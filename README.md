@@ -1,4 +1,4 @@
-# Brandex Datasheet
+# Brandex Database CMS
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![React](https://img.shields.io/badge/React-Vite-61DAFB?logo=react&logoColor=black)
