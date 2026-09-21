@@ -272,7 +272,7 @@ export function AssignedPage() {
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">STATUS</span><strong>{assignmentRecord.stage || "—"}</strong></div>
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">SUB-STATUS</span><strong>{assignmentRecord.subStage || "—"}</strong></div>
               </div>
-              <p className="mt-4 border-l-4 border-[#C94A00] bg-[#FFF0D0] p-3 font-mono text-[10px] uppercase leading-relaxed">Acceptance history is not stored as a separate event relation yet. This view reports the current assignment queue from the trusted trademark status fields; the record button opens the complete case detail.</p>
+              <p className="mt-4 border-l-4 border-[#C94A00] bg-[#FFF0D0] p-3 font-mono text-[10px] uppercase leading-relaxed">This view reports the current assignment queue from the trusted trademark status fields. Complete acceptance workflow history is available in the case detail record.</p>
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => goToRecord(assignmentRecord.id)} className="inline-flex items-center gap-2 border-2 border-[#6C1C1F] bg-[#6C1C1F] px-3 py-2 font-mono text-xs font-bold uppercase text-white"><ExternalLink className="h-4 w-4" /> OPEN RECORD</button></div>
             </section>
           </div>

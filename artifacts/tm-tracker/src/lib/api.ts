@@ -106,6 +106,19 @@ export interface AuditLogEntry {
   newValue: string;
 }
 
+export interface TrademarkWorkflowEvent {
+  id: number;
+  trademarkId: string;
+  eventType: string;
+  fromStatus: string | null;
+  fromSubStatus: string | null;
+  toStatus: string;
+  toSubStatus: string | null;
+  eventAt: string;
+  changedBy: string | null;
+  changedByName: string;
+}
+
 export interface TrademarkStats {
   total: number;
   recentlyModified: number;
@@ -603,6 +616,30 @@ export async function listAuditLogs(limit = 100, offset = 0): Promise<AuditLogEn
     field: "RECORD",
     oldValue: row.old_record ? JSON.stringify(row.old_record) : "",
     newValue: row.new_record ? JSON.stringify(row.new_record) : "",
+  }));
+}
+
+export async function getWorkflowHistory(trademarkId: string): Promise<TrademarkWorkflowEvent[]> {
+  ensureConfigured();
+  const { data, error } = await supabase
+    .from("trademark_workflow_history")
+    .select("*, profiles!changed_by(display_name)")
+    .eq("trademark_id", trademarkId)
+    .order("event_at", { ascending: false });
+
+  throwIfError(error);
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    trademarkId: row.trademark_id,
+    eventType: row.event_type,
+    fromStatus: row.from_status,
+    fromSubStatus: row.from_sub_status,
+    toStatus: row.to_status,
+    toSubStatus: row.to_sub_status,
+    eventAt: row.event_at,
+    changedBy: row.changed_by,
+    changedByName: row.profiles?.display_name || "Unknown User",
   }));
 }
 

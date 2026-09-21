@@ -1,5 +1,5 @@
-import { getRecord } from "@/lib/api";
-import type { TrademarkRecord, TmMatches, JournalRecord } from "@/lib/api";
+import { getRecord, getWorkflowHistory } from "@/lib/api";
+import type { TrademarkRecord, TmMatches, JournalRecord, TrademarkWorkflowEvent } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort, formatDate } from "@/lib/utils";
 import { useState } from "react";
@@ -61,6 +61,12 @@ export function RecordView() {
   const { data: record, isLoading, error } = useQuery({
     queryKey: ["trademark", params.id],
     queryFn: () => getRecord(params.id!),
+    enabled: Boolean(params.id),
+  });
+
+  const { data: workflowHistory = [] } = useQuery({
+    queryKey: ["trademark-workflow-history", params.id],
+    queryFn: () => getWorkflowHistory(params.id!),
     enabled: Boolean(params.id),
   });
 
@@ -237,6 +243,30 @@ export function RecordView() {
                 </div>
               </div>
             </div>
+
+            {/* Workflow History */}
+            {workflowHistory.length > 0 && (
+              <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
+                <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-3 print:mb-2 flex items-center gap-1.5">
+                  Workflow History
+                </div>
+                <div className="space-y-3">
+                  {workflowHistory.map((event) => (
+                    <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 py-1">
+                      <div className="font-mono text-sm font-bold text-[#0A1931]">
+                        {event.toSubStatus || event.toStatus}
+                      </div>
+                      <div className="font-mono text-[9px] text-[#6d6658] mt-1">
+                        {formatDateShort(event.eventAt)}
+                      </div>
+                      <div className="font-mono text-[9px] text-[#6d6658]">
+                        Changed by: {event.changedByName}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Agent detail */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">

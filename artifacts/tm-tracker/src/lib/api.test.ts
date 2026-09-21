@@ -23,6 +23,7 @@ import {
   createTrademark,
   deleteTrademark,
   getRecord,
+  getWorkflowHistory,
   inputToRow,
   listTrademarkPage,
   listTrademarksForExport,
@@ -244,5 +245,31 @@ describe("Brandex Supabase access patterns", () => {
       3600,
     );
     expect(result.url).toBe("https://signed.example/upload.png");
+  });
+
+  it("fetches workflow history mapped to TrademarkWorkflowEvent array", async () => {
+    const query = createQuery({
+      data: [{
+        id: 1,
+        trademark_id: "BX-1",
+        event_type: "STATUS_CHANGE",
+        from_status: "STAGE 1",
+        from_sub_status: null,
+        to_status: "STAGE 2",
+        to_sub_status: "Accepted",
+        event_at: "2026-09-10T12:00:00Z",
+        changed_by: "user-1",
+        profiles: { display_name: "User A" }
+      }],
+      error: null
+    });
+    supabaseMock.from.mockReturnValue(query);
+
+    const history = await getWorkflowHistory("BX-1");
+    expect(supabaseMock.from).toHaveBeenCalledWith("trademark_workflow_history");
+    expect(query.eq).toHaveBeenCalledWith("trademark_id", "BX-1");
+    expect(history).toHaveLength(1);
+    expect(history[0].toSubStatus).toBe("Accepted");
+    expect(history[0].changedByName).toBe("User A");
   });
 });

@@ -168,4 +168,7 @@ This file is the single source of truth for project status.
 - [x] Removed destructive global reset `SET tm5=false...` from `run_form_match()` to protect legacy and manually entered TM form flags
 - [x] Updated `api.ts` `addAgentFee` to automatically compute `paid` boolean status when `amountPaid >= amountBilled`
 - [x] Verified `pnpm test` (10/10 passed), `pnpm typecheck` (0 errors), and `pnpm build` (bundle successfully generated)
+- [x] Created migration `202609220002_trademark_workflow_history.sql` to track full status workflow history via postgres trigger
+- [x] Updated `RecordView.tsx` to display full Acceptance and workflow history
+
 
