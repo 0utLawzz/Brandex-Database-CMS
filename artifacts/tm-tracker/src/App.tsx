@@ -12,6 +12,8 @@ const DatabasePage = lazy(() => import("./pages/DatabasePage").then((module) => 
 const LogsPage = lazy(() => import("./pages/LogsPage").then((module) => ({ default: module.LogsPage })));
 const RecordView = lazy(() => import("./pages/RecordView").then((module) => ({ default: module.RecordView })));
 const AssignedPage = lazy(() => import("./pages/AssignedPage").then((module) => ({ default: module.AssignedPage })));
+const AgentsPage = lazy(() => import("./pages/AgentsPage").then((module) => ({ default: module.AgentsPage })));
+const PublicationPipelinePage = lazy(() => import("./pages/PublicationPipelinePage").then((module) => ({ default: module.PublicationPipelinePage })));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient({
@@ -31,6 +33,8 @@ function Router() {
         <Route path="/search"        component={SearchPage} />
         <Route path="/database"      component={DatabasePage} />
         <Route path="/assigned"      component={AssignedPage} />
+        <Route path="/agents"        component={AgentsPage} />
+        <Route path="/publication"   component={PublicationPipelinePage} />
         <Route path="/record/:id"    component={RecordView} />
         <Route path="/logs"          component={LogsPage} />
         <Route                       component={NotFound} />

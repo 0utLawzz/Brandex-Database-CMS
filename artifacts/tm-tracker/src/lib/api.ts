@@ -65,6 +65,11 @@ export interface TrademarkRecord {
   journalDate: string;
   tmMatches?: TmMatches;
   journal?: JournalRecord | null;
+  // NEW: Publication workflow fields
+  publicationDate?: string | null;
+  oppositionDeadline?: string | null;
+  demandNoteReceived?: boolean;
+  demandNoteDate?: string | null;
 }
 
 export interface TmMatches {
@@ -253,6 +258,11 @@ type SupabaseTrademarkRow = {
   legacy_image_url?: string | null;
   updated_at: string;
   version?: number;
+  // NEW fields from migration 1
+  publication_date?: string | null;
+  opposition_deadline?: string | null;
+  demand_note_received?: boolean;
+  demand_note_date?: string | null;
 };
 
 function ensureConfigured() {
@@ -307,6 +317,11 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     journalDate: row.journal_date ?? "",
     tmMatches: matches,
     journal: row.journal_data,
+    // NEW publication fields
+    publicationDate: row.publication_date ?? null,
+    oppositionDeadline: row.opposition_deadline ?? null,
+    demandNoteReceived: row.demand_note_received ?? false,
+    demandNoteDate: row.demand_note_date ?? null,
   };
 }
 
@@ -368,6 +383,8 @@ const TRADEMARK_LIST_COLUMNS = [
   "application_name", "tm_cpr_number", "nice_class", "status", "sub_status",
   "case_type", "agent", "city", "tm5", "tm6", "tm11", "tm16", "tm56",
   "journal_number", "journal_date", "logo_path", "legacy_image_url", "updated_at", "version",
+  // NEW
+  "publication_date", "opposition_deadline", "demand_note_received", "demand_note_date",
 ].join(",");
 
 export function inputToRow(input: TrademarkInput) {
@@ -628,4 +645,395 @@ export async function uploadImage(
   const { data } = await supabase.storage.from(TRADEMARK_FILES_BUCKET).createSignedUrl(path, 3600);
   onProgress?.(100);
   return { fileId: path, url: data?.signedUrl ?? "", thumbnailUrl: data?.signedUrl ?? "" };
+}
+
+// =============================================================================
+// NEW: AGENT INTERFACES
+// =============================================================================
+
+/** One agent in the agents master table */
+export interface Agent {
+  id: string;
+  name: string;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Agent with computed fee summary stats (from agent_summary view) */
+export interface AgentWithStats extends Agent {
+  casesWithFees: number; // how many trademark cases have fee entries
+  totalBilled: number; // total amount charged
+  totalPaid: number; // total amount received
+  balanceDue: number; // totalBilled - totalPaid
+  unpaidEntries: number; // count of unpaid fee rows
+}
+
+/** Input when creating or updating an agent */
+export interface AgentInput {
+  name: string;
+  city?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  isActive?: boolean;
+}
+
+/** One fee entry linked to a trademark case + agent */
+export interface AgentFee {
+  id: string;
+  trademarkId: string;
+  agentId: string;
+  agentName?: string; // joined from agents table for display
+  caseNumber?: string; // joined from trademarks for display
+  appName?: string; // joined from trademarks for display
+  description: string;
+  amountBilled: number;
+  amountPaid: number;
+  balanceDue: number; // computed: amountBilled - amountPaid
+  feeDate: string;
+  paid: boolean;
+  paidDate: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+/** Input when adding or updating a fee entry */
+export interface AgentFeeInput {
+  trademarkId: string;
+  agentId: string;
+  description: string;
+  amountBilled: number;
+  amountPaid?: number;
+  feeDate?: string;
+  paid?: boolean;
+  paidDate?: string | null;
+  notes?: string;
+}
+
+// =============================================================================
+// NEW: PUBLICATION PIPELINE INTERFACE
+// =============================================================================
+
+/** A trademark that has been published in the journal — tracks opposition window */
+export interface PublicationRecord {
+  id: string;
+  caseNumber: string;
+  clientName: string;
+  appName: string;
+  tmCprNo: string;
+  appClass: string;
+  stage: string;
+  subStage: string;
+  agent: string;
+  publicationDate: string;
+  oppositionDeadline: string;
+  daysRemaining: number; // negative = overdue
+  demandNoteReceived: boolean;
+  demandNoteDate: string | null;
+  status: "pending" | "overdue" | "done"; // computed
+}
+
+// =============================================================================
+// NEW: MATCH ENGINE FUNCTIONS
+// Calls Supabase RPC functions created in migration 1
+// =============================================================================
+
+/** Matches journal_registry rows → trademarks by TM number
+ * Updates: journal_number, journal_date, publication_date, journal_data
+ * Returns how many trademarks were updated
+ */
+export async function runJournalMatch(): Promise<{ matched: number; message: string; ranAt: string }> {
+  ensureConfigured();
+  const { data, error } = await supabase.rpc("run_journal_match");
+  throwIfError(error);
+  const result = data as { matched_trademarks: number; message: string; ran_at: string; status: string };
+  return {
+    matched: result.matched_trademarks ?? 0,
+    message: result.message ?? "Journal match completed",
+    ranAt: result.ran_at ?? new Date().toISOString(),
+  };
+}
+
+/** Matches form_registry rows → trademarks by TM number
+ * Sets tm5/tm6/tm11/tm16/tm56 booleans on matching trademarks
+ * Returns count per form type
+ */
+export async function runFormMatch(): Promise<{ total: number; tm5: number; tm6: number; tm11: number; tm16: number; tm56: number; message: string }> {
+  ensureConfigured();
+  const { data, error } = await supabase.rpc("run_form_match");
+  throwIfError(error);
+  const result = data as { total: number; tm5: number; tm6: number; tm11: number; tm16: number; tm56: number; message: string };
+  return {
+    total: result.total ?? 0,
+    tm5: result.tm5 ?? 0,
+    tm6: result.tm6 ?? 0,
+    tm11: result.tm11 ?? 0,
+    tm16: result.tm16 ?? 0,
+    tm56: result.tm56 ?? 0,
+    message: result.message ?? "Form match completed",
+  };
+}
+
+// =============================================================================
+// NEW: PUBLICATION PIPELINE FUNCTIONS
+// Tracks publication → opposition window → demand note workflow
+// =============================================================================
+
+/** Returns all trademarks that have been published in the journal
+ * with computed daysRemaining and status
+ */
+export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
+  ensureConfigured();
+  const { data, error } = await supabase
+    .from("trademarks")
+    .select(
+      "id, case_number, client_name, application_name, tm_cpr_number, nice_class, " +
+      "status, sub_status, agent, publication_date, opposition_deadline, " +
+      "demand_note_received, demand_note_date"
+    )
+    .not("publication_date", "is", null) // only published cases
+    .order("opposition_deadline", { ascending: true, nullsFirst: false });
+  throwIfError(error);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (data ?? []).map((row: any) => {
+    // Calculate days remaining until opposition deadline
+    const deadline = row.opposition_deadline ? new Date(row.opposition_deadline) : null;
+    const daysRemaining = deadline ? Math.floor((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+    // Compute status label
+    let status: "pending" | "overdue" | "done" = "pending";
+    if (row.demand_note_received) {
+      status = "done";
+    } else if (daysRemaining < 0) {
+      status = "overdue"; // deadline passed, no demand note yet — action needed
+    }
+
+    return {
+      id: row.id,
+      caseNumber: row.case_number ?? "",
+      clientName: row.client_name ?? "",
+      appName: row.application_name ?? "",
+      tmCprNo: row.tm_cpr_number ?? "",
+      appClass: row.nice_class ?? "",
+      stage: row.status ?? "",
+      subStage: row.sub_status ?? "",
+      agent: row.agent ?? "",
+      publicationDate: row.publication_date ?? "",
+      oppositionDeadline: row.opposition_deadline ?? "",
+      daysRemaining,
+      demandNoteReceived: row.demand_note_received ?? false,
+      demandNoteDate: row.demand_note_date ?? null,
+      status,
+    };
+  });
+}
+
+/** Marks a case's demand note as received with a date
+ * Called when firm physically receives the demand note from IPO
+ */
+export async function markDemandNoteReceived(trademarkId: string, date: string): Promise<void> {
+  ensureConfigured();
+  const { error } = await supabase
+    .from("trademarks")
+    .update({
+      demand_note_received: true,
+      demand_note_date: date,
+    })
+    .eq("id", trademarkId);
+  throwIfError(error);
+}
+
+/** Clears the demand note received flag (undo/correction) */
+export async function clearDemandNoteReceived(trademarkId: string): Promise<void> {
+  ensureConfigured();
+  const { error } = await supabase
+    .from("trademarks")
+    .update({
+      demand_note_received: false,
+      demand_note_date: null,
+    })
+    .eq("id", trademarkId);
+  throwIfError(error);
+}
+
+// =============================================================================
+// NEW: AGENT MANAGEMENT FUNCTIONS
+// Note: existing listAgents() returns string[] from trademarks — that stays.
+// These new functions work with the agents master table.
+// =============================================================================
+
+/** Returns all agents from agents table with fee summary stats (from agent_summary view) */
+export async function listAgentProfiles(): Promise<AgentWithStats[]> {
+  ensureConfigured();
+  const { data, error } = await supabase
+    .from("agent_summary")
+    .select("*")
+    .order("name");
+  throwIfError(error);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    city: row.city ?? null,
+    phone: row.phone ?? null,
+    email: row.email ?? null,
+    notes: null,
+    isActive: row.is_active ?? true,
+    createdAt: "",
+    updatedAt: "",
+    casesWithFees: Number(row.cases_with_fees ?? 0),
+    totalBilled: Number(row.total_billed ?? 0),
+    totalPaid: Number(row.total_paid ?? 0),
+    balanceDue: Number(row.balance_due ?? 0),
+    unpaidEntries: Number(row.unpaid_entries ?? 0),
+  }));
+}
+
+/** Creates a new agent in the agents table */
+export async function createAgentProfile(input: AgentInput): Promise<Agent> {
+  ensureConfigured();
+  const { data, error } = await supabase
+    .from("agents")
+    .insert({
+      name: input.name,
+      city: input.city ?? null,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      notes: input.notes ?? null,
+      is_active: input.isActive ?? true,
+    })
+    .select("*")
+    .single();
+  throwIfError(error);
+  return {
+    id: data.id,
+    name: data.name,
+    city: data.city,
+    phone: data.phone,
+    email: data.email,
+    notes: data.notes,
+    isActive: data.is_active,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+/** Updates an existing agent */
+export async function updateAgentProfile(id: string, input: Partial<AgentInput>): Promise<void> {
+  ensureConfigured();
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.city !== undefined) patch.city = input.city;
+  if (input.phone !== undefined) patch.phone = input.phone;
+  if (input.email !== undefined) patch.email = input.email;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.isActive !== undefined) patch.is_active = input.isActive;
+  const { error } = await supabase.from("agents").update(patch).eq("id", id);
+  throwIfError(error);
+}
+
+// =============================================================================
+// NEW: AGENT FEE FUNCTIONS
+// Per-case fee entries linked to agents
+// =============================================================================
+
+/** Fetch all fee entries for a specific trademark case (for RecordView fees tab) */
+export async function listFeesForTrademark(trademarkId: string): Promise<AgentFee[]> {
+  ensureConfigured();
+  const { data, error } = await supabase
+    .from("agent_fees")
+    .select("*, agents(name)")
+    .eq("trademark_id", trademarkId)
+    .order("fee_date", { ascending: false });
+  throwIfError(error);
+  return (data ?? []).map(mapFeeRow);
+}
+
+/** Fetch all fee entries for a specific agent (for AgentsPage detail view) */
+export async function listFeesForAgent(agentId: string): Promise<AgentFee[]> {
+  ensureConfigured();
+  const { data, error } = await supabase
+    .from("agent_fees")
+    .select("*, trademarks(case_number, application_name)")
+    .eq("agent_id", agentId)
+    .order("fee_date", { ascending: false });
+  throwIfError(error);
+  return (data ?? []).map(mapFeeRow);
+}
+
+/** Add a new fee entry */
+export async function addAgentFee(input: AgentFeeInput): Promise<AgentFee> {
+  ensureConfigured();
+  const { data: authData } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("agent_fees")
+    .insert({
+      trademark_id: input.trademarkId,
+      agent_id: input.agentId,
+      description: input.description,
+      amount_billed: input.amountBilled,
+      amount_paid: input.amountPaid ?? 0,
+      fee_date: input.feeDate ?? new Date().toISOString().slice(0, 10),
+      paid: input.paid ?? false,
+      paid_date: input.paidDate ?? null,
+      notes: input.notes ?? null,
+      created_by: authData.user?.id,
+    })
+    .select("*, agents(name), trademarks(case_number, application_name)")
+    .single();
+  throwIfError(error);
+  return mapFeeRow(data);
+}
+
+/** Update a fee entry (e.g. mark as paid, update amount) */
+export async function updateAgentFee(id: string, input: Partial<AgentFeeInput>): Promise<void> {
+  ensureConfigured();
+  const patch: Record<string, unknown> = {};
+  if (input.description !== undefined) patch.description = input.description;
+  if (input.amountBilled !== undefined) patch.amount_billed = input.amountBilled;
+  if (input.amountPaid !== undefined) patch.amount_paid = input.amountPaid;
+  if (input.feeDate !== undefined) patch.fee_date = input.feeDate;
+  if (input.paid !== undefined) patch.paid = input.paid;
+  if (input.paidDate !== undefined) patch.paid_date = input.paidDate;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  const { error } = await supabase.from("agent_fees").update(patch).eq("id", id);
+  throwIfError(error);
+}
+
+/** Delete a fee entry */
+export async function deleteAgentFee(id: string): Promise<void> {
+  ensureConfigured();
+  const { error } = await supabase.from("agent_fees").delete().eq("id", id);
+  throwIfError(error);
+}
+
+// Internal helper: maps a raw Supabase agent_fee row to AgentFee interface
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapFeeRow(row: any): AgentFee {
+  const billed = Number(row.amount_billed ?? 0);
+  const paid = Number(row.amount_paid ?? 0);
+  return {
+    id: row.id,
+    trademarkId: row.trademark_id,
+    agentId: row.agent_id,
+    agentName: row.agents?.name ?? undefined,
+    caseNumber: row.trademarks?.case_number ?? undefined,
+    appName: row.trademarks?.application_name ?? undefined,
+    description: row.description ?? "",
+    amountBilled: billed,
+    amountPaid: paid,
+    balanceDue: billed - paid,
+    feeDate: row.fee_date ?? "",
+    paid: row.paid ?? false,
+    paidDate: row.paid_date ?? null,
+    notes: row.notes ?? null,
+    createdAt: row.created_at ?? "",
+  };
 }

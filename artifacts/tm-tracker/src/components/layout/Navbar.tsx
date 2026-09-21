@@ -12,15 +12,18 @@ import {
   X,
   Users2,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 const NAV_ITEMS = [
-  { href: "/",         label: "DASHBOARD", icon: LayoutDashboard },
-  { href: "/search",   label: "SEARCH TM", icon: Search },
-  { href: "/database", label: "DATABASE",  icon: Database },
-  { href: "/assigned", label: "ASSIGNED",  icon: Users2 },
-  { href: "/logs",     label: "LOGS",      icon: ScrollText },
+  { href: "/",           label: "DASHBOARD",    icon: LayoutDashboard },
+  { href: "/search",     label: "SEARCH TM",    icon: Search },
+  { href: "/database",   label: "DATABASE",     icon: Database },
+  { href: "/assigned",   label: "ASSIGNED",     icon: Users2 },
+  { href: "/agents",     label: "AGENTS",       icon: BriefcaseBusiness },
+  { href: "/publication", label: "PUBLICATION", icon: BookOpen },
+  { href: "/logs",       label: "LOGS",         icon: ScrollText },
 ];
 
 export function Navbar() {

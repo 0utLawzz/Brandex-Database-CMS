@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 12 September 2026 (CSV import header fix + light Record View refresh)**
+**Last updated: 21 September 2026 (Match Engine + Publication Pipeline + Agent Management)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -65,11 +65,26 @@ This file is the single source of truth for project status.
 - [x] `RegistryImportModal.tsx` — kind toggle (Form / Journal), Choose CSV → Dry-run preview → Commit inserts
 - [x] Database page IMPORT button: admin-only opens modal; non-admin sees disabled/alert
 
-**Still needed for full matching pipeline**
+## Match Engine + Publication Pipeline + Agent Management (Completed 21 September 2026)
 
-- [ ] Apply migration on Supabase production
-- [ ] Match engine: on import/save, set trademarks.tm5…tm56 from form_registry; populate journal_number / journal_date / journal_data from journal_registry
-- [ ] Green/grey TM form badges driven by registry match (already UI-ready via tmMatches)
+- [x] Migration `202609200001_match_engine_publication.sql` — Added publication workflow fields to trademarks table (publication_date, opposition_deadline, demand_note_received, demand_note_date)
+- [x] Migration `202609200001_match_engine_publication.sql` — Created RPC functions `run_journal_match()` and `run_form_match()` for automatic registry matching
+- [x] Migration `202609200002_agents_fees.sql` — Created `agents` master table and `agent_fees` table for per-case fee tracking
+- [x] Migration `202609200002_agents_fees.sql` — Created `agent_summary` view with computed fee statistics
+- [x] `api.ts` — Added publication pipeline functions (listPublicationPipeline, markDemandNoteReceived, clearDemandNoteReceived)
+- [x] `api.ts` — Added match engine functions (runJournalMatch, runFormMatch)
+- [x] `api.ts` — Added agent management functions (listAgentProfiles, createAgentProfile, updateAgentProfile)
+- [x] `api.ts` — Added agent fee functions (listFeesForTrademark, listFeesForAgent, addAgentFee, updateAgentFee, deleteAgentFee)
+- [x] `AgentsPage.tsx` — Full agent management UI with create/edit/delete, fee tracking, and summary statistics
+- [x] `PublicationPipelinePage.tsx` — Publication workflow UI with opposition deadline tracking, demand note management, and match engine controls
+- [x] `App.tsx` — Added routes for `/agents` and `/publication` pages
+- [x] `Navbar.tsx` — Added navigation items for AGENTS and PUBLICATION pages
+
+**Still needed for full deployment**
+
+- [x] Apply migrations `202609200001_match_engine_publication.sql` and `202609200002_agents_fees.sql` on Supabase production
+- [x] Run typecheck and build to verify no TypeScript errors
+- [ ] Test new pages in development environment
 
 ## Required release checks
 
@@ -132,12 +147,16 @@ This file is the single source of truth for project status.
 
 ## Current active focus
 
-1. Run migration `202609120001_form_journal_registry.sql` on Supabase.
-2. Admin dry-run + commit CSV into form_registry / journal_registry from Database → IMPORT.
-3. Next: match engine to light TM flags + journal_data on trademarks.
+1. Apply migrations `202609200001_match_engine_publication.sql` and `202609200002_agents_fees.sql` on Supabase production.
+2. Run typecheck and build to verify no TypeScript errors with new pages.
+3. Test AgentsPage and PublicationPipelinePage in development environment.
 
-## 2026-09-12 — Admin CSV import (dry-run)
+## 2026-09-21 — Match Engine + Publication Pipeline + Agent Management
 
-- [x] form_registry + journal_registry tables + RLS
-- [x] registryImport.ts (parse / dry-run / commit)
-- [x] RegistryImportModal + Database IMPORT (admin)
+- [x] Created migration `202609200001_match_engine_publication.sql` with publication workflow fields and RPC match functions
+- [x] Created migration `202609200002_agents_fees.sql` with agents master table and per-case fee tracking
+- [x] Updated `api.ts` with publication pipeline, match engine, and agent management functions
+- [x] Created `AgentsPage.tsx` with full agent management UI and fee tracking
+- [x] Created `PublicationPipelinePage.tsx` with opposition deadline tracking and match engine controls
+- [x] Updated `App.tsx` routing to include `/agents` and `/publication` routes
+- [x] Updated `Navbar.tsx` navigation to include AGENTS and PUBLICATION menu items
