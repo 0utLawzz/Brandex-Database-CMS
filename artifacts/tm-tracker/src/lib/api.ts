@@ -972,17 +972,20 @@ export async function listFeesForAgent(agentId: string): Promise<AgentFee[]> {
 export async function addAgentFee(input: AgentFeeInput): Promise<AgentFee> {
   ensureConfigured();
   const { data: authData } = await supabase.auth.getUser();
+  const amountBilled = input.amountBilled ?? 0;
+  const amountPaid = input.amountPaid ?? 0;
+  const isPaid = input.paid ?? (amountPaid >= amountBilled && amountBilled > 0);
   const { data, error } = await supabase
     .from("agent_fees")
     .insert({
       trademark_id: input.trademarkId,
       agent_id: input.agentId,
       description: input.description,
-      amount_billed: input.amountBilled,
-      amount_paid: input.amountPaid ?? 0,
+      amount_billed: amountBilled,
+      amount_paid: amountPaid,
       fee_date: input.feeDate ?? new Date().toISOString().slice(0, 10),
-      paid: input.paid ?? false,
-      paid_date: input.paidDate ?? null,
+      paid: isPaid,
+      paid_date: input.paidDate ?? (isPaid ? new Date().toISOString().slice(0, 10) : null),
       notes: input.notes ?? null,
       created_by: authData.user?.id,
     })

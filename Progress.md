@@ -160,3 +160,12 @@ This file is the single source of truth for project status.
 - [x] Created `PublicationPipelinePage.tsx` with opposition deadline tracking and match engine controls
 - [x] Updated `App.tsx` routing to include `/agents` and `/publication` routes
 - [x] Updated `Navbar.tsx` navigation to include AGENTS and PUBLICATION menu items
+
+## 2026-09-22 — Practical System Audit + Security & Logic Corrective Migration
+
+- [x] Executed complete 14-phase practical audit across frontend, backend, database schema, RLS, RPCs, and migrations
+- [x] Created migration `202609220001_fix_match_engine_security_and_logic.sql` enforcing `current_brandex_role() IN ('editor', 'admin')` checks inside `run_journal_match()` and `run_form_match()`
+- [x] Removed destructive global reset `SET tm5=false...` from `run_form_match()` to protect legacy and manually entered TM form flags
+- [x] Updated `api.ts` `addAgentFee` to automatically compute `paid` boolean status when `amountPaid >= amountBilled`
+- [x] Verified `pnpm test` (10/10 passed), `pnpm typecheck` (0 errors), and `pnpm build` (bundle successfully generated)
+
