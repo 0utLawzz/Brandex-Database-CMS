@@ -264,4 +264,20 @@ This file is the single source of truth for project status.
 - [x] Added unit tests in `api.test.ts` verifying `STAGE_DOCUMENT_WORKFLOW` stages/sub-stages, terminology rules (no short forms, CER preserved), and upload sub-stage normalization
 - [x] Verified: `pnpm test --run` (27/27 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 13.15s)
 
+## 2026-09-22 — Batch 12: RecordView Workflow Consolidation
+
+- [x] Implemented workflow/status management functions in `api.ts`:
+  - `updateTrademarkStatus(id, stage, subStage)`: updates case stage and sub-stage directly, strictly enforcing the Stage 2 payment gate (`stage2_paid = true` required for STAGE 2) and normalizing sub-stage values via `normalizeWorkflowValue`
+  - `updateTrademarkAgent(id, agentName, city)`: updates assigned agent and city, enforcing the Stage 2 payment gate if the record is currently in Stage 2
+- [x] Created `CaseWorkflowSection.tsx` component in `artifacts/tm-tracker/src/components/`:
+  - **Progression Stepper**: horizontal track visually tracing normal forward workflow (`Stage 1` → `Stage 2` → `Stage 3` → `Stage 4`) with completed checkmarks, bold active stage indicator, and distinct alert for `STOPPED` cases
+  - **Current Status & Transition Control**: clear Stage and Sub-Stage display with complete canonical terminology (Demand Note, Opposition, CER); role-gated "Update Status" modal for Editor/Admin enforcing the Stage 2 payment gate
+  - **Agent Details & Assignment Control**: displays assigned agent and city; role-gated "Assign / Change Agent" modal pulling from `listAgentProfiles()` master list and enforcing the Stage 2 payment gate
+  - **Stage Payments**: compact 4-stage payment block (Stage 1 to 4) with real-time toggle, date recording, and prominent `MANUAL — NOT VERIFIED` indication
+  - **Workflow History**: chronological event history with timestamp, changed by user, and full terminology transitions (preserving repeated status events intact)
+- [x] Consolidated `RecordView.tsx`: replaced fragmented status, agent, history, and payment cards with unified `CaseWorkflowSection`; preserved registry-matching "Document Status" (TM forms) and Batch 11 `StageDocumentsSection` completely intact
+- [x] Added unit tests in `api.test.ts` verifying `updateTrademarkStatus` and `updateTrademarkAgent` payment gate enforcement and sub-stage normalization
+- [x] Verified: `pnpm test --run` (32/32 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 11.44s)
+
+
 

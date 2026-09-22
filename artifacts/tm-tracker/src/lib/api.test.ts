@@ -40,6 +40,8 @@ import {
   normalizeWorkflowValue,
   WORKFLOW_DISPLAY_LABELS,
   STAGE_DOCUMENT_WORKFLOW,
+  updateTrademarkStatus,
+  updateTrademarkAgent,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -633,4 +635,90 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
     );
   });
 });
+
+describe("Batch 12: RecordView Workflow Consolidation", () => {
+  it("updateTrademarkStatus — blocks transition to STAGE 2 when stage2_paid is false", async () => {
+    const selectQuery = createQuery({
+      data: { stage2_paid: false, status: "STAGE 1" },
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(selectQuery);
+
+    await expect(
+      updateTrademarkStatus("BX-1", "STAGE 2", "Assigned"),
+    ).rejects.toBeInstanceOf(StagePaymentRequiredError);
+  });
+
+  it("updateTrademarkStatus — allows transition to STAGE 2 when stage2_paid is true", async () => {
+    const selectQuery = createQuery({
+      data: { stage2_paid: true, status: "STAGE 1" },
+      error: null,
+    });
+    const updateQuery = createQuery({ data: null, error: null });
+    let callCount = 0;
+    supabaseMock.from.mockImplementation(() => {
+      callCount++;
+      return callCount === 1 ? selectQuery : updateQuery;
+    });
+
+    await updateTrademarkStatus("BX-1", "STAGE 2", "Assigned");
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      status: "STAGE 2",
+      sub_status: "Assigned",
+    });
+    expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
+  });
+
+  it("updateTrademarkStatus — normalizes user-facing subStage when updating status", async () => {
+    const selectQuery = createQuery({
+      data: { stage2_paid: false, status: "STAGE 1" },
+      error: null,
+    });
+    const updateQuery = createQuery({ data: null, error: null });
+    let callCount = 0;
+    supabaseMock.from.mockImplementation(() => {
+      callCount++;
+      return callCount === 1 ? selectQuery : updateQuery;
+    });
+
+    await updateTrademarkStatus("BX-1", "STAGE 3", "Demand Note Submitted");
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      status: "STAGE 3",
+      sub_status: "D-Note Submitted",
+    });
+  });
+
+  it("updateTrademarkAgent — blocks assignment in STAGE 2 when stage2_paid is false", async () => {
+    const selectQuery = createQuery({
+      data: { stage2_paid: false, status: "STAGE 2" },
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(selectQuery);
+
+    await expect(
+      updateTrademarkAgent("BX-1", "Counsel A", "Islamabad"),
+    ).rejects.toBeInstanceOf(StagePaymentRequiredError);
+  });
+
+  it("updateTrademarkAgent — allows assignment when stage2_paid is true or in other stages", async () => {
+    const selectQuery = createQuery({
+      data: { stage2_paid: true, status: "STAGE 2" },
+      error: null,
+    });
+    const updateQuery = createQuery({ data: null, error: null });
+    let callCount = 0;
+    supabaseMock.from.mockImplementation(() => {
+      callCount++;
+      return callCount === 1 ? selectQuery : updateQuery;
+    });
+
+    await updateTrademarkAgent("BX-1", "Counsel A", "Islamabad");
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      agent: "Counsel A",
+      city: "Islamabad",
+    });
+    expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
+  });
+});
+
 

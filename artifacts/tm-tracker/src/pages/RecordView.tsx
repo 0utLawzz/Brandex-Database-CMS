@@ -1,16 +1,17 @@
-import { getRecord, getWorkflowHistory, updateStagePayment, formatWorkflowLabel } from "@/lib/api";
-import type { TrademarkRecord, TmMatches, JournalRecord, TrademarkWorkflowEvent } from "@/lib/api";
+import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole } from "@/lib/api";
+import type { TrademarkRecord, TmMatches, JournalRecord } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort, formatDate } from "@/lib/utils";
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft, Edit2, Printer, CheckCircle2, MinusCircle,
-  Image as ImageIcon, FileText, User, MapPin,
+  Image as ImageIcon, FileText,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RecordModal } from "@/components/RecordModal";
 import { StageDocumentsSection } from "@/components/StageDocumentsSection";
+import { CaseWorkflowSection } from "@/components/CaseWorkflowSection";
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
@@ -51,12 +52,12 @@ export function RecordView() {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
 
-  // Persisted payment save mutation (manual — NOT auto-verified)
-  const paymentMutation = useMutation({
-    mutationFn: (args: { stage: 1 | 2 | 3 | 4; paid: boolean; date: string }) =>
-      updateStagePayment(params.id!, args.stage, args.paid, args.date || null),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trademark", params.id] }),
+  const { data: staffRole } = useQuery({
+    queryKey: ["staff-role"],
+    queryFn: getStaffRole,
+    staleTime: 5 * 60 * 1000,
   });
+  const canEdit = staffRole === "editor" || staffRole === "admin";
 
   const { data: record, isLoading, error } = useQuery({
     queryKey: ["trademark", params.id],
@@ -211,64 +212,12 @@ export function RecordView() {
               </div>
             </div>
 
-            {/* Status & Sub-status */}
-            <div className="print-avoid-break grid grid-cols-1 sm:grid-cols-2 gap-3 print:gap-2">
-              <div className="border-2 border-[#0C0C0C] bg-white p-3 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-                <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-1">Status</div>
-                <div className={`inline-block px-3 py-1.5 print:px-2 print:py-0.5 font-mono text-base print:text-sm font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
-                  {record.stage || "—"}
-                </div>
-              </div>
-              <div className="border-2 border-[#0C0C0C] bg-white p-3 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-                <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-1">Sub-Status</div>
-                <div className="font-mono text-base print:text-sm font-bold text-[#0A1931]">
-                  {formatWorkflowLabel(record.subStage) || "—"}
-                </div>
-              </div>
-            </div>
-
-            {/* Workflow History */}
-            {workflowHistory.length > 0 && (
-              <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-                <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-3 print:mb-2 flex items-center gap-1.5">
-                  Workflow History
-                </div>
-                <div className="space-y-3">
-                  {workflowHistory.map((event) => (
-                    <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 py-1">
-                      <div className="font-mono text-sm font-bold text-[#0A1931]">
-                        {formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus)}
-                      </div>
-                      <div className="font-mono text-[9px] text-[#6d6658] mt-1">
-                        {formatDateShort(event.eventAt)}
-                      </div>
-                      <div className="font-mono text-[9px] text-[#6d6658]">
-                        Changed by: {event.changedByName}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Agent detail */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-2 flex items-center gap-1.5">
-                <User className="w-3 h-3" /> Agent Detail
-              </div>
-              <div className="grid grid-cols-2 gap-3 print:gap-2">
-                <div>
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-[#6d6658]">Agent</div>
-                  <div className="font-mono text-sm font-bold text-[#0A1931]">{record.agent || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
-                    <MapPin className="w-3 h-3" /> Agent City
-                  </div>
-                  <div className="font-mono text-sm font-bold text-[#0A1931]">{record.city || "—"}</div>
-                </div>
-              </div>
-            </div>
+            {/* Case Workflow & Control Center */}
+            <CaseWorkflowSection
+              record={record}
+              workflowHistory={workflowHistory}
+              canEdit={canEdit}
+            />
 
             {/* TM Forms — green when matched, grey when not */}
             <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#F0E8D0] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none">
@@ -279,60 +228,6 @@ export function RecordView() {
                 <TmFormBadge label="TM11" active={matches.TM11} />
                 <TmFormBadge label="TM16" active={matches.TM16} />
                 <TmFormBadge label="TM56" active={matches.TM56} />
-              </div>
-            </div>
-
-            {/* Stage payment ticks — manual placeholder (NOT auto-verified) */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B]">
-                  Stage Payments
-                </div>
-                <span className="font-mono text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5">
-                  MANUAL — NOT VERIFIED
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:gap-2">
-                {(
-                  [
-                    { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
-                    { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
-                    { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
-                    { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
-                  ] as const
-                ).map(({ label, stageNum, paid, date }) => (
-                  <div
-                    key={label}
-                    className={`border-2 p-3 print:p-1.5 ${
-                      paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C]/30 bg-[#F0E8D0]"
-                    }`}
-                  >
-                    <div className="font-mono text-[10px] font-bold uppercase mb-2 print:mb-1">{label}</div>
-                    <label className="flex items-center gap-2 cursor-pointer mb-2 print:mb-1">
-                      <input
-                        type="checkbox"
-                        checked={paid}
-                        disabled={paymentMutation.isPending}
-                        onChange={() =>
-                          paymentMutation.mutate({ stage: stageNum, paid: !paid, date: paid ? "" : (date || new Date().toISOString().slice(0, 10)) })
-                        }
-                        className="w-4 h-4 accent-[#0A6B52]"
-                      />
-                      <span className="font-mono text-xs font-bold">
-                        {paid ? "PAID" : "UNPAID"}
-                      </span>
-                    </label>
-                    <input
-                      type="date"
-                      value={date}
-                      disabled={!paid || paymentMutation.isPending}
-                      onChange={(e) =>
-                        paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
-                      }
-                      className="w-full h-8 print:h-6 px-2 border border-[#0C0C0C]/40 font-mono text-xs bg-white disabled:opacity-40"
-                    />
-                  </div>
-                ))}
               </div>
             </div>
 

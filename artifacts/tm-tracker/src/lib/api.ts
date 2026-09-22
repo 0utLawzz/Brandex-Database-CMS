@@ -728,6 +728,66 @@ export async function assignStage2Agent(
   throwIfError(error);
 }
 
+/**
+ * Updates a trademark's stage and sub-stage directly.
+ * Enforces the Stage 2 payment gate (stage2_paid = true required for STAGE 2).
+ * Normalizes user-facing subStage values to database values.
+ */
+export async function updateTrademarkStatus(
+  id: string,
+  stage: string,
+  subStage?: string | null,
+): Promise<void> {
+  ensureConfigured();
+  const { data: current, error: fetchErr } = await supabase
+    .from("trademarks")
+    .select("stage2_paid, status")
+    .eq("id", id)
+    .single();
+  throwIfError(fetchErr);
+
+  if (isStage2PaymentRequired(stage, current?.stage2_paid)) {
+    throw new StagePaymentRequiredError("Stage 2 payment is required before proceeding to Stage 2.");
+  }
+
+  const canonicalSubStage = subStage ? normalizeWorkflowValue(subStage) : null;
+  const { error } = await supabase
+    .from("trademarks")
+    .update({
+      status: stage,
+      sub_status: canonicalSubStage,
+    })
+    .eq("id", id);
+  throwIfError(error);
+}
+
+/**
+ * Updates a trademark's assigned agent and city.
+ * Enforces the Stage 2 payment gate if the trademark is currently in Stage 2.
+ */
+export async function updateTrademarkAgent(
+  id: string,
+  agentName: string,
+  city?: string,
+): Promise<void> {
+  ensureConfigured();
+  const { data: current, error: fetchErr } = await supabase
+    .from("trademarks")
+    .select("stage2_paid, status")
+    .eq("id", id)
+    .single();
+  throwIfError(fetchErr);
+
+  if (isStage2PaymentRequired(current?.status, current?.stage2_paid)) {
+    throw new StagePaymentRequiredError("Stage 2 payment is required before assigning an agent.");
+  }
+
+  const patch: Record<string, string> = { agent: agentName };
+  if (city) patch.city = city;
+  const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
+  throwIfError(error);
+}
+
 
 export async function updateTrademark(
   id: string,
