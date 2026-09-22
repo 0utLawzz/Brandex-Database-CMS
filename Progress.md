@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (Batch 18 — Final UI + Print + V2 Freeze)**
+**Last updated: 22 September 2026 (V2.0.1 Batch 2 — RecordView UX corrections)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -86,7 +86,31 @@ This file is the single source of truth for project status.
 - [x] Run typecheck and build to verify no TypeScript errors
 - [x] Test new pages in development environment
 
+## V2.0.1 Batch 1 — Core Workflow + New Record Creation (Completed 22 September 2026)
+
+- [x] Strict forward-only workflow enforcement in `updateTrademarkStatus` (STAGE 1→2→3→4 only; backward rejected)
+- [x] New record defaults: STAGE 1, sub-stage "Filing", `stage1_paid = true`, `filing_date = today`
+- [x] Payment gate: STAGE 2 transition blocked unless `stage1_paid = true`
+- [x] Migration `202609220006_workflow_creation_trigger.sql` — DB trigger enforces stage1/Filing/paid defaults on INSERT
+- [x] Applied migration 202609220006 to Supabase production (confirmed by Supabase console)
+- [x] All 46 tests pass; typecheck clean; production build successful
+- [x] Committed `9468de4` and pushed to origin/main
+
+## V2.0.1 Batch 2 — RecordView UX Corrections (Completed 22 September 2026)
+
+- [x] **Section reorder** in `RecordView.tsx`: 1. Workflow/Status Control → 2. Stage Payments → 3. Workflow History → 4. Stage Documents → 5. TM Forms → 6. Office Notes
+- [x] **Two-column header redesign**: Left = logo + app name + TM/Class; Right = client info (name, code, case no, type, case type); footer strip = current stage badge + sub-stage + filed date + previous workflow action
+- [x] **Stage Document visibility**: sections hidden for future stages with no uploaded documents (`isStageDocumentSectionVisible` helper in `api.ts`, applied in `StageDocumentsSection.tsx`)
+- [x] **Uppercase normalization at API boundary** (`inputToRow`): clientCode, caseNumber, type, appName, clientName, agent, city, caseType, appClass, tmCprNo all uppercased for ordinary business data
+- [x] **Agent/city uppercase** propagated to `assignStage2Agent`, `updateTrademarkAgent`, `createAgentProfile`, `updateAgentProfile`
+- [x] **Application Details card** now also surfaces Agent and City fields
+- [x] Three stale test assertions updated to expect UPPERCASE agent/city (matching corrected behaviour)
+- [x] All 46 tests pass; typecheck clean; production build successful (2142 modules, 31.56s)
+- [x] Committed `95660c5` and pushed to origin/main
+- [x] v2.0.0 tag unchanged
+
 ## Required release checks
+
 
 - [x] Automated tests
 - [x] TypeScript typecheck
