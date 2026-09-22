@@ -1026,15 +1026,19 @@ export interface AgentFeeInput {
 // NEW: PUBLICATION PIPELINE INTERFACE
 // =============================================================================
 
-/** A trademark that has been published in the journal — tracks opposition window */
+/** A trademark that has been matched to journal data — tracks opposition window & demand note workflow */
 export interface PublicationRecord {
   id: string;
   caseNumber: string;
+  clientCode: string;
+  type: string;
   clientName: string;
   appName: string;
   tmCprNo: string;
   appClass: string;
+  journalNumber: string;
   stage: string;
+  /** Full user-facing sub-stage label (e.g. "Demand Note Submitted", not "D-Note Submitted") */
   subStage: string;
   agent: string;
   publicationDate: string;
@@ -1099,11 +1103,11 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
   const { data, error } = await supabase
     .from("trademarks")
     .select(
-      "id, case_number, client_name, application_name, tm_cpr_number, nice_class, " +
-      "status, sub_status, agent, publication_date, opposition_deadline, " +
+      "id, case_number, client_code, type, client_name, application_name, tm_cpr_number, nice_class, " +
+      "journal_number, status, sub_status, agent, publication_date, opposition_deadline, " +
       "demand_note_received, demand_note_date"
     )
-    .not("publication_date", "is", null) // only published cases
+    .not("publication_date", "is", null) // only journal-matched cases
     .order("opposition_deadline", { ascending: true, nullsFirst: false });
   throwIfError(error);
 
@@ -1115,7 +1119,7 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
     const deadline = row.opposition_deadline ? new Date(row.opposition_deadline) : null;
     const daysRemaining = deadline ? Math.floor((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Compute status label
+    // Compute pipeline status label
     let status: "pending" | "overdue" | "done" = "pending";
     if (row.demand_note_received) {
       status = "done";
@@ -1126,12 +1130,16 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
     return {
       id: row.id,
       caseNumber: row.case_number ?? "",
+      clientCode: row.client_code ?? "",
+      type: row.type ?? "",
       clientName: row.client_name ?? "",
       appName: row.application_name ?? "",
       tmCprNo: row.tm_cpr_number ?? "",
       appClass: row.nice_class ?? "",
+      journalNumber: row.journal_number ?? "",
       stage: row.status ?? "",
-      subStage: row.sub_status ?? "",
+      // Sub-stage is stored internally (e.g. "D-Note Submitted"); expose full user-facing label
+      subStage: formatWorkflowLabel(row.sub_status) ?? "",
       agent: row.agent ?? "",
       publicationDate: row.publication_date ?? "",
       oppositionDeadline: row.opposition_deadline ?? "",

@@ -42,6 +42,7 @@ import {
   STAGE_DOCUMENT_WORKFLOW,
   updateTrademarkStatus,
   updateTrademarkAgent,
+  listPublicationPipeline,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -718,6 +719,85 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
       city: "Islamabad",
     });
     expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
+  });
+});
+
+describe("Batch 13: Publication Workflow Integration", () => {
+  it("listPublicationPipeline — queries journal-matched records and maps clientCode, type, journalNumber, and formats subStage", async () => {
+    const publicationRows = [
+      {
+        id: "BX-100",
+        case_number: "CASE-100",
+        client_code: "CC-99",
+        type: "X",
+        client_name: "Apex Corp",
+        application_name: "APEX FLOW",
+        tm_cpr_number: "554433",
+        nice_class: "09",
+        journal_number: "J-890",
+        status: "STAGE 3",
+        sub_status: "D-Note Submitted",
+        agent: "Lead Counsel",
+        publication_date: "2026-08-01",
+        opposition_deadline: "2026-10-01",
+        demand_note_received: false,
+        demand_note_date: null,
+      },
+      {
+        id: "BX-101",
+        case_number: "CASE-101",
+        client_code: "CC-101",
+        type: "Y",
+        client_name: "Beacon Ltd",
+        application_name: "BEACON PRO",
+        tm_cpr_number: "998877",
+        nice_class: "42",
+        journal_number: "J-891",
+        status: "STAGE 3",
+        sub_status: "OPPO: Filed",
+        agent: "Senior Partner",
+        publication_date: "2026-08-05",
+        opposition_deadline: "2026-08-20",
+        demand_note_received: true,
+        demand_note_date: "2026-08-25",
+      },
+    ];
+
+    const selectQuery = createQuery({
+      data: publicationRows,
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(selectQuery);
+
+    const records = await listPublicationPipeline();
+
+    expect(selectQuery.not).toHaveBeenCalledWith("publication_date", "is", null);
+    expect(records).toHaveLength(2);
+
+    // Record 1: D-Note Submitted -> Demand Note Submitted
+    expect(records[0]).toMatchObject({
+      id: "BX-100",
+      caseNumber: "CASE-100",
+      clientCode: "CC-99",
+      type: "X",
+      journalNumber: "J-890",
+      stage: "STAGE 3",
+      subStage: "Demand Note Submitted",
+      status: expect.stringMatching(/pending|overdue/),
+    });
+
+    // Record 2: OPPO: Filed -> Opposition: Filed, demandNoteReceived true -> status: done
+    expect(records[1]).toMatchObject({
+      id: "BX-101",
+      caseNumber: "CASE-101",
+      clientCode: "CC-101",
+      type: "Y",
+      journalNumber: "J-891",
+      stage: "STAGE 3",
+      subStage: "Opposition: Filed",
+      demandNoteReceived: true,
+      status: "done",
+    });
   });
 });
 

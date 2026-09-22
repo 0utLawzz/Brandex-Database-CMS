@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (Audit + Security Fixes)**
+**Last updated: 22 September 2026 (Batch 13 — Publication Workflow Integration)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -278,6 +278,35 @@ This file is the single source of truth for project status.
 - [x] Consolidated `RecordView.tsx`: replaced fragmented status, agent, history, and payment cards with unified `CaseWorkflowSection`; preserved registry-matching "Document Status" (TM forms) and Batch 11 `StageDocumentsSection` completely intact
 - [x] Added unit tests in `api.test.ts` verifying `updateTrademarkStatus` and `updateTrademarkAgent` payment gate enforcement and sub-stage normalization
 - [x] Verified: `pnpm test --run` (32/32 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 11.44s)
+## 2026-09-22 — Batch 13: Publication Workflow Integration
 
+### What was integrated
 
+- **Publication Pipeline V2 (`PublicationPipelinePage.tsx`)**:
+  - Exclusively operates on journal-matched records (`publication_date IS NOT NULL`). Non-published trademarks do not clutter this pipeline.
+  - Retains all existing Match Engine controls intact: "Run Journal Match" and "Run Form Match" RPC triggers remain fully accessible.
+  - Added **Journal Number**, **Client Code**, and **Type** columns in the primary datasheet table, maintaining the canonical Brandex identifier hierarchy.
+  - Replaced the inaccurate header metric count `${records.length} PUBLISHED` with `${records.length} MATCHED CASES` alongside a breakdown of `Pending Window`, `Overdue`, and `Completed (Demand Note Received)` counts.
+  - Fixed date input state bug where changing the demand note received date previously ignored user input and defaulted to today's date. The date field is now fully controlled via React state.
+  - Sub-stage values are formatted using `formatWorkflowLabel` so users see full canonical terminology (e.g. `Demand Note Submitted`, `Demand Note Received`, `Opposition: Filed`, `Opposition: Received`, `Opposition: Withdrawn`, `Published`) instead of internal shorthand (`D-Note Submitted`, `OPPO: Filed`).
+  - Pipeline records display Publication Date, Opposition Deadline, Days Remaining, and color-coded status badges (`pending`, `overdue`, `done`).
+  - Added direct navigation link from each pipeline record card and modal to `/record/:id` for full case view.
 
+- **API Extensions (`api.ts`)**:
+  - `PublicationRecord` interface extended with `journalNumber`, `clientCode`, and `type` fields.
+  - `listPublicationPipeline()` updated to select `client_code`, `type`, and `journal_number`, and applies `formatWorkflowLabel(row.sub_status)` for client presentation.
+
+- **Unit Tests (`api.test.ts`)**:
+  - Added unit test suite for Batch 13 verifying `listPublicationPipeline` queries journal-matched cases, correctly maps `clientCode`, `type`, and `journalNumber`, applies `formatWorkflowLabel` to `subStage`, and computes days remaining and pipeline status badges (`pending`, `overdue`, `done`).
+
+### Business / Legal Confirmation Item
+
+- **Publication Opposition Deadline Calculation**:
+  - Current implementation uses `run_journal_match()` which sets `opposition_deadline = publication_date + 60 days` (standard 2 months statutory opposition window).
+  - *Business/Legal Confirmation Required*: In Pakistani trademark practice (Trade Marks Ordinance 2001), the initial opposition period is 2 months from the date of publication in the Trade Marks Journal, extendable by up to 2 additional months upon application (Form TM-44). Need practice-owner confirmation if automatic 60-day calendar calculation should account for statutory gazette publication notice rules or track TM-44 extensions.
+
+### Verification
+
+- [x] `pnpm test --run` → 33/33 tests passed
+- [x] `pnpm typecheck` → 0 errors
+- [x] `pnpm build` → production bundle compiled successfully
