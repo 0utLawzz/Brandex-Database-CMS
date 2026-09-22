@@ -1,11 +1,12 @@
-import { listAgents, listTrademarkPage, CITIES } from "@/lib/api";
+import { listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, CITIES } from "@/lib/api";
 import type { TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { Users2, ChevronLeft, ChevronRight, ExternalLink, ClipboardCheck, X } from "lucide-react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Users2, ChevronLeft, ChevronRight, ExternalLink, ClipboardCheck, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const PAGE_SIZE = 50;
 
@@ -55,9 +56,14 @@ function FilterSelect({
 
 export function AssignedPage() {
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [page, setPage] = useState(1);
   const [assignmentRecord, setAssignmentRecord] = useState<TrademarkPage["records"][number] | null>(null);
+  const [selectedAgentName, setSelectedAgentName] = useState("");
+  const [selectedAgentCity, setSelectedAgentCity] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Assigned page only shows STAGE 2 + Sub-status Assigned
   const { data, isLoading } = useQuery<TrademarkPage>({
@@ -75,6 +81,15 @@ export function AssignedPage() {
     staleTime: 60_000,
   });
   const { data: agents = [] } = useQuery({ queryKey: ["agents"], queryFn: listAgents, staleTime: 5 * 60_000 });
+  const { data: agentProfiles = [] } = useQuery({
+    queryKey: ["agent-profiles"],
+    queryFn: listAgentProfiles,
+    staleTime: 5 * 60_000,
+  });
+  const activeAgentProfiles = useMemo(
+    () => agentProfiles.filter((a) => a.isActive !== false),
+    [agentProfiles]
+  );
   const completedQuery = useQuery({
     queryKey: ["assigned-completed", filters],
     queryFn: async () => {
@@ -97,6 +112,65 @@ export function AssignedPage() {
   };
 
   const goToRecord = (id: string) => navigate(`/record/${id}`);
+
+  const openAssignmentModal = (record: TrademarkPage["records"][number]) => {
+    setAssignmentRecord(record);
+    setSelectedAgentName(record.agent || "");
+    setSelectedAgentCity(record.city || "");
+  };
+
+  const handleAssignAgent = async () => {
+    if (!assignmentRecord) return;
+    if (!assignmentRecord.stage2Paid) {
+      toast({
+        title: "⚠ Payment Required",
+        description: "Stage 2 payment is required before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!selectedAgentName.trim()) {
+      toast({
+        title: "Agent Required",
+        description: "Please select an agent from the Agents master list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAssigning(true);
+    try {
+      await assignStage2Agent(
+        assignmentRecord.id,
+        selectedAgentName.trim(),
+        selectedAgentCity.trim() || undefined,
+      );
+      toast({
+        title: "Agent Assigned",
+        description: `Successfully assigned to ${selectedAgentName}.`,
+      });
+      setAssignmentRecord((prev) =>
+        prev
+          ? {
+              ...prev,
+              agent: selectedAgentName.trim(),
+              city: selectedAgentCity.trim() || prev.city,
+            }
+          : null,
+      );
+      queryClient.invalidateQueries({ queryKey: ["assigned-page"] });
+      queryClient.invalidateQueries({ queryKey: ["agents"] });
+    } catch (err: any) {
+      toast({
+        title: "Assignment Error",
+        description: err?.message || "Failed to assign agent.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
 
   return (
     <AppShell>
@@ -215,7 +289,7 @@ export function AssignedPage() {
                         <button type="button" onClick={() => goToRecord(r.id)} className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white" title="Open complete record detail">
                           <ExternalLink className="h-3 w-3" /> RECORD
                         </button>
-                        <button type="button" onClick={() => setAssignmentRecord(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-[9px] font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" title="Open assignment acceptance summary">
+                        <button type="button" onClick={() => openAssignmentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-[9px] font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" title="Open assignment acceptance summary">
                           <ClipboardCheck className="h-3 w-3" /> ASSIGNMENT
                         </button>
                       </div>
@@ -272,6 +346,99 @@ export function AssignedPage() {
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">STATUS</span><strong>{assignmentRecord.stage || "—"}</strong></div>
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">SUB-STATUS</span><strong>{assignmentRecord.subStage || "—"}</strong></div>
               </div>
+              {!assignmentRecord.stage2Paid ? (
+                <>
+                  <div className="mt-3 p-3 bg-[#FFF0D0] border-2 border-[#C94A00] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-[#C94A00] shrink-0" />
+                      <span className="font-mono text-xs font-bold text-[#6C1C1F]">
+                        Stage 2 payment is required before proceeding.
+                      </span>
+                    </div>
+                    <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
+                      MANUAL — NOT VERIFIED
+                    </span>
+                  </div>
+                  <div className="mt-3 p-3 bg-white/70 border-2 border-[#0C0C0C]/30 opacity-70">
+                    <div className="font-mono text-[10px] font-bold uppercase text-[#6d6658] mb-1">
+                      ASSIGN AGENT (BLOCKED)
+                    </div>
+                    <div className="font-mono text-xs text-[#6C1C1F]">
+                      Agent assignment is locked until Stage 2 payment is cleared.
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-3 p-3 bg-[#D8F2E8] border-2 border-[#0A6B52] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#0A6B52] shrink-0" />
+                      <span className="font-mono text-xs font-bold text-[#0A6B52]">
+                        Stage 2 Payment Confirmed ({assignmentRecord.stage2PaidDate || "Recorded"})
+                      </span>
+                    </div>
+                    <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
+                      MANUAL — NOT VERIFIED
+                    </span>
+                  </div>
+                  <div className="mt-3 p-3 bg-white border-2 border-[#0C0C0C] shadow-[3px_3px_0_#0C0C0C]">
+                    <div className="font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-2 font-bold">
+                      SELECT AGENT FROM AGENTS MASTER SYSTEM
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-mono text-[9px] font-bold text-[#6d6658] mb-1">AGENT</label>
+                        <select
+                          value={selectedAgentName}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedAgentName(val);
+                            const matched = activeAgentProfiles.find((a) => a.name === val);
+                            if (matched?.city && CITIES.includes(matched.city as any)) {
+                              setSelectedAgentCity(matched.city);
+                            }
+                          }}
+                          className="w-full h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
+                        >
+                          <option value="">-- SELECT AGENT --</option>
+                          {selectedAgentName && !activeAgentProfiles.some((a) => a.name === selectedAgentName) && (
+                            <option value={selectedAgentName}>{selectedAgentName} (Current)</option>
+                          )}
+                          {activeAgentProfiles.map((a) => (
+                            <option key={a.id} value={a.name}>
+                              {a.name} {a.city ? `(${a.city})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block font-mono text-[9px] font-bold text-[#6d6658] mb-1">AGENT CITY</label>
+                        <select
+                          value={selectedAgentCity}
+                          onChange={(e) => setSelectedAgentCity(e.target.value)}
+                          className="w-full h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
+                        >
+                          <option value="">-- SELECT CITY --</option>
+                          {CITIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAssignAgent}
+                        disabled={isAssigning || !selectedAgentName.trim()}
+                        className="inline-flex items-center gap-1.5 border-2 border-[#0A6B52] bg-[#0A6B52] px-4 py-1.5 font-mono text-xs font-bold uppercase text-white hover:bg-[#074F3C] disabled:opacity-50 transition-colors"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {isAssigning ? "ASSIGNING…" : "CONFIRM ASSIGNMENT"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
               <p className="mt-4 border-l-4 border-[#C94A00] bg-[#FFF0D0] p-3 font-mono text-[10px] uppercase leading-relaxed">This view reports the current assignment queue from the trusted trademark status fields. Complete acceptance workflow history is available in the case detail record.</p>
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => goToRecord(assignmentRecord.id)} className="inline-flex items-center gap-2 border-2 border-[#6C1C1F] bg-[#6C1C1F] px-3 py-2 font-mono text-xs font-bold uppercase text-white"><ExternalLink className="h-4 w-4" /> OPEN RECORD</button></div>
             </section>

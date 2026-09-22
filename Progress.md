@@ -179,5 +179,15 @@ This file is the single source of truth for project status.
 - [x] Updated `RecordView.tsx` to persist and display real Stage 1–4 manual payments with clear `MANUAL — NOT VERIFIED` status label
 - [x] Verified `pnpm test` (11/11 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 13.7s bundle)
 
+## 2026-09-22 — Batch 2 & 3: Stage 2 Payment Gate & Agent Assignment
+
+- [x] Enforced Stage 2 payment gate (`isStage2PaymentRequired`, `validateStage2PaymentGate`, `assignStage2Agent` in `api.ts`)
+- [x] Integrated Stage 2 payment requirement check into `AssignedPage.tsx` and `RecordModal.tsx`
+- [x] Reused existing Agents master system (`listAgentProfiles()`) for agent assignment dropdowns
+- [x] Preserved legacy agent names and data integrity without schema changes or fake data
+- [x] Added unit tests in `api.test.ts` verifying payment gate blocking unpaid assignments and allowing cleared payments
+- [x] Verified `pnpm test` (13/13 passed), `pnpm typecheck` (0 errors), and `pnpm build` (12.35s production bundle)
+
+
 
 

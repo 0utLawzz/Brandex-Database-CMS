@@ -25,11 +25,15 @@ import {
   getRecord,
   getWorkflowHistory,
   inputToRow,
+  isStage2PaymentRequired,
   listTrademarkPage,
   listTrademarksForExport,
   mapRowToRecord,
+  StagePaymentRequiredError,
   updateTrademark,
   uploadImage,
+  validateStage2PaymentGate,
+  assignStage2Agent,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -271,5 +275,43 @@ describe("Brandex Supabase access patterns", () => {
     expect(history).toHaveLength(1);
     expect(history[0].toSubStatus).toBe("Accepted");
     expect(history[0].changedByName).toBe("User A");
+  });
+
+  it("enforces Stage 2 payment gate (stage2_paid = true required)", () => {
+    // Stage 2 with unpaid status must be blocked
+    expect(isStage2PaymentRequired("STAGE 2", false)).toBe(true);
+    expect(isStage2PaymentRequired("STAGE 2", undefined)).toBe(true);
+    expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(StagePaymentRequiredError);
+    expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(
+      "Stage 2 payment is required before proceeding.",
+    );
+
+    // Stage 2 with paid status must pass
+    expect(isStage2PaymentRequired("STAGE 2", true)).toBe(false);
+    expect(() => validateStage2PaymentGate("STAGE 2", true)).not.toThrow();
+
+    // Non-Stage 2 (e.g. STAGE 1, STAGE 3) must pass without requiring stage2_paid
+    expect(isStage2PaymentRequired("STAGE 1", false)).toBe(false);
+    expect(() => validateStage2PaymentGate("STAGE 1", false)).not.toThrow();
+  });
+
+  it("enforces Stage 2 agent assignment: blocked when unpaid, allowed when paid", async () => {
+    // Unpaid case: must throw StagePaymentRequiredError
+    const unpaidQuery = createQuery({ data: { stage2_paid: false, status: "STAGE 2", sub_status: "Assigned" }, error: null });
+    supabaseMock.from.mockReturnValue(unpaidQuery);
+    await expect(assignStage2Agent("BX-1", "Counsel A", "Islamabad")).rejects.toBeInstanceOf(StagePaymentRequiredError);
+
+    // Paid case: updates agent and city
+    const paidSelectQuery = createQuery({ data: { stage2_paid: true, status: "STAGE 2", sub_status: "Assigned" }, error: null });
+    const updateQuery = createQuery({ data: null, error: null });
+    let callCount = 0;
+    supabaseMock.from.mockImplementation(() => {
+      callCount++;
+      return callCount === 1 ? paidSelectQuery : updateQuery;
+    });
+
+    await assignStage2Agent("BX-1", "Counsel B", "Karachi");
+    expect(updateQuery.update).toHaveBeenCalledWith({ agent: "Counsel B", city: "Karachi" });
+    expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
   });
 });

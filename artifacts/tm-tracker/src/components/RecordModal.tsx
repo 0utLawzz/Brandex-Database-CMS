@@ -11,6 +11,8 @@ import {
   STATUS_WORKFLOW,
   CITIES,
   VALID_TYPES,
+  isStage2PaymentRequired,
+  listAgentProfiles,
 } from "@/lib/api";
 import type { TrademarkInput, TrademarkRecord } from "@/lib/api";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -143,6 +145,17 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
     return map;
   }, [clientRefs, allTrademarks]);
 
+  const { data: agentProfiles = [] } = useQuery({
+    queryKey: ["agent-profiles"],
+    queryFn: listAgentProfiles,
+    staleTime: 5 * 60_000,
+  });
+
+  const activeAgentProfiles = useMemo(
+    () => agentProfiles.filter((a) => a.isActive !== false),
+    [agentProfiles]
+  );
+
   const createMutation = useMutation({
     mutationFn: (input: TrademarkInput) => createTrademark(input),
     onSuccess: () => {
@@ -219,6 +232,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
   const watchStage = form.watch("stage");
   const watchImage = form.watch("image");
   const availableSubStages = STATUS_WORKFLOW[watchStage] ?? [];
+  const isStage2Paid = !creating && Boolean(trademark?.stage2Paid);
 
   // Auto-populate Client Name when Client Code changes
   const handleClientCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,6 +279,15 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
   };
 
   const onSubmit = (data: FormValues) => {
+    // Stage 2 Payment Gate: Assigned -> Accepted -> Hearing requires stage2_paid = true
+    if (data.stage === "STAGE 2" && !isStage2Paid) {
+      toast({
+        title: "⚠ Payment Required",
+        description: "Stage 2 payment is required before proceeding.",
+        variant: "destructive",
+      });
+      return;
+    }
     const payload: TrademarkInput = {
       date:       data.date,
       type:       data.type,
@@ -482,23 +505,94 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     </FormSelect>
                   </div>
                 </div>
+                {watchStage === "STAGE 2" && (
+                  <div
+                    className={`mt-3 p-3 border-2 flex items-center justify-between ${
+                      isStage2Paid
+                        ? "bg-[#D8F2E8] border-[#0A6B52]"
+                        : "bg-[#FFF0D0] border-[#C94A00]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isStage2Paid ? (
+                        <CheckCircle2 className="w-4 h-4 text-[#0A6B52] shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-[#C94A00] shrink-0" />
+                      )}
+                      <span
+                        className={`font-mono text-xs font-bold ${
+                          isStage2Paid ? "text-[#0A6B52]" : "text-[#6C1C1F]"
+                        }`}
+                      >
+                        {isStage2Paid
+                          ? `Stage 2 Payment Confirmed (${trademark?.stage2PaidDate || "Recorded"})`
+                          : "Stage 2 payment is required before proceeding."}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
+                      MANUAL — NOT VERIFIED
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Assignment */}
               <div>
                 <SectionHead title="Assignment" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <FieldLabel>AGENT</FieldLabel>
-                    <FormInput placeholder="Agent name" {...form.register("agent")} />
+                {watchStage === "STAGE 2" && !isStage2Paid ? (
+                  <div className="p-3 bg-[#FFF0D0] border-2 border-[#C94A00] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-[#C94A00] shrink-0" />
+                        <span className="font-mono text-xs font-bold text-[#6C1C1F]">
+                          Stage 2 payment is required before proceeding.
+                        </span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
+                        MANUAL — NOT VERIFIED
+                      </span>
+                    </div>
+                    <div className="font-mono text-xs text-[#6d6658]">
+                      Agent assignment is locked until Stage 2 payment is cleared.
+                    </div>
                   </div>
-                  <div>
-                    <FieldLabel required>AGENT CITY</FieldLabel>
-                    <FormSelect {...form.register("city")}>
-                      {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </FormSelect>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel>AGENT (MASTER SYSTEM)</FieldLabel>
+                      <FormSelect
+                        {...form.register("agent")}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          form.setValue("agent", val);
+                          const matched = activeAgentProfiles.find((a) => a.name === val);
+                          if (matched?.city && CITIES.includes(matched.city as any)) {
+                            form.setValue("city", matched.city);
+                          }
+                        }}
+                      >
+                        <option value="">-- SELECT AGENT --</option>
+                        {form.watch("agent") &&
+                          !activeAgentProfiles.some((a) => a.name === form.watch("agent")) && (
+                            <option value={form.watch("agent")}>
+                              {form.watch("agent")} (Current)
+                            </option>
+                          )}
+                        {activeAgentProfiles.map((a) => (
+                          <option key={a.id} value={a.name}>
+                            {a.name} {a.city ? `(${a.city})` : ""}
+                          </option>
+                        ))}
+                      </FormSelect>
+                    </div>
+                    <div>
+                      <FieldLabel required>AGENT CITY</FieldLabel>
+                      <FormSelect {...form.register("city")}>
+                        {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </FormSelect>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Additional */}

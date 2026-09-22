@@ -579,6 +579,61 @@ export class ConflictError extends Error {
   }
 }
 
+export class StagePaymentRequiredError extends Error {
+  constructor(message = "Stage 2 payment is required before proceeding.") {
+    super(message);
+    this.name = "StagePaymentRequiredError";
+  }
+}
+
+/**
+ * Stage 2 workflow (Assigned -> Accepted -> Hearing) requires stage2_paid = true.
+ * Manual / placeholder only — payment is NOT auto-verified.
+ */
+export function isStage2PaymentRequired(stage?: string, stage2Paid?: boolean): boolean {
+  return stage === "STAGE 2" && !stage2Paid;
+}
+
+export function validateStage2PaymentGate(stage?: string, stage2Paid?: boolean): void {
+  if (isStage2PaymentRequired(stage, stage2Paid)) {
+    throw new StagePaymentRequiredError();
+  }
+}
+
+/**
+ * Assigns an agent to a Stage 2 Assigned trademark.
+ * Requires stage2_paid = true.
+ * Reuses existing agent string field and agents master profiles.
+ */
+export async function assignStage2Agent(
+  id: string,
+  agentName: string,
+  city?: string,
+): Promise<void> {
+  ensureConfigured();
+  const { data, error: fetchErr } = await supabase
+    .from("trademarks")
+    .select("stage2_paid, status, sub_status")
+    .eq("id", id)
+    .single();
+  throwIfError(fetchErr);
+  if (!data?.stage2_paid) {
+    throw new StagePaymentRequiredError("Stage 2 payment is required before assigning an agent.");
+  }
+  const patch: Record<string, string> = {
+    agent: agentName,
+  };
+  if (city) {
+    patch.city = city;
+  }
+  const { error } = await supabase
+    .from("trademarks")
+    .update(patch)
+    .eq("id", id);
+  throwIfError(error);
+}
+
+
 export async function updateTrademark(
   id: string,
   input: TrademarkInput,
