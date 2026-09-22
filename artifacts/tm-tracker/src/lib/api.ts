@@ -1169,6 +1169,54 @@ export async function deleteAgentFee(id: string): Promise<void> {
   throwIfError(error);
 }
 
+// =============================================================================
+// AGENT CASE COUNTS
+// Counts Stage 2 sub-stage cases assigned to an agent by their text name.
+// No FK required — matches trademarks.agent exact string.
+// =============================================================================
+
+export interface AgentCaseCounts {
+  /** Stage 2 + sub_status = 'Assigned' */
+  assignedCases: number;
+  /** Stage 2 + sub_status = 'Accepted' */
+  acceptedCases: number;
+  /** All cases (any stage) where trademarks.agent = name */
+  totalAssignedCases: number;
+}
+
+/** Returns trademark case counts for an agent matched by their exact name string.
+ * Only fired on demand (modal open), not in the table list.
+ */
+export async function getAgentCaseCounts(agentName: string): Promise<AgentCaseCounts> {
+  ensureConfigured();
+  const [assignedResult, acceptedResult, totalResult] = await Promise.all([
+    supabase
+      .from("trademarks")
+      .select("id", { count: "exact", head: true })
+      .eq("agent", agentName)
+      .eq("status", "STAGE 2")
+      .ilike("sub_status", "Assigned"),
+    supabase
+      .from("trademarks")
+      .select("id", { count: "exact", head: true })
+      .eq("agent", agentName)
+      .eq("status", "STAGE 2")
+      .ilike("sub_status", "Accepted"),
+    supabase
+      .from("trademarks")
+      .select("id", { count: "exact", head: true })
+      .eq("agent", agentName),
+  ]);
+  throwIfError(assignedResult.error);
+  throwIfError(acceptedResult.error);
+  throwIfError(totalResult.error);
+  return {
+    assignedCases: assignedResult.count ?? 0,
+    acceptedCases: acceptedResult.count ?? 0,
+    totalAssignedCases: totalResult.count ?? 0,
+  };
+}
+
 // Internal helper: maps a raw Supabase agent_fee row to AgentFee interface
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapFeeRow(row: any): AgentFee {

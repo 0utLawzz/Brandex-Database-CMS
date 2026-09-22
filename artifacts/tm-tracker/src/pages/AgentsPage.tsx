@@ -1,4 +1,4 @@
-import { listAgentProfiles, createAgentProfile, updateAgentProfile, listFeesForAgent, deleteAgentFee, type AgentWithStats, type AgentFee, type AgentInput } from "@/lib/api";
+import { listAgentProfiles, createAgentProfile, updateAgentProfile, listFeesForAgent, deleteAgentFee, getAgentCaseCounts, type AgentWithStats, type AgentFee, type AgentInput, type AgentCaseCounts } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,6 +42,13 @@ export function AgentsPage() {
     queryFn: () => selectedAgent ? listFeesForAgent(selectedAgent.id) : [],
     enabled: !!selectedAgent,
     staleTime: 30_000,
+  });
+
+  const { data: caseCounts, isLoading: caseCountsLoading } = useQuery<AgentCaseCounts>({
+    queryKey: ["agent-case-counts", selectedAgent?.name],
+    queryFn: () => getAgentCaseCounts(selectedAgent!.name),
+    enabled: !!selectedAgent && !isEditing,
+    staleTime: 60_000,
   });
 
   const createMutation = useMutation({
@@ -295,11 +302,43 @@ export function AgentsPage() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 border-2 border-[#0C0C0C] bg-white p-3 font-mono text-xs uppercase">
-              <div><span className="block text-[9px] font-bold text-[#6d6658]">CASES WITH FEES</span><strong>{selectedAgent.casesWithFees}</strong></div>
-              <div><span className="block text-[9px] font-bold text-[#6d6658]">TOTAL BILLED</span><strong>{formatCurrency(selectedAgent.totalBilled)}</strong></div>
-              <div><span className="block text-[9px] font-bold text-[#6d6658]">TOTAL PAID</span><strong className="text-[#0A6B52]">{formatCurrency(selectedAgent.totalPaid)}</strong></div>
-              <div><span className="block text-[9px] font-bold text-[#6d6658]">BALANCE DUE</span><strong className={selectedAgent.balanceDue > 0 ? "text-[#CC0000]" : "text-[#0A6B52]"}>{formatCurrency(selectedAgent.balanceDue)}</strong></div>
+            {/* Case assignment stats — sourced from trademarks.agent text field */}
+            <div className="mt-4">
+              <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-2">CASE ASSIGNMENT (from trademark records)</div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="border-2 border-[#0C0C0C] bg-white p-3 shadow-[2px_2px_0_#0C0C0C]">
+                  <span className="block text-[9px] font-bold text-[#6d6658] uppercase">ASSIGNED (STAGE 2)</span>
+                  <strong className="font-serif text-2xl text-[#D4A800]">
+                    {caseCountsLoading ? "…" : (caseCounts?.assignedCases ?? "—")}
+                  </strong>
+                </div>
+                <div className="border-2 border-[#0C0C0C] bg-white p-3 shadow-[2px_2px_0_#0C0C0C]">
+                  <span className="block text-[9px] font-bold text-[#6d6658] uppercase">ACCEPTED (STAGE 2)</span>
+                  <strong className="font-serif text-2xl text-[#0A6B52]">
+                    {caseCountsLoading ? "…" : (caseCounts?.acceptedCases ?? "—")}
+                  </strong>
+                </div>
+                <div className="border-2 border-[#0C0C0C] bg-white p-3 shadow-[2px_2px_0_#0C0C0C]">
+                  <span className="block text-[9px] font-bold text-[#6d6658] uppercase">TOTAL CASES</span>
+                  <strong className="font-serif text-2xl">
+                    {caseCountsLoading ? "…" : (caseCounts?.totalAssignedCases ?? "—")}
+                  </strong>
+                </div>
+              </div>
+              <p className="mt-1 font-mono text-[9px] text-[#9d9488] uppercase tracking-wider">
+                Matched by exact agent name — trademarks.agent text field
+              </p>
+            </div>
+
+            {/* Fee financial stats — from agent_fees via agent_summary view */}
+            <div className="mt-3">
+              <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-2">FEE FINANCIAL SUMMARY (from agent_fees)</div>
+              <div className="grid grid-cols-2 gap-3 border-2 border-[#0C0C0C] bg-white p-3 font-mono text-xs uppercase sm:grid-cols-4">
+                <div><span className="block text-[9px] font-bold text-[#6d6658]">CASES W/ FEES</span><strong>{selectedAgent.casesWithFees}</strong></div>
+                <div><span className="block text-[9px] font-bold text-[#6d6658]">TOTAL BILLED</span><strong>{formatCurrency(selectedAgent.totalBilled)}</strong></div>
+                <div><span className="block text-[9px] font-bold text-[#6d6658]">TOTAL RECEIVED</span><strong className="text-[#0A6B52]">{formatCurrency(selectedAgent.totalPaid)}</strong></div>
+                <div><span className="block text-[9px] font-bold text-[#6d6658]">BALANCE</span><strong className={selectedAgent.balanceDue > 0 ? "text-[#CC0000]" : "text-[#0A6B52]"}>{formatCurrency(selectedAgent.balanceDue)}</strong></div>
+              </div>
             </div>
 
             <div className="mt-4">
