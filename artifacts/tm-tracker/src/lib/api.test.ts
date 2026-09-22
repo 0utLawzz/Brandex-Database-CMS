@@ -219,7 +219,7 @@ describe("Brandex Supabase access patterns", () => {
       .mockReturnValueOnce(deleteQueryMock);
 
     await createTrademark({ type: "X", clientCode: "C-7", caseNumber: "CASE-10", appName: "NEW", city: "Lahore", stage: "STAGE 1" });
-    await updateTrademark("BX-2", { type: "X", clientCode: "C-7", caseNumber: "CASE-10", appName: "UPDATED", city: "Lahore", stage: "STAGE 2" }, 3);
+    await updateTrademark("BX-2", { type: "X", clientCode: "C-7", caseNumber: "CASE-10", appName: "UPDATED", city: "Lahore", stage: "STAGE 1" }, 3);
     await deleteTrademark("BX-2");
 
     expect(createQueryMock.insert).toHaveBeenCalledWith(expect.objectContaining({ created_by: "user-1", updated_by: "user-1" }));
@@ -899,6 +899,36 @@ describe("Batch 13: Publication Workflow Integration", () => {
         applicationName: "New Brand",
         clientCode: "CC-01",
         caseType: "TM",
+      });
+    });
+  });
+
+  describe("Batch 15: Security, Workflow Validation & Reliability", () => {
+    it("validates stage and sub-stage values on updateTrademark", async () => {
+      await expect(
+        updateTrademark("BX-1", { stage: "INVALID_STAGE" as any })
+      ).rejects.toThrow('Invalid stage "INVALID_STAGE"');
+
+      await expect(
+        updateTrademark("BX-1", { stage: "STAGE 1", subStage: "NonExistentSubStage" })
+      ).rejects.toThrow('Invalid sub-stage "NonExistentSubStage" for STAGE 1');
+    });
+
+    it("requires non-empty agent name on assignStage2Agent", async () => {
+      await expect(assignStage2Agent("BX-1", "   ")).rejects.toThrow("Agent name is required.");
+    });
+
+    it("trims agent and city whitespace on assignStage2Agent", async () => {
+      const selectQuery = createQuery({ data: { stage2_paid: true, status: "STAGE 2", sub_status: "Assigned" }, error: null });
+      const updateQuery = createQuery({ data: null, error: null });
+      supabaseMock.from
+        .mockReturnValueOnce(selectQuery)
+        .mockReturnValueOnce(updateQuery);
+
+      await assignStage2Agent("BX-1", "  Agent Smith  ", "  Karachi  ");
+      expect(updateQuery.update).toHaveBeenCalledWith({
+        agent: "Agent Smith",
+        city: "Karachi",
       });
     });
   });

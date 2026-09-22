@@ -660,6 +660,27 @@ export async function searchTm(tmNo: string): Promise<TmSearchResult> {
 
 export async function createTrademark(input: TrademarkInput): Promise<{ id: string; caseNumber: string }> {
   ensureConfigured();
+
+  // Validate workflow values if stage is supplied
+  if (input.stage) {
+    if (!STAGES.includes(input.stage as any)) {
+      throw new Error(`Invalid stage "${input.stage}". Permitted stages: ${STAGES.join(", ")}`);
+    }
+    if (input.subStage && input.stage in STATUS_WORKFLOW) {
+      const validSubStages = STATUS_WORKFLOW[input.stage] || [];
+      const normalizedSub = normalizeWorkflowValue(input.subStage);
+      const isValid = validSubStages.some(
+        (s) => s === input.subStage || normalizeWorkflowValue(s) === normalizedSub,
+      );
+      if (!isValid) {
+        throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
+      }
+    }
+    if (input.stage === "STAGE 2" && isStage2PaymentRequired("STAGE 2", false)) {
+      throw new StagePaymentRequiredError("Stage 2 payment is required before creating a record in Stage 2.");
+    }
+  }
+
   const { data: authData } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("trademarks")
@@ -710,6 +731,9 @@ export async function assignStage2Agent(
   city?: string,
 ): Promise<void> {
   ensureConfigured();
+  if (!agentName || !agentName.trim()) {
+    throw new Error("Agent name is required.");
+  }
   const { data, error: fetchErr } = await supabase
     .from("trademarks")
     .select("stage2_paid, status, sub_status")
@@ -720,10 +744,10 @@ export async function assignStage2Agent(
     throw new StagePaymentRequiredError("Stage 2 payment is required before assigning an agent.");
   }
   const patch: Record<string, string> = {
-    agent: agentName,
+    agent: agentName.trim(),
   };
-  if (city) {
-    patch.city = city;
+  if (city && city.trim()) {
+    patch.city = city.trim();
   }
   const { error } = await supabase
     .from("trademarks")
@@ -743,6 +767,24 @@ export async function updateTrademarkStatus(
   subStage?: string | null,
 ): Promise<void> {
   ensureConfigured();
+
+  // Validate stage
+  if (!STAGES.includes(stage as any)) {
+    throw new Error(`Invalid stage "${stage}". Permitted stages: ${STAGES.join(", ")}`);
+  }
+
+  // Validate subStage if supplied
+  if (subStage && stage in STATUS_WORKFLOW) {
+    const validSubStages = STATUS_WORKFLOW[stage] || [];
+    const normalizedSub = normalizeWorkflowValue(subStage);
+    const isValid = validSubStages.some(
+      (s) => s === subStage || normalizeWorkflowValue(s) === normalizedSub,
+    );
+    if (!isValid) {
+      throw new Error(`Invalid sub-stage "${subStage}" for ${stage}.`);
+    }
+  }
+
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
     .select("stage2_paid, status")
@@ -775,6 +817,9 @@ export async function updateTrademarkAgent(
   city?: string,
 ): Promise<void> {
   ensureConfigured();
+  if (!agentName || !agentName.trim()) {
+    throw new Error("Agent name is required.");
+  }
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
     .select("stage2_paid, status")
@@ -786,12 +831,11 @@ export async function updateTrademarkAgent(
     throw new StagePaymentRequiredError("Stage 2 payment is required before assigning an agent.");
   }
 
-  const patch: Record<string, string> = { agent: agentName };
-  if (city) patch.city = city;
+  const patch: Record<string, string> = { agent: agentName.trim() };
+  if (city && city.trim()) patch.city = city.trim();
   const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
   throwIfError(error);
 }
-
 
 export async function updateTrademark(
   id: string,
@@ -799,6 +843,35 @@ export async function updateTrademark(
   expectedVersion?: number,
 ): Promise<{ id: string; version: number }> {
   ensureConfigured();
+
+  // Validate workflow values if stage is supplied
+  if (input.stage) {
+    if (!STAGES.includes(input.stage as any)) {
+      throw new Error(`Invalid stage "${input.stage}". Permitted stages: ${STAGES.join(", ")}`);
+    }
+    if (input.subStage && input.stage in STATUS_WORKFLOW) {
+      const validSubStages = STATUS_WORKFLOW[input.stage] || [];
+      const normalizedSub = normalizeWorkflowValue(input.subStage);
+      const isValid = validSubStages.some(
+        (s) => s === input.subStage || normalizeWorkflowValue(s) === normalizedSub,
+      );
+      if (!isValid) {
+        throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
+      }
+    }
+
+    if (input.stage === "STAGE 2") {
+      const { data: current, error: fetchErr } = await supabase
+        .from("trademarks")
+        .select("stage2_paid")
+        .eq("id", id)
+        .single();
+      if (!fetchErr && current && isStage2PaymentRequired("STAGE 2", current.stage2_paid)) {
+        throw new StagePaymentRequiredError("Stage 2 payment is required before proceeding to Stage 2.");
+      }
+    }
+  }
+
   let query = supabase.from("trademarks").update(inputToRow(input)).eq("id", id);
   if (expectedVersion !== undefined) {
     query = query.eq("version", expectedVersion);

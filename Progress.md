@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (Batch 13 — Publication Workflow Integration)**
+**Last updated: 22 September 2026 (Batch 15 — Security, Documents, Data Integrity & Reliability)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -359,4 +359,28 @@ This file is the single source of truth for project status.
    - `pnpm test --run` → 40/40 tests passed across all test files.
    - `pnpm typecheck` → 0 errors.
    - `pnpm build` → production bundle compiled successfully (Vite v7.3.6, dist generated).
+
+## 2026-09-22 — Batch 15: Security, Documents, Data Integrity & Reliability
+
+### What was completed
+
+1. **API Validation & Data Integrity (`api.ts`)**:
+   - Hardened `createTrademark` and `updateTrademark` with workflow stage and sub-stage validation against canonical `STAGES` and `STATUS_WORKFLOW`.
+   - Enforced string trimming on agent names and cities in `assignStage2Agent` and `updateTrademarkAgent` with non-empty checks.
+   - Preserved optimistic concurrency version control and Stage 2 payment gate checks intact.
+
+2. **Role-Gating & UI Security (`DatabasePage.tsx`, `AgentsPage.tsx`, `PublicationPipelinePage.tsx`, `RecordModal.tsx`)**:
+   - Added `getStaffRole()` role checks across all UI entry points.
+   - Restricted write actions for `viewer` role users: disabled `ADD RECORD`, `NEW AGENT`, agent editing, fee deletion, and match engine execution, displaying role tooltips/messages.
+   - Added read-only alert banner to `RecordModal.tsx` when viewed by `viewer` role users and disabled save/delete mutations.
+
+3. **User Action Safety & Confirmations**:
+   - Added confirmation dialogs before fee deletion in `AgentsPage.tsx`.
+
+4. **Tests & Build Verification**:
+   - Added focused unit tests in `api.test.ts` for Batch 15 stage/sub-stage validation and agent string trimming/validation.
+   - `pnpm test` → 43/43 tests passed across all test files.
+   - `pnpm typecheck` → passed (0 errors).
+   - `pnpm build` → passed; production bundle compiled successfully in 25.16s.
+
 

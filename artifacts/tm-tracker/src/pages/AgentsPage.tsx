@@ -1,4 +1,4 @@
-import { listAgentProfiles, createAgentProfile, updateAgentProfile, listFeesForAgent, deleteAgentFee, getAgentCaseCounts, type AgentWithStats, type AgentFee, type AgentInput, type AgentCaseCounts } from "@/lib/api";
+import { listAgentProfiles, createAgentProfile, updateAgentProfile, listFeesForAgent, deleteAgentFee, getAgentCaseCounts, getStaffRole, type AgentWithStats, type AgentFee, type AgentInput, type AgentCaseCounts } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +31,13 @@ export function AgentsPage() {
   const [editForm, setEditForm] = useState<AgentInput>({ name: "" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: staffRole } = useQuery({
+    queryKey: ["staff-role"],
+    queryFn: getStaffRole,
+    staleTime: 5 * 60_000,
+  });
+  const isViewer = staffRole === "viewer";
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ["agent-profiles", filters],
@@ -141,12 +148,22 @@ export function AgentsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => openEditModal()}
-              className="inline-flex items-center gap-2 border-2 border-[#0A6B52] bg-[#D8F2E8] px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors"
-            >
-              <Plus className="h-4 w-4" /> NEW AGENT
-            </button>
+            {!isViewer ? (
+              <button
+                onClick={() => openEditModal()}
+                className="inline-flex items-center gap-2 border-2 border-[#0A6B52] bg-[#D8F2E8] px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors"
+              >
+                <Plus className="h-4 w-4" /> NEW AGENT
+              </button>
+            ) : (
+              <button
+                disabled
+                className="inline-flex items-center gap-2 border-2 border-[#0A6B52]/40 bg-[#D8F2E8]/40 px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52]/40 cursor-not-allowed"
+                title="Editor or Admin role required"
+              >
+                <Plus className="h-4 w-4" /> NEW AGENT
+              </button>
+            )}
 
             <label className="flex items-center gap-2 font-mono text-xs text-[#6d6658]">
               <input
@@ -243,16 +260,20 @@ export function AgentsPage() {
                       )}
                     </td>
                     <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModal(agent);
-                        }}
-                        className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
-                      >
-                        <Edit className="h-3 w-3" /> EDIT
-                      </button>
+                      {!isViewer ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(agent);
+                          }}
+                          className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
+                        >
+                          <Edit className="h-3 w-3" /> EDIT
+                        </button>
+                      ) : (
+                        <span className="font-mono text-[9px] text-[#9d9488] uppercase">—</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -404,12 +425,20 @@ export function AgentsPage() {
                           )}
                         </td>
                         <td className="px-2 py-1.5">
-                          <button
-                            onClick={() => deleteFeeMutation.mutate(fee.id)}
-                            className="border-2 border-[#CC0000] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase text-[#CC0000] hover:bg-[#CC0000] hover:text-white transition-colors"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          {!isViewer ? (
+                            <button
+                              onClick={() => {
+                                if (confirm("Delete this fee record permanently?")) {
+                                  deleteFeeMutation.mutate(fee.id);
+                                }
+                              }}
+                              disabled={deleteFeeMutation.isPending}
+                              className="border-2 border-[#CC0000] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase text-[#CC0000] hover:bg-[#CC0000] hover:text-white transition-colors disabled:opacity-50"
+                              title="Delete fee"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          ) : null}
                         </td>
                       </tr>
                     ))

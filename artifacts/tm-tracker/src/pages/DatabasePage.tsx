@@ -132,7 +132,11 @@ export function DatabasePage() {
           ) : (
             <button onClick={() => alert("CSV Import is admin-only.")} className="flex items-center gap-2 px-3 h-10 bg-white border-2 border-[#0A6B52] text-[#0A6B52] font-mono font-bold text-xs uppercase tracking-wider opacity-60" title="Admin only">IMPORT</button>
           )}
-          <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 h-10 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110"><Plus className="w-4 h-4" /> ADD RECORD</button>
+          {staffRole !== "viewer" ? (
+            <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 h-10 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110"><Plus className="w-4 h-4" /> ADD RECORD</button>
+          ) : (
+            <button onClick={() => alert("Adding records requires Editor or Admin role.")} className="flex items-center gap-2 px-4 h-10 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] font-mono font-bold text-xs uppercase tracking-wider opacity-60" title="Editor or Admin role required"><Plus className="w-4 h-4" /> ADD RECORD</button>
+          )}
         </div>
 
         {showFilters && (

@@ -15,6 +15,7 @@ import {
   listAgentProfiles,
   formatWorkflowLabel,
   normalizeWorkflowValue,
+  getStaffRole,
 } from "@/lib/api";
 import type { TrademarkInput, TrademarkRecord } from "@/lib/api";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -146,6 +147,13 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
     }
     return map;
   }, [clientRefs, allTrademarks]);
+
+  const { data: staffRole } = useQuery({
+    queryKey: ["staff-role"],
+    queryFn: getStaffRole,
+    staleTime: 5 * 60_000,
+  });
+  const isViewer = staffRole === "viewer";
 
   const { data: agentProfiles = [] } = useQuery({
     queryKey: ["agent-profiles"],
@@ -406,6 +414,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
         ) : (
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {isViewer && (
+                <div className="p-3 bg-[#FFF0D0] border-2 border-[#B0740E] flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-[#6C1C1F] shrink-0" />
+                  <span className="font-mono text-xs font-bold text-[#6C1C1F] uppercase">
+                    VIEWER MODE: You have read-only access. Saving or deleting records is restricted.
+                  </span>
+                </div>
+              )}
 
               {/* Basic Information */}
               <div>
@@ -735,7 +751,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
 
             {/* Footer */}
             <div className="shrink-0 flex items-center justify-between px-6 py-4 bg-[#E8DFC7] border-t-2 border-[#0C0C0C]">
-              {!creating ? (
+              {!creating && !isViewer ? (
                 <button
                   type="button"
                   onClick={handleDelete}
@@ -756,8 +772,9 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || isViewer}
                   className="flex items-center gap-2 bg-[#C94A00] text-white border-2 border-[#C94A00] px-6 h-10 font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50"
+                  title={isViewer ? "Editor or Admin role required" : undefined}
                 >
                   <Save className="w-4 h-4" />
                   {isPending ? "SAVING TO DATABASE…" : creating ? "SAVE RECORD" : "UPDATE RECORD"}

@@ -4,6 +4,7 @@ import {
   clearDemandNoteReceived,
   runJournalMatch,
   runFormMatch,
+  getStaffRole,
   type PublicationRecord,
 } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
@@ -44,6 +45,13 @@ export function PublicationPipelinePage() {
   );
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: staffRole } = useQuery({
+    queryKey: ["staff-role"],
+    queryFn: getStaffRole,
+    staleTime: 5 * 60_000,
+  });
+  const isViewer = staffRole === "viewer";
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["publication-pipeline"],
@@ -145,12 +153,22 @@ export function PublicationPipelinePage() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => setShowMatchDialog(true)}
-              className="inline-flex items-center gap-2 border-2 border-[#0A6B52] bg-[#D8F2E8] px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors"
-            >
-              <RefreshCw className="h-4 w-4" /> RUN MATCH ENGINE
-            </button>
+            {!isViewer ? (
+              <button
+                onClick={() => setShowMatchDialog(true)}
+                className="inline-flex items-center gap-2 border-2 border-[#0A6B52] bg-[#D8F2E8] px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors"
+              >
+                <RefreshCw className="h-4 w-4" /> RUN MATCH ENGINE
+              </button>
+            ) : (
+              <button
+                disabled
+                className="inline-flex items-center gap-2 border-2 border-[#0A6B52]/40 bg-[#D8F2E8]/40 px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52]/40 cursor-not-allowed"
+                title="Editor or Admin role required"
+              >
+                <RefreshCw className="h-4 w-4" /> RUN MATCH ENGINE
+              </button>
+            )}
 
             <div className="flex items-center gap-4 ml-auto flex-wrap">
               <div className="flex items-center gap-2">
@@ -431,29 +449,35 @@ export function PublicationPipelinePage() {
                     <Clock className="h-4 w-4" />
                     <span className="font-mono text-xs">Not yet received</span>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <label className="font-mono text-[10px] font-bold uppercase text-[#6d6658]">
-                      Received Date:
-                    </label>
-                    <input
-                      type="date"
-                      value={demandNoteDate}
-                      onChange={(e) => setDemandNoteDate(e.target.value)}
-                      className="h-8 px-2 border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
-                    />
-                    <button
-                      onClick={() =>
-                        markReceivedMutation.mutate({
-                          id: selectedRecord.id,
-                          date: demandNoteDate,
-                        })
-                      }
-                      disabled={markReceivedMutation.isPending || !demandNoteDate}
-                      className="border-2 border-[#0A6B52] bg-[#D8F2E8] px-3 py-1.5 font-mono text-[10px] font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors disabled:opacity-50"
-                    >
-                      MARK RECEIVED
-                    </button>
-                  </div>
+                  {!isViewer ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="font-mono text-[10px] font-bold uppercase text-[#6d6658]">
+                        Received Date:
+                      </label>
+                      <input
+                        type="date"
+                        value={demandNoteDate}
+                        onChange={(e) => setDemandNoteDate(e.target.value)}
+                        className="h-8 px-2 border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
+                      />
+                      <button
+                        onClick={() =>
+                          markReceivedMutation.mutate({
+                            id: selectedRecord.id,
+                            date: demandNoteDate,
+                          })
+                        }
+                        disabled={markReceivedMutation.isPending || !demandNoteDate}
+                        className="border-2 border-[#0A6B52] bg-[#D8F2E8] px-3 py-1.5 font-mono text-[10px] font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        MARK RECEIVED
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="font-mono text-[10px] text-[#9d9488] uppercase italic">
+                      Read-only mode — Editor or Admin required to update
+                    </div>
+                  )}
                 </div>
               )}
             </div>
