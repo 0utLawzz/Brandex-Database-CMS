@@ -186,11 +186,11 @@
   animation: fadeIn 0.18s ease-out both;
 }
 
-/* ── Print Stylesheet (Dark Blue Typography & Theme Accents for A4) ────── */
+/* ── Print Stylesheet (Clean Black Ink on White — Brand Accents for A4) ── */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm 8mm 10mm;
+    margin: 10mm 12mm;
   }
 
   /* Hide everything that is not the record body */
@@ -201,12 +201,12 @@
     display: none !important;
   }
 
-  /* Reset body with Dark Blue text and white background */
+  /* Reset body with clean black ink on white background */
   body {
     background: #FFFFFF !important;
-    color: #0A1931 !important;
+    color: #0C0C0C !important;
     font-size: 9pt;
-    line-height: 1.3;
+    line-height: 1.35;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -256,17 +256,6 @@
     overflow: visible !important;
     text-overflow: unset !important;
     white-space: normal !important;
-  }
-
-  /* All black text & borders replaced with theme dark blue and brand accents */
-  .text-\[\#0C0C0C\],
-  .text-black {
-    color: #0A1931 !important;
-  }
-
-  .border-\[\#0C0C0C\],
-  .border-black {
-    border-color: #1E3E62 !important;
   }
 
   /* Preserve badge backgrounds & theme styling in print */

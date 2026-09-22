@@ -154,11 +154,11 @@ export function DatabasePage() {
 
         <div className="flex-1 overflow-auto bg-white">
           <table className="w-full text-left font-mono text-xs whitespace-nowrap border-collapse">
-            <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10"><tr>{["DATE", "IMAGE", "MODIFIED", "TYPE", "CLIENT CODE", "CASE NO", "TM/CPR", "CLASS", "APPLICATION", "STATUS", "SUB-STATUS", "CITY", "TM FORMS", "JOURNAL"].map((heading) => <th key={heading} className="px-3 py-3 border-r border-[#333] font-bold tracking-wider text-[10px] last:border-r-0">{heading}</th>)}</tr></thead>
+            <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10"><tr>{["DATE", "IMAGE", "MODIFIED", "TYPE", "CLIENT CODE", "CASE NO", "TM/CPR", "CLASS", "APPLICATION", "STATUS", "SUB-STATUS", "AGENT", "CITY", "TM FORMS", "JOURNAL"].map((heading) => <th key={heading} className="px-3 py-3 border-r border-[#333] font-bold tracking-wider text-[10px] last:border-r-0">{heading}</th>)}</tr></thead>
             <tbody>
-              {isLoading ? <tr><td colSpan={14} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">LOADING OPTIMIZED RECORD PAGE…</td></tr>
-              : error ? <tr><td colSpan={14} className="px-6 py-12 text-center font-bold text-[#CC0000]">FAILED TO LOAD RECORDS. PLEASE REFRESH.</td></tr>
-              : records.length === 0 ? <tr><td colSpan={14} className="px-6 py-12 text-center font-bold text-[#6d6658]">NO RECORDS MATCH THE CURRENT SEARCH OR FILTERS.</td></tr>
+              {isLoading ? <tr><td colSpan={15} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">LOADING OPTIMIZED RECORD PAGE…</td></tr>
+              : error ? <tr><td colSpan={15} className="px-6 py-12 text-center font-bold text-[#CC0000]">FAILED TO LOAD RECORDS. PLEASE REFRESH.</td></tr>
+              : records.length === 0 ? <tr><td colSpan={15} className="px-6 py-12 text-center font-bold text-[#6d6658]">NO RECORDS MATCH THE CURRENT SEARCH OR FILTERS.</td></tr>
               : records.map((record, index) => {
                 const activeForms = TM_FORMS.filter((form) => record.tmMatches?.[form]);
                 return <tr key={record.id} onClick={() => navigate(`/record/${record.id}`)} className={`cursor-pointer border-b border-[#0C0C0C]/10 hover:bg-[#E5D8C8] ${index % 2 === 0 ? "bg-[#FFF9F0]" : "bg-white"}`}>
@@ -173,6 +173,7 @@ export function DatabasePage() {
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[200px] truncate font-bold uppercase">{record.appName}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10"><span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold border border-[#0C0C0C]/20 uppercase ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>{record.stage}</span></td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate uppercase">{formatWorkflowLabel(record.subStage)}</td>
+                  <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[120px] truncate uppercase text-[#0C0C0C]">{record.agent || "—"}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10 uppercase">{record.city}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10"><div className="flex gap-1">{activeForms.length ? activeForms.map((form) => <span key={form} className="px-1.5 py-0.5 bg-[#B0740E]/15 border border-[#B0740E] text-[#6C1C1F] text-[9px] font-bold uppercase">{form}</span>) : <span className="text-[#9d9488]">—</span>}</div></td>
                   <td className="px-3 py-2 text-[#6d6658] uppercase">{record.journalNumber || "—"}</td>

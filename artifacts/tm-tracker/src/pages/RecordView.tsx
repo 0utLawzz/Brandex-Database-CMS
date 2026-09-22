@@ -1,12 +1,12 @@
-import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole } from "@/lib/api";
-import type { TrademarkRecord, TmMatches, JournalRecord } from "@/lib/api";
+import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole, getWorkflowReminders } from "@/lib/api";
+import type { TrademarkRecord, TmMatches } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort, formatDate } from "@/lib/utils";
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft, Edit2, Printer, CheckCircle2, MinusCircle,
-  Image as ImageIcon, FileText,
+  Image as ImageIcon, FileText, Bell,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RecordModal } from "@/components/RecordModal";
@@ -15,8 +15,8 @@ import { CaseWorkflowSection } from "@/components/CaseWorkflowSection";
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
-  "STAGE 2": "bg-[#D4A800] text-[#0C0C0C]",
-  "STAGE 3": "bg-[#C94A00] text-white",
+  "STAGE 2": "bg-[#B0740E] text-white",
+  "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
   "STOPPED": "bg-[#CC0000] text-white",
 };
@@ -106,6 +106,12 @@ export function RecordView() {
     TM5: false, TM6: false, TM11: false, TM16: false, TM56: false,
   };
 
+  const reminders = getWorkflowReminders(record.stage, record.subStage, {
+    filingDate: record.date || undefined,
+    publicationDate: record.publicationDate || undefined,
+    oppositionDeadline: record.oppositionDeadline || undefined,
+  });
+
   return (
     <AppShell>
       <div className="flex flex-col h-full bg-[#F0E8D0]">
@@ -148,12 +154,12 @@ export function RecordView() {
         >
           <div className="max-w-4xl mx-auto space-y-4 print:max-w-none print:space-y-2.5">
 
-            {/* Print-only header */}
-            <div className="hidden print:block border-b-2 border-[#1E3E62] pb-2 mb-1">
-              <div className="font-serif text-xl uppercase tracking-widest text-[#0A1931] font-bold">
+            {/* Print-only header — uses brand tokens, no dark-blue */}
+            <div className="hidden print:block border-b-2 border-[#6C1C1F] pb-2 mb-1">
+              <div className="font-serif text-xl uppercase tracking-widest text-[#0C0C0C] font-bold">
                 Brandex Law Associates — Trademark Record
               </div>
-              <div className="font-mono text-[9px] text-[#3A506B] mt-0.5">
+              <div className="font-mono text-[9px] text-[#6d6658] mt-0.5">
                 {record.caseNumber} · {record.clientCode} · {record.type} · Printed {new Date().toLocaleDateString()}
               </div>
             </div>
@@ -172,7 +178,7 @@ export function RecordView() {
                 )}
               </div>
               <div className="flex-1 min-w-0 space-y-2 print:space-y-1">
-                <div className="font-serif text-2xl sm:text-3xl print:text-xl uppercase tracking-wide text-[#0A1931] font-bold leading-tight">
+                <div className="font-serif text-2xl sm:text-3xl print:text-xl uppercase tracking-wide text-[#0C0C0C] font-bold leading-tight">
                   {record.appName || "—"}
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
@@ -221,7 +227,7 @@ export function RecordView() {
 
             {/* TM Forms — green when matched, grey when not */}
             <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#F0E8D0] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none">
-              <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3">Document Status</div>
+              <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3">Document Status (TM Forms)</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 <TmFormBadge label="TM5" active={matches.TM5} />
                 <TmFormBadge label="TM6" active={matches.TM6} />
@@ -237,12 +243,43 @@ export function RecordView() {
               currentStage={record.stage}
             />
 
+            {/* Workflow Reminders (informational only) */}
+            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
+              <div className="text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-2 flex items-center gap-1.5">
+                <Bell className="w-3 h-3" /> Workflow Reminders (Informational Only)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 print:gap-1.5">
+                {reminders.map((r) => (
+                  <div
+                    key={r.number}
+                    className={`border-2 p-3 print:p-2 ${
+                      r.active
+                        ? "border-[#6C1C1F] bg-[#6C1C1F]/5"
+                        : "border-[#0C0C0C]/20 bg-[#F0E8D0]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-block px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase border ${
+                        r.active ? "border-[#6C1C1F] text-[#6C1C1F] bg-[#6C1C1F]/10" : "border-[#0C0C0C]/30 text-[#6d6658]"
+                      }`}>
+                        REMINDER {r.number}
+                      </span>
+                      <span className="font-mono text-[10px] font-bold uppercase text-[#0C0C0C]">{r.title}</span>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#6d6658] leading-snug print:text-[9px]">
+                      {r.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Office Notes */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-2 flex items-center gap-1.5">
+              <div className="text-[8px] font-bold uppercase tracking-widest text-[#6d6658] mb-2 flex items-center gap-1.5">
                 <FileText className="w-3 h-3" /> Office Notes & Manual Proceeding Remarks
               </div>
-              <div className="font-mono text-sm print:text-xs text-[#0A1931] whitespace-pre-wrap min-h-[40px]">
+              <div className="font-mono text-sm print:text-xs text-[#0C0C0C] whitespace-pre-wrap min-h-[40px]">
                 {record.notes || "—"}
               </div>
             </div>
@@ -251,7 +288,7 @@ export function RecordView() {
             {record.journal && (
               <div className="print-avoid-break border-2 border-[#0A6B52] bg-[#0D9970]/5 p-4 print:p-2">
                 <div className="text-[8px] font-bold uppercase tracking-widest text-[#0A6B52] mb-2">Journal Record</div>
-                <div className="font-mono text-xs print:text-[10px] space-y-1 text-[#0A1931]">
+                <div className="font-mono text-xs print:text-[10px] space-y-1 text-[#0C0C0C]">
                   <div>Journal No: <strong>{String(record.journal["Journal No"] || "")}</strong></div>
                   <div>Date: <strong>{record.journal["Journal Date"] ? formatDateShort(String(record.journal["Journal Date"])) : ""}</strong></div>
                   {record.journal["Application No"] && (
@@ -265,13 +302,13 @@ export function RecordView() {
                   )}
                   {record.journal["Applicant Name and Address"] && (
                     <div className="pt-1">
-                      <div className="text-[8px] uppercase tracking-widest text-[#3A506B]">Applicant</div>
+                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">Applicant</div>
                       <div className="whitespace-pre-wrap leading-tight">{String(record.journal["Applicant Name and Address"])}</div>
                     </div>
                   )}
                   {record.journal["Agent Name and Address"] && (
                     <div className="pt-1">
-                      <div className="text-[8px] uppercase tracking-widest text-[#3A506B]">Agent</div>
+                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">Agent</div>
                       <div className="whitespace-pre-wrap leading-tight">{String(record.journal["Agent Name and Address"])}</div>
                     </div>
                   )}
@@ -282,13 +319,19 @@ export function RecordView() {
               </div>
             )}
 
-            {/* Signature block */}
+            {/* CEO Signature / Stamp Block — professional block, no fake signature */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-3 print:mb-2">
-                3. CEO BRANDEX SIGNATURE/STAMP
+              <div className="text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-2">
+                CEO BRANDEX — SIGNATURE / STAMP
               </div>
               <div className="flex flex-col sm:flex-row gap-6 items-end">
-                <div className="flex-1 border-b-2 border-[#0C0C0C] h-16 print:h-12" />
+                <div className="flex-1">
+                  <div className="border-2 border-dashed border-[#0C0C0C]/30 p-4 print:p-3 text-center min-h-[60px] print:min-h-[48px] flex items-center justify-center">
+                    <span className="font-mono text-[9px] text-[#9d9488] uppercase tracking-wider">
+                      Official Signature / Stamp
+                    </span>
+                  </div>
+                </div>
                 <div className="font-mono text-[10px] text-[#6d6658] uppercase tracking-wider">
                   Date: _______________
                 </div>
@@ -300,8 +343,8 @@ export function RecordView() {
               Last modified: {record.updatedAt ? formatDate(record.updatedAt) : "—"}
             </div>
 
-            {/* Print footer */}
-            <div className="hidden print:block border-t border-[#1E3E62]/30 pt-1.5 mt-2 text-[#3A506B] font-mono text-[8px]">
+            {/* Print footer — brand tokens, no dark-blue */}
+            <div className="hidden print:block border-t border-[#6C1C1F]/30 pt-1.5 mt-2 text-[#6d6658] font-mono text-[8px]">
               Brandex Law Associates · Confidential · Page 1
             </div>
           </div>

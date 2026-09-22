@@ -2,8 +2,9 @@ import { listAgentProfiles, createAgentProfile, updateAgentProfile, listFeesForA
 import { AppShell } from "@/components/layout/AppShell";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, AlertCircle, CheckCircle } from "lucide-react";
+import { Users, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 const PAGE_SIZE = 20;
 
@@ -163,7 +164,7 @@ export function AgentsPage() {
           <table className="w-full text-left font-mono text-xs whitespace-nowrap border-collapse">
             <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10">
               <tr>
-                {["NAME", "CITY", "PHONE", "EMAIL", "CASES WITH FEES", "TOTAL BILLED", "TOTAL PAID", "BALANCE DUE", "UNPAID", "STATUS", "ACTIONS"].map((h) => (
+                {["NAME", "CITY", "PHONE", "EMAIL", "CASES WITH FEES", "TOTAL BILLED", "TOTAL RECEIVED", "BALANCE", "UNPAID", "STATUS", "ACTIONS"].map((h) => (
                   <th key={h} className="px-3 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-[10px] last:border-r-0">
                     {h}
                   </th>
@@ -375,7 +376,20 @@ export function AgentsPage() {
                   ) : (
                     agentFees.map((fee) => (
                       <tr key={fee.id} className="border-b border-[#0C0C0C]/10">
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 font-bold">{fee.caseNumber || "—"}</td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 font-bold">
+                          {fee.trademarkId ? (
+                            <Link
+                              href={`/record/${fee.trademarkId}`}
+                              className="inline-flex items-center gap-1 text-[#6C1C1F] hover:underline"
+                              title={`View record ${fee.caseNumber || ""}`}
+                            >
+                              <span>{fee.caseNumber || "—"}</span>
+                              <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                            </Link>
+                          ) : (
+                            fee.caseNumber || "—"
+                          )}
+                        </td>
                         <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 max-w-[150px] truncate">{fee.appName || "—"}</td>
                         <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">{fee.description}</td>
                         <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">{formatCurrency(fee.amountBilled)}</td>

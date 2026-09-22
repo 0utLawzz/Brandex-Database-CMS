@@ -516,14 +516,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     className={`mt-3 p-3 border-2 flex items-center justify-between ${
                       isStage2Paid
                         ? "bg-[#D8F2E8] border-[#0A6B52]"
-                        : "bg-[#FFF0D0] border-[#C94A00]"
+                        : "bg-[#FFF0D0] border-[#B0740E]"
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {isStage2Paid ? (
                         <CheckCircle2 className="w-4 h-4 text-[#0A6B52] shrink-0" />
                       ) : (
-                        <AlertCircle className="w-4 h-4 text-[#C94A00] shrink-0" />
+                        <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
                       )}
                       <span
                         className={`font-mono text-xs font-bold ${
@@ -546,10 +546,10 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               <div>
                 <SectionHead title="Assignment" />
                 {watchStage === "STAGE 2" && !isStage2Paid ? (
-                  <div className="p-3 bg-[#FFF0D0] border-2 border-[#C94A00] space-y-2">
+                  <div className="p-3 bg-[#FFF0D0] border-2 border-[#B0740E] space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-[#C94A00] shrink-0" />
+                        <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
                         <span className="font-mono text-xs font-bold text-[#6C1C1F]">
                           Stage 2 payment is required before proceeding.
                         </span>

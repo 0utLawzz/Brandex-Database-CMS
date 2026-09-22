@@ -114,6 +114,10 @@ export interface AuditLogEntry {
   field: string;
   oldValue: string;
   newValue: string;
+  applicationNumber?: string;
+  applicationName?: string;
+  clientCode?: string;
+  caseType?: string;
 }
 
 export interface TrademarkWorkflowEvent {
@@ -875,18 +879,26 @@ export async function listAuditLogs(limit = 100, offset = 0): Promise<AuditLogEn
   const { data, error } = await supabase.from("audit_logs").select("*")
     .order("changed_at", { ascending: false }).range(offset, offset + limit - 1);
   throwIfError(error);
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    changedAt: row.changed_at,
-    changedBy: row.changed_by ?? "system",
-    action: row.action,
-    recordId: row.trademark_id ?? "",
-    caseNo: row.new_record?.case_number ?? row.old_record?.case_number ?? "",
-    record: row.new_record?.case_number ?? row.old_record?.case_number ?? row.trademark_id ?? "",
-    field: "RECORD",
-    oldValue: row.old_record ? JSON.stringify(row.old_record) : "",
-    newValue: row.new_record ? JSON.stringify(row.new_record) : "",
-  }));
+  return (data ?? []).map((row) => {
+    const nr = row.new_record as Record<string, unknown> | null;
+    const or = row.old_record as Record<string, unknown> | null;
+    return {
+      id: row.id,
+      changedAt: row.changed_at,
+      changedBy: row.changed_by ?? "system",
+      action: row.action,
+      recordId: row.trademark_id ?? "",
+      caseNo: String(nr?.case_number ?? or?.case_number ?? ""),
+      record: String(nr?.case_number ?? or?.case_number ?? row.trademark_id ?? ""),
+      field: "RECORD",
+      oldValue: or ? JSON.stringify(or) : "",
+      newValue: nr ? JSON.stringify(nr) : "",
+      applicationNumber: String(nr?.tm_cpr_number ?? or?.tm_cpr_number ?? "") || undefined,
+      applicationName: String(nr?.application_name ?? or?.application_name ?? "") || undefined,
+      clientCode: String(nr?.client_code ?? or?.client_code ?? "") || undefined,
+      caseType: String(nr?.type ?? or?.type ?? "") || undefined,
+    };
+  });
 }
 
 export async function getWorkflowHistory(trademarkId: string): Promise<TrademarkWorkflowEvent[]> {
@@ -1606,4 +1618,124 @@ function mapFeeRow(row: any): AgentFee {
     notes: row.notes ?? null,
     createdAt: row.created_at ?? "",
   };
+}
+
+// =============================================================================
+// BATCH 14: WORKFLOW REMINDERS
+// Returns exactly 4 informational reminder items based on current workflow state.
+// These are informational/contextual only — no automatic legal actions.
+// Hard cap: never returns more than 4 reminders.
+// =============================================================================
+
+export interface WorkflowReminder {
+  /** Reminder 1–4 */
+  number: 1 | 2 | 3 | 4;
+  /** Short title */
+  title: string;
+  /** Descriptive context for the reminder */
+  description: string;
+  /** Whether this reminder is active/relevant for the current workflow state */
+  active: boolean;
+}
+
+/**
+ * Returns exactly 4 workflow reminder definitions adapted to the current
+ * stage/sub-stage context. Reminders are informational/contextual only.
+ *
+ * Rules:
+ *  - Exactly Reminder 1–4. Never Reminder 5+.
+ *  - Does not invent statutory deadlines.
+ *  - Does not invent legal meanings or automatic actions.
+ *  - Does not mutate any data.
+ */
+export function getWorkflowReminders(
+  stage?: string,
+  subStage?: string,
+  context?: {
+    filingDate?: string;
+    publicationDate?: string;
+    oppositionDeadline?: string;
+  },
+): WorkflowReminder[] {
+  const s = stage || "";
+  const sub = subStage || "";
+
+  // Default 4 reminders with stage-adaptive descriptions
+  const reminders: WorkflowReminder[] = [
+    {
+      number: 1,
+      title: "Filing & Documentation",
+      description: getReminder1(s, sub, context),
+      active: s === "STAGE 1" || s === "",
+    },
+    {
+      number: 2,
+      title: "Agent & Assignment",
+      description: getReminder2(s, sub),
+      active: s === "STAGE 2",
+    },
+    {
+      number: 3,
+      title: "Publication & Opposition",
+      description: getReminder3(s, sub, context),
+      active: s === "STAGE 3",
+    },
+    {
+      number: 4,
+      title: "Registration & Certificate",
+      description: getReminder4(s, sub),
+      active: s === "STAGE 4",
+    },
+  ];
+
+  // Hard cap: exactly 4
+  return reminders.slice(0, 4);
+}
+
+function getReminder1(stage: string, sub: string, ctx?: { filingDate?: string }): string {
+  if (stage === "STAGE 1") {
+    if (sub === "Filing") return "Application has been filed. Await acknowledgment from IPO.";
+    if (sub === "Acknowledgment") return "Acknowledgment received. Await examination report.";
+    if (sub === "Examination") return "Under examination. Monitor for official queries or objections.";
+    return "Stage 1 in progress. Ensure all filing documents are complete.";
+  }
+  if (ctx?.filingDate) return `Filed on ${ctx.filingDate}. Filing documentation archived.`;
+  return "Ensure all original filing documents are collected and archived.";
+}
+
+function getReminder2(stage: string, sub: string): string {
+  if (stage === "STAGE 2") {
+    if (sub === "Assigned") return "Case assigned to agent. Await acceptance confirmation. Stage 2 payment required.";
+    if (sub === "Accepted") return "Agent has accepted. Case is under agent handling. Monitor hearing dates.";
+    if (sub === "Hearing") return "Hearing scheduled or in progress. Coordinate with assigned agent.";
+    return "Stage 2 in progress. Verify agent assignment and payment status.";
+  }
+  return "Agent assignment and hearing management — refer to assigned agent details.";
+}
+
+function getReminder3(stage: string, sub: string, ctx?: { publicationDate?: string; oppositionDeadline?: string }): string {
+  if (stage === "STAGE 3") {
+    const normalized = normalizeWorkflowValue(sub);
+    if (normalized === "D-Note Submitted") return "Demand note submitted to IPO. Await demand note receipt.";
+    if (normalized === "D-Note Received") return "Demand note received. Process payment and proceed.";
+    if (normalized === "OPPO: Filed") return "Opposition filed against this mark. Prepare response.";
+    if (normalized === "OPPO: Received") return "Opposition received. Review and coordinate legal response.";
+    if (normalized === "OPPO: Withdrawn") return "Opposition withdrawn. Case may proceed to publication.";
+    if (sub === "Published") {
+      if (ctx?.oppositionDeadline) return `Published. Opposition deadline: ${ctx.oppositionDeadline}. Monitor for third-party oppositions.`;
+      return "Published in Trade Marks Journal. Monitor opposition window.";
+    }
+    return "Stage 3 in progress. Track publication and opposition status.";
+  }
+  return "Publication and opposition tracking — review publication pipeline if applicable.";
+}
+
+function getReminder4(stage: string, sub: string): string {
+  if (stage === "STAGE 4") {
+    if (sub === "CER Dispatch") return "Certificate dispatched from IPO. Await physical receipt.";
+    if (sub === "CER Received") return "Certificate received. Verify details and deliver to client.";
+    if (sub === "CER Acknowledge") return "Certificate acknowledged. Case registration complete.";
+    return "Stage 4 in progress. Track certificate dispatch and receipt.";
+  }
+  return "Registration certificate tracking — case may not yet be at this stage.";
 }

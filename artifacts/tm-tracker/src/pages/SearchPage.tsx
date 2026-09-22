@@ -1,4 +1,4 @@
-import { listTrademarks, searchTm, STAGES, CITIES, formatWorkflowLabel } from "@/lib/api";
+import { listTrademarks, searchTm, STAGES, CITIES, VALID_TYPES, listAgents, formatWorkflowLabel } from "@/lib/api";
 import type { TrademarkRecord, TmSearchResult } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
@@ -12,8 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
-  "STAGE 2": "bg-[#D4A800] text-[#0C0C0C]",
-  "STAGE 3": "bg-[#C94A00] text-white",
+  "STAGE 2": "bg-[#B0740E] text-white",
+  "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
   "STOPPED": "bg-[#CC0000] text-white",
 };
@@ -128,11 +128,10 @@ function TmCard({ result, onViewRecord }: {
 
           {/* Card Body extras */}
           <div className="px-4 pb-4 space-y-3 border-t border-[#0C0C0C]/10 pt-3">
-
             {/* TM Sheet Matches */}
             <div>
               <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6d6658] mb-1.5">
-                Document Status
+                Document Status (TM Forms)
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => (
@@ -172,7 +171,7 @@ function TmCard({ result, onViewRecord }: {
             <div className="pt-1">
               <button
                 onClick={() => onViewRecord(rec.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#C94A00] text-white font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all border-2 border-[#C94A00]"
+                className="flex items-center gap-2 px-4 py-2 bg-[#6C1C1F] text-white font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all border-2 border-[#6C1C1F]"
               >
                 VIEW RECORD <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -199,13 +198,14 @@ export function SearchPage() {
   const debouncedQuery = useDebounce(query, 300);
 
   // General filters
+  const [typeFilter,     setTypeFilter]     = useState("");
   const [stageFilter,    setStageFilter]    = useState("");
   const [cityFilter,     setCityFilter]     = useState("");
   const [caseTypeFilter, setCaseTypeFilter] = useState("");
   const [agentFilter,    setAgentFilter]    = useState("");
   const [showFilters,    setShowFilters]    = useState(false);
 
-  const hasFilters  = Boolean(stageFilter || cityFilter || caseTypeFilter || agentFilter);
+  const hasFilters  = Boolean(typeFilter || stageFilter || cityFilter || caseTypeFilter || agentFilter);
   const hasGenSearch = debouncedQuery.trim().length > 0 || hasFilters;
 
   // TM Number search query
@@ -216,12 +216,20 @@ export function SearchPage() {
     staleTime: 30_000,
   });
 
+  // Agents list query
+  const { data: agents = [] } = useQuery<string[]>({
+    queryKey: ["agents"],
+    queryFn: listAgents,
+    staleTime: 5 * 60_000,
+  });
+
   // General search query
   const { data: generalResults = [], isLoading: genLoading, isFetching: genFetching } = useQuery<TrademarkRecord[]>({
-    queryKey: ["trademarks-search", debouncedQuery, stageFilter, cityFilter, caseTypeFilter, agentFilter],
+    queryKey: ["trademarks-search", debouncedQuery, typeFilter, stageFilter, cityFilter, caseTypeFilter, agentFilter],
     queryFn: () =>
       listTrademarks({
         search:    debouncedQuery.trim() || undefined,
+        type:      typeFilter     || undefined,
         stage:     stageFilter    || undefined,
         city:      cityFilter     || undefined,
         caseType:  caseTypeFilter || undefined,
@@ -233,12 +241,10 @@ export function SearchPage() {
 
   const goToRecord = (id: string) => navigate(`/record/${id}`);
   const clearAll   = () => {
-    setQuery(""); setStageFilter(""); setCityFilter(""); setCaseTypeFilter(""); setAgentFilter("");
+    setQuery(""); setTypeFilter(""); setStageFilter(""); setCityFilter(""); setCaseTypeFilter(""); setAgentFilter("");
   };
   const clearTm = () => setTmQuery("");
 
-  const STAGES     = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4"];
-  const CITIES     = ["Islamabad", "Karachi", "Lahore", "Peshawar", "Multan", "Quetta"];
   const CASE_TYPES = ["Trademark", "Copyright", "Design", "Patent", "Renewal", "Opposition", "Other"];
 
   return (
@@ -260,7 +266,7 @@ export function SearchPage() {
                 placeholder="e.g. 633710"
                 value={tmQuery}
                 onChange={(e) => setTmQuery(e.target.value)}
-                className="w-full h-11 pl-10 pr-10 bg-white border-2 border-[#0C0C0C] font-mono text-sm font-bold focus:outline-2 focus:outline-[#C94A00] focus:outline-offset-0 placeholder:text-[#9d9488] placeholder:font-normal"
+                className="w-full h-11 pl-10 pr-10 bg-white border-2 border-[#0C0C0C] font-mono text-sm font-bold focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 placeholder:text-[#9d9488] placeholder:font-normal"
               />
               {tmQuery && (
                 <button
@@ -285,7 +291,7 @@ export function SearchPage() {
                   placeholder="Name, Client Code, Case No, Application Name, Class..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="w-full h-11 pl-10 pr-10 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00] focus:outline-offset-0 placeholder:text-[#6d6658]"
+                  className="w-full h-11 pl-10 pr-10 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 placeholder:text-[#6d6658]"
                 />
                 {query && (
                   <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6d6658] hover:text-[#0C0C0C]">
@@ -317,7 +323,9 @@ export function SearchPage() {
             {showFilters && (
               <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-[#0C0C0C]/10">
                 {[
+                  { label: "TYPE",      value: typeFilter,     set: setTypeFilter,     options: VALID_TYPES },
                   { label: "STATUS",    value: stageFilter,    set: setStageFilter,    options: STAGES },
+                  { label: "AGENT",     value: agentFilter,    set: setAgentFilter,    options: agents },
                   { label: "CITY",      value: cityFilter,     set: setCityFilter,     options: CITIES },
                   { label: "CASE TYPE", value: caseTypeFilter, set: setCaseTypeFilter, options: CASE_TYPES },
                 ].map(({ label, value, set, options }) => (
@@ -326,7 +334,7 @@ export function SearchPage() {
                     <select
                       value={value}
                       onChange={(e) => set(e.target.value)}
-                      className="h-9 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00] min-w-[150px]"
+                      className="h-9 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F] min-w-[140px]"
                     >
                       <option value="">ALL</option>
                       {options.map((o) => <option key={o} value={o}>{o.toUpperCase()}</option>)}
@@ -379,7 +387,7 @@ export function SearchPage() {
                 <table className="w-full text-left font-mono text-xs whitespace-nowrap border-collapse">
                   <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10">
                     <tr>
-                      {["CLIENT CODE", "CLIENT NAME", "CASE NUMBER", "APPLICATION NAME", "STATUS", "SUB-STATUS", "TM / CPR NO", "CLASS", "AGENT", "CITY", "LAST MODIFIED"].map((h) => (
+                      {["TYPE", "CLIENT CODE", "CLIENT NAME", "CASE NUMBER", "APPLICATION NAME", "STATUS", "SUB-STATUS", "TM / CPR NO", "CLASS", "AGENT", "CITY", "LAST MODIFIED"].map((h) => (
                         <th key={h} className="px-4 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-[10px] last:border-r-0">
                           {h}
                         </th>
@@ -393,10 +401,11 @@ export function SearchPage() {
                         onClick={() => goToRecord(tm.id)}
                         className={`cursor-pointer border-b border-[#0C0C0C]/10 hover:bg-[#D9D0B7] transition-colors ${i % 2 === 0 ? "bg-[#F0E8D0]" : "bg-white"}`}
                       >
+                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold font-serif text-[#6C1C1F]">{tm.type || "—"}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold">{tm.clientCode || ""}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[150px] truncate">{tm.clientName || ""}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold text-[#0A6B52]">{tm.caseNumber || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[200px] truncate">{tm.appName || ""}</td>
+                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[200px] truncate font-bold">{tm.appName || ""}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10">
                           {tm.stage && (
                             <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase border border-[#0C0C0C]/20 ${STAGE_BADGE[tm.stage] ?? "bg-[#E8DFC7]"}`}>

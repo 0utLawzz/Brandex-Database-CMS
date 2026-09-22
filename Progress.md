@@ -310,3 +310,53 @@ This file is the single source of truth for project status.
 - [x] `pnpm test --run` → 33/33 tests passed
 - [x] `pnpm typecheck` → 0 errors
 - [x] `pnpm build` → production bundle compiled successfully
+
+## 2026-09-22 — Batch 14: Operations Consolidation (Print, Reminders, Logs, Search, Database, Agents, Record UX)
+
+### What was completed
+
+1. **Reminder System (`api.ts` + `RecordView.tsx`)**:
+   - Implemented `getWorkflowReminders(stage, subStage, context)` in `api.ts` returning exactly 4 informational reminders (1: Filing & Documentation, 2: Agent & Assignment, 3: Publication & Opposition, 4: Registration & Certificate).
+   - Strict adherence to safety rules: exactly 4 reminders, never Reminder 5+, no invention of statutory deadlines, no mutation, purely informational.
+   - Stage-adaptive descriptions highlight active stage while preserving awareness of adjacent workflow steps.
+   - Displayed in `RecordView.tsx` with clean brand styling on screen and in A4 print layout.
+
+2. **Print System (`RecordView.tsx` + `index.css`)**:
+   - Clean black ink on white background for A4 portrait layout with standard 10mm 12mm page margins.
+   - Completely purged legacy dark-blue tokens (`#0A1931`, `#1E3E62`, `#3A506B`) from print stylesheet and views.
+   - Professional Brandex letterhead banner with brand wordmark and mark.
+   - Formal CEO Signature / Official Stamp block (no fake signature, formal attestation space).
+   - Reminders included in print layout with print-avoid-break protection.
+
+3. **Logs / Audit UI (`api.ts` + `LogsPage.tsx`)**:
+   - Extended `listAuditLogs` to extract `applicationNumber`, `applicationName`, `clientCode`, and `caseType` from `new_record` and `old_record` JSONB fields.
+   - Rebuilt `LogsPage.tsx` with an 8-column layout: `DATE`, `TIME`, `USER`, `ACTION`, `RECORD` (clickable link navigating directly to `/record/:id`), `APP NUMBER`, `NAME`, and `CHANGES`.
+   - Brand color-coded action badges (CREATE in green `#0A6B52`, UPDATE in gold `#B0740E`, DELETE in red `#CC0000`).
+
+4. **Search TM (`SearchPage.tsx`)**:
+   - Added canonical `TYPE` as the leading column in the search results datasheet table (`TYPE`, `CLIENT CODE`, `CLIENT NAME`, `CASE NUMBER`...).
+   - Added `TYPE` (`VALID_TYPES`) and `AGENT` (`listAgents`) dropdown filter controls to search filters.
+   - Aligned `STAGE_BADGE` tokens to brand palette (`STAGE 2`: `#B0740E`, `STAGE 3`: `#6C1C1F`).
+   - Aligned action buttons and focus rings to brand maroon (`#6C1C1F`).
+
+5. **Database Page Consistency (`DatabasePage.tsx`)**:
+   - Added `AGENT` column to table headers and rows, ensuring datasheet consistency across Database and Search pages.
+   - Updated table `colSpan` to 15 across loading, error, and empty states.
+   - Verified `formatWorkflowLabel` usage on sub-status and in CSV export.
+
+6. **Record UX Consolidation (`RecordModal.tsx` + `RecordView.tsx` + `StageDocumentsSection.tsx`)**:
+   - Aligned `RecordModal.tsx` Stage 2 payment banner and warning borders to brand gold (`#B0740E`) and maroon (`#6C1C1F`).
+   - Standardized distinct headers: `"Document Status (TM Forms)"` for registry-matching checks and `"Stage Documents"` for file attachments.
+   - Aligned `STAGE_COLORS` in `StageDocumentsSection.tsx` to brand palette.
+
+7. **Agents / Assigned Operations (`AgentsPage.tsx`)**:
+   - Aligned financial table headers: `TOTAL PAID` → `TOTAL RECEIVED` and `BALANCE DUE` → `BALANCE`.
+   - Made fee table case numbers clickable with direct link to `/record/:trademarkId`.
+
+8. **Tests & Verification (`api.test.ts`)**:
+   - Added comprehensive tests verifying `getWorkflowReminders` (hard-capped at 4, stage-specific activation, safe empty stage fallback).
+   - Added tests verifying `listAuditLogs` extracts `applicationNumber`, `applicationName`, `clientCode`, and `caseType`.
+   - `pnpm test --run` → 40/40 tests passed across all test files.
+   - `pnpm typecheck` → 0 errors.
+   - `pnpm build` → production bundle compiled successfully (Vite v7.3.6, dist generated).
+

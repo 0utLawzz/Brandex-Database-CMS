@@ -43,6 +43,8 @@ import {
   updateTrademarkStatus,
   updateTrademarkAgent,
   listPublicationPipeline,
+  getWorkflowReminders,
+  listAuditLogs,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -797,6 +799,107 @@ describe("Batch 13: Publication Workflow Integration", () => {
       subStage: "Opposition: Filed",
       demandNoteReceived: true,
       status: "done",
+    });
+  });
+
+  describe("getWorkflowReminders", () => {
+    it("returns exactly 4 reminders (numbers 1 to 4)", () => {
+      const reminders = getWorkflowReminders("STAGE 1");
+      expect(reminders).toHaveLength(4);
+      expect(reminders.map((r) => r.number)).toEqual([1, 2, 3, 4]);
+      // Verify no reminder 5+ ever exists
+      expect(reminders.some((r) => r.number > 4)).toBe(false);
+    });
+
+    it("activates reminder 1 for STAGE 1", () => {
+      const reminders = getWorkflowReminders("STAGE 1", "Filing");
+      expect(reminders[0].active).toBe(true);
+      expect(reminders[1].active).toBe(false);
+      expect(reminders[2].active).toBe(false);
+      expect(reminders[3].active).toBe(false);
+      expect(reminders[0].description).toContain("Application has been filed");
+    });
+
+    it("activates reminder 2 for STAGE 2", () => {
+      const reminders = getWorkflowReminders("STAGE 2", "Assigned");
+      expect(reminders[0].active).toBe(false);
+      expect(reminders[1].active).toBe(true);
+      expect(reminders[2].active).toBe(false);
+      expect(reminders[3].active).toBe(false);
+      expect(reminders[1].description).toContain("assigned to agent");
+    });
+
+    it("activates reminder 3 for STAGE 3", () => {
+      const reminders = getWorkflowReminders("STAGE 3", "Published");
+      expect(reminders[0].active).toBe(false);
+      expect(reminders[1].active).toBe(false);
+      expect(reminders[2].active).toBe(true);
+      expect(reminders[3].active).toBe(false);
+      expect(reminders[2].description).toContain("Published in Trade Marks Journal");
+    });
+
+    it("activates reminder 4 for STAGE 4", () => {
+      const reminders = getWorkflowReminders("STAGE 4", "CER Dispatch");
+      expect(reminders[0].active).toBe(false);
+      expect(reminders[1].active).toBe(false);
+      expect(reminders[2].active).toBe(false);
+      expect(reminders[3].active).toBe(true);
+      expect(reminders[3].description).toContain("Certificate dispatched");
+    });
+
+    it("handles empty or unknown stage safely", () => {
+      const reminders = getWorkflowReminders(undefined, undefined);
+      expect(reminders).toHaveLength(4);
+      expect(reminders[0].active).toBe(true);
+    });
+  });
+
+  describe("listAuditLogs", () => {
+    it("extracts applicationNumber, applicationName, clientCode, caseType from JSON records", async () => {
+      const rawAuditRows = [
+        {
+          id: "log-1",
+          changed_at: "2026-09-22T08:00:00Z",
+          changed_by: "user-uuid-1",
+          action: "UPDATE",
+          trademark_id: "tm-uuid-123",
+          old_record: {
+            case_number: "CASE-10",
+            application_name: "Old Brand",
+            tm_cpr_number: "600100",
+            client_code: "CC-01",
+            type: "TM",
+          },
+          new_record: {
+            case_number: "CASE-10",
+            application_name: "New Brand",
+            tm_cpr_number: "600100",
+            client_code: "CC-01",
+            type: "TM",
+          },
+        },
+      ];
+
+      const selectQuery = createQuery({
+        data: rawAuditRows,
+        error: null,
+      });
+      supabaseMock.from.mockReturnValue(selectQuery);
+
+      const logs = await listAuditLogs(10, 0);
+
+      expect(supabaseMock.from).toHaveBeenCalledWith("audit_logs");
+      expect(logs).toHaveLength(1);
+      expect(logs[0]).toMatchObject({
+        id: "log-1",
+        recordId: "tm-uuid-123",
+        caseNo: "CASE-10",
+        record: "CASE-10",
+        applicationNumber: "600100",
+        applicationName: "New Brand",
+        clientCode: "CC-01",
+        caseType: "TM",
+      });
     });
   });
 });

@@ -21,8 +21,8 @@ interface StageDocumentsSectionProps {
 
 const STAGE_COLORS: Record<string, { bg: string; text: string }> = {
   "STAGE 1": { bg: "bg-[#0D9970]", text: "text-white" },
-  "STAGE 2": { bg: "bg-[#D4A800]", text: "text-[#0C0C0C]" },
-  "STAGE 3": { bg: "bg-[#C94A00]", text: "text-white" },
+  "STAGE 2": { bg: "bg-[#B0740E]", text: "text-white" },
+  "STAGE 3": { bg: "bg-[#6C1C1F]", text: "text-white" },
   "STAGE 4": { bg: "bg-[#0A6B52]", text: "text-white" },
 };
 
