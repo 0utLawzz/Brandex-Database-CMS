@@ -217,3 +217,13 @@ This file is the single source of truth for project status.
 - [x] Counts load on-demand when agent modal opens — not prefetched for every table row
 - [x] Verified: `pnpm test` 13/13 passed, `pnpm typecheck` 0 errors, `pnpm build` passed (11.47s)
 
+## 2026-09-22 — Batch 9: Stage-wise Documents - DB + API Foundation
+
+- [x] Created additive migration `supabase/migrations/202609220004_trademark_files_stage_columns.sql` adding `stage`, `sub_stage`, and `title` to `public.trademark_files` table with index `trademark_files_stage_idx`
+- [x] Implemented API foundation in `api.ts`:
+  - `StageDocument` and `UploadStageDocumentInput` interfaces
+  - `uploadStageDocument(file, input)`: strictly validates file size (≤10MB) and permitted MIME types; uploads to private `trademark-files` bucket under `{trademarkId}/{stage}/{uuid}.{ext}`; inserts DB metadata row with automatic orphan cleanup on failure; returns document with 1-hour signed URL
+  - `listStageDocuments(trademarkId, stage?)`: retrieves rows for trademark (optionally filtered by stage), batch-generates 1-hour signed URLs for private storage access without exposing public URLs
+- [x] Added unit tests in `api.test.ts` verifying MIME type validation, file size bounds, storage error handling/cleanup, and stage filtering
+- [x] Verified: `pnpm test` (18/18 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 13.45s)
+

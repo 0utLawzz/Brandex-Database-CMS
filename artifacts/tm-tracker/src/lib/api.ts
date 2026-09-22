@@ -1217,6 +1217,210 @@ export async function getAgentCaseCounts(agentName: string): Promise<AgentCaseCo
   };
 }
 
+// =============================================================================
+// BATCH 9: STAGE DOCUMENT API
+// Upload and list documents attached to a specific trademark stage/sub-stage.
+// Uses the existing trademark-files private bucket and trademark_files table.
+// No new bucket, no new table, no public URLs.
+// =============================================================================
+
+/** Represents a document file attached to a trademark stage */
+export interface StageDocument {
+  id: string;
+  trademarkId: string;
+  stage: string | null;
+  subStage: string | null;
+  title: string | null;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedBy: string | null;
+  createdAt: string;
+  /** Signed URL valid for 1 hour. Absent if signing failed. */
+  signedUrl?: string;
+}
+
+/** Input parameters for uploadStageDocument */
+export interface UploadStageDocumentInput {
+  trademarkId: string;
+  stage: string;
+  subStage?: string;
+  title?: string;
+  uploadedBy?: string; // auth user id — resolved from session when omitted
+}
+
+const STAGE_DOC_ALLOWED_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+]);
+
+/**
+ * Upload a document into the existing `trademark-files` private bucket under a
+ * deterministic, record-scoped path: `{trademarkId}/{stage}/{uuid}.{ext}`
+ *
+ * Inserts a corresponding row into `public.trademark_files` with:
+ * trademark_id, stage, sub_stage, title, storage_path, file_name,
+ * mime_type, size_bytes, uploaded_by.
+ *
+ * Error safety:
+ *  - If the storage upload succeeds but the DB insert fails, the orphan storage
+ *    object is removed before the original error is re-thrown.
+ *  - If the DB insert succeeds but URL signing fails, the document metadata is
+ *    returned without a signedUrl (no storage object is made public).
+ */
+export async function uploadStageDocument(
+  file: File,
+  input: UploadStageDocumentInput,
+): Promise<StageDocument> {
+  ensureConfigured();
+
+  // Validate size
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("File must be 10 MB or smaller.");
+  }
+
+  // Validate MIME type
+  if (!STAGE_DOC_ALLOWED_MIME.has(file.type)) {
+    throw new Error(
+      `File type "${file.type}" is not allowed. Permitted types: PDF, Word, Excel, plain text, PNG, JPEG, GIF, WebP.`,
+    );
+  }
+
+  // Resolve uploader id
+  const { data: authData } = await supabase.auth.getUser();
+  const uploadedBy = input.uploadedBy ?? authData.user?.id ?? null;
+  if (!uploadedBy) throw new Error("Please sign in before uploading documents.");
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
+  const uuid = crypto.randomUUID();
+  // Sanitise stage for use in storage path (replace spaces/slashes)
+  const stageSlug = input.stage.replace(/[^a-zA-Z0-9-]/g, "_");
+  const storagePath = `${input.trademarkId}/${stageSlug}/${uuid}.${extension}`;
+
+  // 1. Upload to private bucket
+  const { error: uploadError } = await supabase.storage
+    .from(TRADEMARK_FILES_BUCKET)
+    .upload(storagePath, file, { contentType: file.type, upsert: false });
+  if (uploadError) throw new Error(uploadError.message);
+
+  // 2. Insert DB row — clean up storage on failure
+  const { data: dbRow, error: insertError } = await supabase
+    .from("trademark_files")
+    .insert({
+      trademark_id: input.trademarkId,
+      stage: input.stage,
+      sub_stage: input.subStage ?? null,
+      title: input.title ?? null,
+      storage_path: storagePath,
+      file_name: file.name,
+      mime_type: file.type,
+      size_bytes: file.size,
+      uploaded_by: uploadedBy,
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    // Best-effort cleanup of orphan storage object
+    await supabase.storage.from(TRADEMARK_FILES_BUCKET).remove([storagePath]);
+    throw new Error(insertError.message);
+  }
+
+  // 3. Sign URL (non-fatal if it fails)
+  let signedUrl: string | undefined;
+  const { data: signData } = await supabase.storage
+    .from(TRADEMARK_FILES_BUCKET)
+    .createSignedUrl(storagePath, 3600);
+  if (signData?.signedUrl) signedUrl = signData.signedUrl;
+
+  return mapStageDocRow(dbRow, signedUrl);
+}
+
+/**
+ * List trademark_files rows for a trademark.
+ * Pass `stage` to filter to a specific stage.
+ * Returns document metadata + signed URLs (private storage, 1-hour expiry).
+ * No public URLs are exposed.
+ */
+export async function listStageDocuments(
+  trademarkId: string,
+  stage?: string,
+): Promise<StageDocument[]> {
+  ensureConfigured();
+
+  let query = supabase
+    .from("trademark_files")
+    .select("*")
+    .eq("trademark_id", trademarkId)
+    .order("created_at", { ascending: false });
+
+  if (stage) {
+    query = query.eq("stage", stage);
+  }
+
+  const { data, error } = await query;
+  throwIfError(error);
+
+  const rows = (data ?? []) as StageDocumentRow[];
+
+  // Batch-sign all storage paths
+  const paths = rows.map((r) => r.storage_path);
+  const signedByPath = new Map<string, string>();
+  if (paths.length) {
+    const { data: signData } = await supabase.storage
+      .from(TRADEMARK_FILES_BUCKET)
+      .createSignedUrls(paths, 3600);
+    signData?.forEach((item, index) => {
+      if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl);
+    });
+  }
+
+  return rows.map((row) =>
+    mapStageDocRow(row, signedByPath.get(row.storage_path)),
+  );
+}
+
+/** Raw DB row shape for trademark_files (Batch 9 columns included) */
+type StageDocumentRow = {
+  id: string;
+  trademark_id: string;
+  stage: string | null;
+  sub_stage: string | null;
+  title: string | null;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  uploaded_by: string | null;
+  created_at: string;
+};
+
+function mapStageDocRow(row: StageDocumentRow, signedUrl?: string): StageDocument {
+  return {
+    id: row.id,
+    trademarkId: row.trademark_id,
+    stage: row.stage ?? null,
+    subStage: row.sub_stage ?? null,
+    title: row.title ?? null,
+    storagePath: row.storage_path,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    uploadedBy: row.uploaded_by ?? null,
+    createdAt: row.created_at,
+    ...(signedUrl !== undefined ? { signedUrl } : {}),
+  };
+}
+
 // Internal helper: maps a raw Supabase agent_fee row to AgentFee interface
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapFeeRow(row: any): AgentFee {

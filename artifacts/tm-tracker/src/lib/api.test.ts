@@ -26,12 +26,14 @@ import {
   getWorkflowHistory,
   inputToRow,
   isStage2PaymentRequired,
+  listStageDocuments,
   listTrademarkPage,
   listTrademarksForExport,
   mapRowToRecord,
   StagePaymentRequiredError,
   updateTrademark,
   uploadImage,
+  uploadStageDocument,
   validateStage2PaymentGate,
   assignStage2Agent,
 } from "./api";
@@ -313,5 +315,159 @@ describe("Brandex Supabase access patterns", () => {
     await assignStage2Agent("BX-1", "Counsel B", "Karachi");
     expect(updateQuery.update).toHaveBeenCalledWith({ agent: "Counsel B", city: "Karachi" });
     expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
+  });
+});
+
+// =============================================================================
+// Batch 9: Stage Document API tests
+// =============================================================================
+
+const baseStageDocRow = {
+  id: "doc-uuid-1",
+  trademark_id: "BX-1",
+  stage: "STAGE 1",
+  sub_stage: "Filing",
+  title: "Application Form",
+  storage_path: "BX-1/STAGE_1/doc-uuid-1.pdf",
+  file_name: "application.pdf",
+  mime_type: "application/pdf",
+  size_bytes: 204800,
+  uploaded_by: "user-1",
+  created_at: "2026-09-22T01:00:00Z",
+};
+
+describe("Batch 9: Stage document API", () => {
+  it("uploadStageDocument — maps stage, sub_stage, and title on the inserted row", async () => {
+    const uploadStorage = {
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/doc.pdf" } }),
+      remove: vi.fn().mockResolvedValue({ error: null }),
+    };
+    supabaseMock.storage.from.mockReturnValue(uploadStorage);
+
+    const insertQuery = createQuery({ data: baseStageDocRow, error: null });
+    supabaseMock.from.mockReturnValue(insertQuery);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+
+    const file = new File([new Uint8Array(204800)], "application.pdf", { type: "application/pdf" });
+    const result = await uploadStageDocument(file, {
+      trademarkId: "BX-1",
+      stage: "STAGE 1",
+      subStage: "Filing",
+      title: "Application Form",
+    });
+
+    // Verify storage path contains trademarkId and sanitised stage
+    expect(uploadStorage.upload).toHaveBeenCalledWith(
+      expect.stringMatching(/^BX-1\/STAGE_1\//),
+      file,
+      { contentType: "application/pdf", upsert: false },
+    );
+
+    // Verify DB insert includes stage/sub_stage/title
+    expect(insertQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trademark_id: "BX-1",
+        stage: "STAGE 1",
+        sub_stage: "Filing",
+        title: "Application Form",
+        file_name: "application.pdf",
+        mime_type: "application/pdf",
+      }),
+    );
+
+    // Verify returned document maps correctly
+    expect(result.stage).toBe("STAGE 1");
+    expect(result.subStage).toBe("Filing");
+    expect(result.title).toBe("Application Form");
+    expect(result.trademarkId).toBe("BX-1");
+    expect(result.signedUrl).toBe("https://signed.example/doc.pdf");
+  });
+
+  it("uploadStageDocument — removes orphan storage object when DB insert fails", async () => {
+    const storagePath = "BX-1/STAGE_1/doc-uuid-1.pdf";
+    const removeStorage = {
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      createSignedUrl: vi.fn(),
+      remove: vi.fn().mockResolvedValue({ error: null }),
+    };
+    supabaseMock.storage.from.mockReturnValue(removeStorage);
+
+    const failQuery = createQuery({ data: null, error: { message: "insert failed" } });
+    supabaseMock.from.mockReturnValue(failQuery);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+
+    const file = new File(["pdf"], "app.pdf", { type: "application/pdf" });
+    await expect(
+      uploadStageDocument(file, { trademarkId: "BX-1", stage: "STAGE 1" }),
+    ).rejects.toThrow("insert failed");
+
+    // Orphan cleanup must be attempted
+    expect(removeStorage.remove).toHaveBeenCalledWith([expect.stringMatching(/^BX-1\/STAGE_1\//)],
+    );
+
+    void storagePath; // suppress unused-variable lint
+  });
+
+  it("uploadStageDocument — returns metadata without signedUrl when signing fails", async () => {
+    const noUrlStorage = {
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      createSignedUrl: vi.fn().mockResolvedValue({ data: null }),
+      remove: vi.fn(),
+    };
+    supabaseMock.storage.from.mockReturnValue(noUrlStorage);
+
+    const insertQuery = createQuery({ data: { ...baseStageDocRow, sub_stage: null, title: null }, error: null });
+    supabaseMock.from.mockReturnValue(insertQuery);
+
+    const file = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
+    const result = await uploadStageDocument(file, { trademarkId: "BX-1", stage: "STAGE 1" });
+
+    // signedUrl absent — no public URL exposed
+    expect(result.signedUrl).toBeUndefined();
+    expect(result.stage).toBe("STAGE 1");
+    expect(noUrlStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it("listStageDocuments — returns all docs for trademark when no stage filter", async () => {
+    const row2 = { ...baseStageDocRow, id: "doc-uuid-2", stage: "STAGE 2", storage_path: "BX-1/STAGE_2/doc-uuid-2.pdf" };
+    const listQuery = createQuery({ data: [baseStageDocRow, row2], error: null });
+    supabaseMock.from.mockReturnValue(listQuery);
+    supabaseMock.storage.from.mockReturnValue({
+      createSignedUrls: vi.fn().mockResolvedValue({
+        data: [
+          { signedUrl: "https://signed.example/stage1.pdf" },
+          { signedUrl: "https://signed.example/stage2.pdf" },
+        ],
+      }),
+    });
+
+    const docs = await listStageDocuments("BX-1");
+
+    expect(supabaseMock.from).toHaveBeenCalledWith("trademark_files");
+    expect(listQuery.eq).toHaveBeenCalledWith("trademark_id", "BX-1");
+    // No stage filter → eq("stage", ...) must NOT be called for stage
+    const eqCalls = (listQuery.eq as ReturnType<typeof vi.fn>).mock.calls;
+    expect(eqCalls.some((c: string[]) => c[0] === "stage")).toBe(false);
+    expect(docs).toHaveLength(2);
+    expect(docs[0].stage).toBe("STAGE 1");
+    expect(docs[1].stage).toBe("STAGE 2");
+  });
+
+  it("listStageDocuments — applies stage filter when stage argument is provided", async () => {
+    const listQuery = createQuery({ data: [baseStageDocRow], error: null });
+    supabaseMock.from.mockReturnValue(listQuery);
+    supabaseMock.storage.from.mockReturnValue({
+      createSignedUrls: vi.fn().mockResolvedValue({ data: [{ signedUrl: "https://signed.example/stage1.pdf" }] }),
+    });
+
+    const docs = await listStageDocuments("BX-1", "STAGE 1");
+
+    // Stage filter must be applied
+    expect(listQuery.eq).toHaveBeenCalledWith("stage", "STAGE 1");
+    expect(docs).toHaveLength(1);
+    expect(docs[0].subStage).toBe("Filing");
+    expect(docs[0].title).toBe("Application Form");
+    expect(docs[0].signedUrl).toBe("https://signed.example/stage1.pdf");
   });
 });
