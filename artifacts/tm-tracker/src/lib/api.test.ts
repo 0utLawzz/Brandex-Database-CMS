@@ -39,6 +39,7 @@ import {
   formatWorkflowLabel,
   normalizeWorkflowValue,
   WORKFLOW_DISPLAY_LABELS,
+  STAGE_DOCUMENT_WORKFLOW,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -530,3 +531,106 @@ describe("Batch 10: Workflow Terminology Expansion", () => {
     expect(row.sub_status).toBe("D-Note Submitted");
   });
 });
+
+describe("Batch 11: Stage Documents Workflow & Normalization", () => {
+  it("STAGE_DOCUMENT_WORKFLOW — contains all 4 stages in sequential order", () => {
+    expect(STAGE_DOCUMENT_WORKFLOW).toHaveLength(4);
+    expect(STAGE_DOCUMENT_WORKFLOW[0].stage).toBe("STAGE 1");
+    expect(STAGE_DOCUMENT_WORKFLOW[1].stage).toBe("STAGE 2");
+    expect(STAGE_DOCUMENT_WORKFLOW[2].stage).toBe("STAGE 3");
+    expect(STAGE_DOCUMENT_WORKFLOW[3].stage).toBe("STAGE 4");
+  });
+
+  it("STAGE_DOCUMENT_WORKFLOW — defines exact required sub-stages with full terminology", () => {
+    // Stage 1
+    expect(STAGE_DOCUMENT_WORKFLOW[0].subStages).toEqual([
+      "Filing",
+      "Acknowledgment",
+      "Examination",
+    ]);
+
+    // Stage 2
+    expect(STAGE_DOCUMENT_WORKFLOW[1].subStages).toEqual([
+      "Assigned",
+      "Accepted",
+      "Hearing",
+    ]);
+
+    // Stage 3 (Demand Note, Opposition, Published)
+    expect(STAGE_DOCUMENT_WORKFLOW[2].subStages).toEqual([
+      "Demand Note Submitted",
+      "Demand Note Received",
+      "Opposition: Filed",
+      "Opposition: Received",
+      "Opposition: Withdrawn",
+      "Published",
+    ]);
+
+    // Stage 4 (CER Dispatch, CER Received, CER Acknowledge)
+    expect(STAGE_DOCUMENT_WORKFLOW[3].subStages).toEqual([
+      "CER Dispatch",
+      "CER Received",
+      "CER Acknowledge",
+    ]);
+  });
+
+  it("STAGE_DOCUMENT_WORKFLOW — avoids short forms (no D-Note or OPPO) and keeps CER unchanged", () => {
+    const allSubStages = STAGE_DOCUMENT_WORKFLOW.flatMap((s) => s.subStages);
+    for (const sub of allSubStages) {
+      expect(sub).not.toMatch(/\bD-Note\b/);
+      expect(sub).not.toMatch(/\bOPPO\b/);
+    }
+
+    const stage4Subs = STAGE_DOCUMENT_WORKFLOW[3].subStages;
+    expect(stage4Subs).toEqual([
+      "CER Dispatch",
+      "CER Received",
+      "CER Acknowledge",
+    ]);
+  });
+
+  it("uploadStageDocument — normalizes full subStage when inserting DB row", async () => {
+    const uploadStorage = {
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/doc.pdf" } }),
+      remove: vi.fn().mockResolvedValue({ error: null }),
+    };
+    supabaseMock.storage.from.mockReturnValue(uploadStorage);
+
+    const insertQuery = createQuery({
+      data: {
+        id: "doc-uuid-1",
+        trademark_id: "BX-1",
+        stage: "STAGE 3",
+        sub_stage: "D-Note Submitted",
+        title: "D-Note Receipt",
+        storage_path: "BX-1/STAGE_3/doc-uuid-1.pdf",
+        file_name: "demand_note.pdf",
+        mime_type: "application/pdf",
+        size_bytes: 1024,
+        uploaded_by: "user-1",
+        created_at: "2026-09-22T00:00:00Z",
+      },
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(insertQuery);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+
+    const file = new File(["dummy pdf content"], "demand_note.pdf", { type: "application/pdf" });
+    await uploadStageDocument(file, {
+      trademarkId: "BX-1",
+      stage: "STAGE 3",
+      subStage: "Demand Note Submitted",
+      title: "  D-Note Receipt  ",
+    });
+
+    expect(insertQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stage: "STAGE 3",
+        sub_stage: "D-Note Submitted",
+        title: "D-Note Receipt",
+      }),
+    );
+  });
+});
+

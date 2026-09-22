@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RecordModal } from "@/components/RecordModal";
+import { StageDocumentsSection } from "@/components/StageDocumentsSection";
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
@@ -334,6 +335,12 @@ export function RecordView() {
                 ))}
               </div>
             </div>
+
+            {/* Stage Documents */}
+            <StageDocumentsSection
+              trademarkId={record.id}
+              currentStage={record.stage}
+            />
 
             {/* Office Notes */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">

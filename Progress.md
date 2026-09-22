@@ -244,3 +244,24 @@ This file is the single source of truth for project status.
 - [x] Added unit tests in `api.test.ts` verifying label formatting, value normalization, edge cases (null/undefined/empty), and `inputToRow` integration
 - [x] Verified: `pnpm test --run` (23/23 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 18.45s)
 
+## 2026-09-22 — Batch 11: Complete Stage-wise Document UI
+
+- [x] Defined canonical `STAGE_DOCUMENT_WORKFLOW` in `api.ts` with all 4 stages and their available sub-stages using full user-facing terminology:
+  - Stage 1: Filing, Acknowledgment, Examination
+  - Stage 2: Assigned, Accepted, Hearing
+  - Stage 3: Demand Note Submitted, Demand Note Received, Opposition: Filed, Opposition: Received, Opposition: Withdrawn, Published
+  - Stage 4: CER Dispatch, CER Received, CER Acknowledge
+- [x] Re-exported `getStaffRole` from `api.ts` for unified staff authentication & role querying
+- [x] Integrated `normalizeWorkflowValue` into `uploadStageDocument` to ensure canonical database values while accepting full user-facing labels
+- [x] Created `StageDocumentsSection.tsx` component in `artifacts/tm-tracker/src/components/`:
+  - Clearly organized stage cards for Stages 1 through 4
+  - Displays stage name, stage badge color, available sub-stages, and document count
+  - Displays attached documents with title, original file name, MIME type badge, formatted size, and upload date
+  - Secure "View" action opening signed URLs with 1-hour expiry (no public URLs exposed)
+  - Role-gated controls: Editor/Admin users can open the Upload modal with stage/sub-stage selection, file validation (<=10MB, permitted MIME types), optional title, progress loader, and success/error notifications; Viewer users have strictly read-only access with all upload controls hidden
+  - Separate from existing registry/form matching "Document Status" section
+- [x] Embedded `<StageDocumentsSection trademarkId={record.id} currentStage={record.stage} />` into `RecordView.tsx` with print-safe styling
+- [x] Added unit tests in `api.test.ts` verifying `STAGE_DOCUMENT_WORKFLOW` stages/sub-stages, terminology rules (no short forms, CER preserved), and upload sub-stage normalization
+- [x] Verified: `pnpm test --run` (27/27 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 13.15s)
+
+

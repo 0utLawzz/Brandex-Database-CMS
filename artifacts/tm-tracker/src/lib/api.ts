@@ -242,6 +242,52 @@ export function normalizeWorkflowValue(val: string | null | undefined): string {
   return WORKFLOW_INTERNAL_VALUES[val] ?? val;
 }
 
+export interface StageDocumentDefinition {
+  stage: string;
+  label: string;
+  subStages: string[];
+}
+
+/**
+ * Workflow stages and sub-stages for stage-wise document management.
+ * Uses full user-facing terminology (Demand Note, Opposition, CER).
+ */
+export const STAGE_DOCUMENT_WORKFLOW: StageDocumentDefinition[] = [
+  {
+    stage: "STAGE 1",
+    label: "Stage 1",
+    subStages: ["Filing", "Acknowledgment", "Examination"],
+  },
+  {
+    stage: "STAGE 2",
+    label: "Stage 2",
+    subStages: ["Assigned", "Accepted", "Hearing"],
+  },
+  {
+    stage: "STAGE 3",
+    label: "Stage 3",
+    subStages: [
+      "Demand Note Submitted",
+      "Demand Note Received",
+      "Opposition: Filed",
+      "Opposition: Received",
+      "Opposition: Withdrawn",
+      "Published",
+    ],
+  },
+  {
+    stage: "STAGE 4",
+    label: "Stage 4",
+    subStages: [
+      "CER Dispatch",
+      "CER Received",
+      "CER Acknowledge",
+    ],
+  },
+];
+
+export { getStaffRole } from "./registryImport";
+
 export const CITIES = ["Islamabad", "Karachi", "Lahore", "Multan", "Rawalpindi", "Peshawar", "Quetta"] as const;
 export const VALID_TYPES = ["X", "A", "N"] as const;
 export const CASE_TYPES = ["Trademark", "Copyright", "Design", "Patent", "Renewal", "Opposition", "Other"] as const;
@@ -1367,8 +1413,8 @@ export async function uploadStageDocument(
     .insert({
       trademark_id: input.trademarkId,
       stage: input.stage,
-      sub_stage: input.subStage ?? null,
-      title: input.title ?? null,
+      sub_stage: input.subStage ? normalizeWorkflowValue(input.subStage) : null,
+      title: input.title?.trim() || null,
       storage_path: storagePath,
       file_name: file.name,
       mime_type: file.type,
