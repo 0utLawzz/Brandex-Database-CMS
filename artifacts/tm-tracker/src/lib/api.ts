@@ -65,11 +65,21 @@ export interface TrademarkRecord {
   journalDate: string;
   tmMatches?: TmMatches;
   journal?: JournalRecord | null;
-  // NEW: Publication workflow fields
+  // Publication workflow fields
   publicationDate?: string | null;
   oppositionDeadline?: string | null;
   demandNoteReceived?: boolean;
   demandNoteDate?: string | null;
+  // Stage payment placeholder fields (manual — not auto-verified)
+  stage1Paid?: boolean;
+  stage1PaidDate?: string | null;
+  stage2Paid?: boolean;
+  stage2PaidDate?: string | null;
+  stage3Paid?: boolean;
+  stage3PaidDate?: string | null;
+  stage4Paid?: boolean;
+  stage4PaidDate?: string | null;
+  paymentReference?: string | null;
 }
 
 export interface TmMatches {
@@ -189,7 +199,7 @@ export const STAGES = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4", "STOPPED"] as
 export type StageType = typeof STAGES[number];
 
 export const STATUS_WORKFLOW: Record<string, string[]> = {
-  "STAGE 1": ["Acknowledgment", "Examination"],
+  "STAGE 1": ["Filing", "Acknowledgment", "Examination"],
   "STAGE 2": ["Assigned", "Accepted", "Hearing"],
   "STAGE 3": ["D-Note Submitted", "D-Note Received", "OPPO: Filed", "OPPO: Received", "OPPO: Withdrawn", "Published"],
   "STAGE 4": ["CER Dispatch", "CER Received", "CER Acknowledge"],
@@ -271,11 +281,21 @@ type SupabaseTrademarkRow = {
   legacy_image_url?: string | null;
   updated_at: string;
   version?: number;
-  // NEW fields from migration 1
+  // Publication workflow fields
   publication_date?: string | null;
   opposition_deadline?: string | null;
   demand_note_received?: boolean;
   demand_note_date?: string | null;
+  // Stage payment placeholder fields (migration 202609220003)
+  stage1_paid?: boolean;
+  stage1_paid_date?: string | null;
+  stage2_paid?: boolean;
+  stage2_paid_date?: string | null;
+  stage3_paid?: boolean;
+  stage3_paid_date?: string | null;
+  stage4_paid?: boolean;
+  stage4_paid_date?: string | null;
+  payment_reference?: string | null;
 };
 
 function ensureConfigured() {
@@ -330,11 +350,21 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     journalDate: row.journal_date ?? "",
     tmMatches: matches,
     journal: row.journal_data,
-    // NEW publication fields
+    // Publication fields
     publicationDate: row.publication_date ?? null,
     oppositionDeadline: row.opposition_deadline ?? null,
     demandNoteReceived: row.demand_note_received ?? false,
     demandNoteDate: row.demand_note_date ?? null,
+    // Stage payment placeholder fields (manual — not auto-verified)
+    stage1Paid: row.stage1_paid ?? false,
+    stage1PaidDate: row.stage1_paid_date ?? null,
+    stage2Paid: row.stage2_paid ?? false,
+    stage2PaidDate: row.stage2_paid_date ?? null,
+    stage3Paid: row.stage3_paid ?? false,
+    stage3PaidDate: row.stage3_paid_date ?? null,
+    stage4Paid: row.stage4_paid ?? false,
+    stage4PaidDate: row.stage4_paid_date ?? null,
+    paymentReference: row.payment_reference ?? null,
   };
 }
 
@@ -396,8 +426,14 @@ const TRADEMARK_LIST_COLUMNS = [
   "application_name", "tm_cpr_number", "nice_class", "status", "sub_status",
   "case_type", "agent", "city", "tm5", "tm6", "tm11", "tm16", "tm56",
   "journal_number", "journal_date", "logo_path", "legacy_image_url", "updated_at", "version",
-  // NEW
+  // Publication fields
   "publication_date", "opposition_deadline", "demand_note_received", "demand_note_date",
+  // Stage payment placeholder fields (migration 202609220003)
+  "stage1_paid", "stage1_paid_date",
+  "stage2_paid", "stage2_paid_date",
+  "stage3_paid", "stage3_paid_date",
+  "stage4_paid", "stage4_paid_date",
+  "payment_reference",
 ].join(",");
 
 export function inputToRow(input: TrademarkInput) {
@@ -567,6 +603,30 @@ export async function updateTrademark(
 export async function deleteTrademark(id: string): Promise<void> {
   ensureConfigured();
   const { error } = await supabase.from("trademarks").delete().eq("id", id);
+  throwIfError(error);
+}
+
+/**
+ * Persist a single stage payment tick + date + optional reference.
+ * Manual / placeholder only — payment is NOT auto-verified.
+ * Does not touch the trademark version or trigger ConflictError.
+ */
+export async function updateStagePayment(
+  id: string,
+  stage: 1 | 2 | 3 | 4,
+  paid: boolean,
+  paidDate?: string | null,
+  reference?: string | null,
+): Promise<void> {
+  ensureConfigured();
+  const patch: Record<string, boolean | string | null> = {
+    [`stage${stage}_paid`]: paid,
+    [`stage${stage}_paid_date`]: paid ? (paidDate ?? null) : null,
+  };
+  if (reference !== undefined) {
+    patch["payment_reference"] = reference ?? null;
+  }
+  const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
   throwIfError(error);
 }
 

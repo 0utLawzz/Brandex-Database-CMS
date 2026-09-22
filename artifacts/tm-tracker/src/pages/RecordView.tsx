@@ -1,4 +1,4 @@
-import { getRecord, getWorkflowHistory } from "@/lib/api";
+import { getRecord, getWorkflowHistory, updateStagePayment } from "@/lib/api";
 import type { TrademarkRecord, TmMatches, JournalRecord, TrademarkWorkflowEvent } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort, formatDate } from "@/lib/utils";
@@ -8,7 +8,7 @@ import {
   ArrowLeft, Edit2, Printer, CheckCircle2, MinusCircle,
   Image as ImageIcon, FileText, User, MapPin,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RecordModal } from "@/components/RecordModal";
 
 const STAGE_BADGE: Record<string, string> = {
@@ -50,12 +50,11 @@ export function RecordView() {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
 
-  // Local UI state for Stage 1–4 payment ticks (not yet persisted)
-  const [payments, setPayments] = useState<Record<string, { paid: boolean; date: string }>>({
-    "STAGE 1": { paid: false, date: "" },
-    "STAGE 2": { paid: false, date: "" },
-    "STAGE 3": { paid: false, date: "" },
-    "STAGE 4": { paid: false, date: "" },
+  // Persisted payment save mutation (manual — NOT auto-verified)
+  const paymentMutation = useMutation({
+    mutationFn: (args: { stage: 1 | 2 | 3 | 4; paid: boolean; date: string }) =>
+      updateStagePayment(params.id!, args.stage, args.paid, args.date || null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trademark", params.id] }),
   });
 
   const { data: record, isLoading, error } = useQuery({
@@ -73,23 +72,6 @@ export function RecordView() {
   const handleEditSaved = () => {
     setEditOpen(false);
     queryClient.invalidateQueries({ queryKey: ["trademark", params.id] });
-  };
-
-  const togglePayment = (stage: string) => {
-    setPayments((prev) => ({
-      ...prev,
-      [stage]: {
-        paid: !prev[stage].paid,
-        date: !prev[stage].paid ? new Date().toISOString().slice(0, 10) : "",
-      },
-    }));
-  };
-
-  const setPaymentDate = (stage: string, date: string) => {
-    setPayments((prev) => ({
-      ...prev,
-      [stage]: { ...prev[stage], date },
-    }));
   };
 
   if (isLoading) {
@@ -299,34 +281,53 @@ export function RecordView() {
               </div>
             </div>
 
-            {/* Stage payment ticks */}
+            {/* Stage payment ticks — manual placeholder (NOT auto-verified) */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-2">
-                Stage Payments
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B]">
+                  Stage Payments
+                </div>
+                <span className="font-mono text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5">
+                  MANUAL — NOT VERIFIED
+                </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:gap-2">
-                {(["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4"] as const).map((stage) => (
+                {(
+                  [
+                    { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
+                    { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
+                    { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
+                    { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
+                  ] as const
+                ).map(({ label, stageNum, paid, date }) => (
                   <div
-                    key={stage}
-                    className={`border-2 p-3 print:p-1.5 ${payments[stage].paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C]/30 bg-[#F0E8D0]"}`}
+                    key={label}
+                    className={`border-2 p-3 print:p-1.5 ${
+                      paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C]/30 bg-[#F0E8D0]"
+                    }`}
                   >
-                    <div className="font-mono text-[10px] font-bold uppercase mb-2 print:mb-1">{stage}</div>
+                    <div className="font-mono text-[10px] font-bold uppercase mb-2 print:mb-1">{label}</div>
                     <label className="flex items-center gap-2 cursor-pointer mb-2 print:mb-1">
                       <input
                         type="checkbox"
-                        checked={payments[stage].paid}
-                        onChange={() => togglePayment(stage)}
+                        checked={paid}
+                        disabled={paymentMutation.isPending}
+                        onChange={() =>
+                          paymentMutation.mutate({ stage: stageNum, paid: !paid, date: paid ? "" : (date || new Date().toISOString().slice(0, 10)) })
+                        }
                         className="w-4 h-4 accent-[#0A6B52]"
                       />
                       <span className="font-mono text-xs font-bold">
-                        {payments[stage].paid ? "PAID" : "UNPAID"}
+                        {paid ? "PAID" : "UNPAID"}
                       </span>
                     </label>
                     <input
                       type="date"
-                      value={payments[stage].date}
-                      onChange={(e) => setPaymentDate(stage, e.target.value)}
-                      disabled={!payments[stage].paid}
+                      value={date}
+                      disabled={!paid || paymentMutation.isPending}
+                      onChange={(e) =>
+                        paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
+                      }
                       className="w-full h-8 print:h-6 px-2 border border-[#0C0C0C]/40 font-mono text-xs bg-white disabled:opacity-40"
                     />
                   </div>

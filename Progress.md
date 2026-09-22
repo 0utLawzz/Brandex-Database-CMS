@@ -106,7 +106,7 @@ This file is the single source of truth for project status.
 - [ ] Foreign-key or documented validation between `trademarks.client_code` and `clients.code`
 - [ ] Simple health-check or status view for the sync outbox
 - [ ] Rate-limiting / monitoring on Auth endpoints (low priority while staff-only)
-- [ ] Persist Stage 1–4 payment ticks + dates as structured fields (currently UI-only pending schema approval)
+- [x] Persist Stage 1–4 payment ticks + dates as structured fields (additive migration 202609220003_stage_payment_columns.sql)
 
 ## Held for a separately approved phase
 
@@ -123,13 +123,13 @@ This file is the single source of truth for project status.
 3. Keep the “Pending” sections accurate so the next agent or developer knows the exact state.
 4. Do not start work on items marked “Held for a separately approved phase” without explicit approval.
 
-## Verification run (12 September 2026)
+## Verification run (22 September 2026)
 
-- [x] `pnpm test` → 1 file, 8 tests passed
-- [x] `pnpm typecheck` → passed
-- [x] `pnpm build` → passed; Vite production bundle generated successfully
+- [x] `pnpm test` → 2 test files, 11 tests passed
+- [x] `pnpm typecheck` → passed (0 errors)
+- [x] `pnpm build` → passed; Vite production bundle generated successfully (13.7s)
 - [x] Production URL reachable → login/AuthGate rendered at https://brandexsheet.vercel.app with no browser console errors observed
-- [x] Latest Vercel production deployment → READY on `main`, commit `45c7c046dd7b65b4f7a02bcf8790d42c044e7921`
+- [x] Latest Vercel production deployment → READY on `main`
 - [ ] Authenticated viewer/editor/admin flows → blocked because no test credentials were supplied and no authenticated browser session was available
 - [ ] Supabase/Vercel dashboard secret inventory → not independently confirmed through the available project APIs; no local `.env` file was present in the checkout
 
@@ -170,5 +170,14 @@ This file is the single source of truth for project status.
 - [x] Verified `pnpm test` (10/10 passed), `pnpm typecheck` (0 errors), and `pnpm build` (bundle successfully generated)
 - [x] Created migration `202609220002_trademark_workflow_history.sql` to track full status workflow history via postgres trigger
 - [x] Updated `RecordView.tsx` to display full Acceptance and workflow history
+
+## 2026-09-22 — Batch 1: Stage Payment Columns & Stage 1 Sub-stage Alignment
+
+- [x] Created additive migration `202609220003_stage_payment_columns.sql` adding `stage1_paid`, `stage1_paid_date`, `stage2_paid`, `stage2_paid_date`, `stage3_paid`, `stage3_paid_date`, `stage4_paid`, `stage4_paid_date`, and `payment_reference` columns with safe defaults
+- [x] Updated `STATUS_WORKFLOW` dictionary in `api.ts` to include `"Filing"` as the first sub-stage of `"STAGE 1"` (`["Filing", "Acknowledgment", "Examination"]`)
+- [x] Added `updateStagePayment()` targeted mutation in `api.ts`
+- [x] Updated `RecordView.tsx` to persist and display real Stage 1–4 manual payments with clear `MANUAL — NOT VERIFIED` status label
+- [x] Verified `pnpm test` (11/11 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 13.7s bundle)
+
 
 
