@@ -10,6 +10,7 @@ import {
   STAGE_DOCUMENT_WORKFLOW,
   formatWorkflowLabel,
   getStaffRole,
+  isStageDocumentSectionVisible,
   type StageDocument,
 } from "@/lib/api";
 import { formatDateShort } from "@/lib/utils";
@@ -200,16 +201,21 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
       {/* Stage Cards Grid */}
       <div className="space-y-4 print:space-y-2">
         {STAGE_DOCUMENT_WORKFLOW.map((stageDef) => {
-          const colors = STAGE_COLORS[stageDef.stage] ?? {
-            bg: "bg-[#0C0C0C]",
-            text: "text-white",
-          };
-
           // Match documents for this stage
           const stageDocs = documents.filter((doc) => {
             const s = (doc.stage || "").trim().toUpperCase();
             return s === stageDef.stage || s === stageDef.label.toUpperCase();
           });
+
+          // Show stage if current/earlier OR if documents already exist in it
+          if (!isStageDocumentSectionVisible(stageDef.stage, currentStage, stageDocs.length)) {
+            return null;
+          }
+
+          const colors = STAGE_COLORS[stageDef.stage] ?? {
+            bg: "bg-[#0C0C0C]",
+            text: "text-white",
+          };
 
           return (
             <div

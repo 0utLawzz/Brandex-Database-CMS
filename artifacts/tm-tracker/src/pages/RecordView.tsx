@@ -175,41 +175,126 @@ export function RecordView() {
               </div>
             </div>
 
-            {/* Image + Name priority */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] p-4 print:p-2 print:shadow-none flex gap-4 items-start">
-              <div className="w-28 h-28 sm:w-36 sm:h-36 print:w-20 print:h-20 shrink-0 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
-                {record.image ? (
-                  <img
-                    src={record.image}
-                    alt={record.appName}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <ImageIcon className="w-10 h-10 text-[#9d9488] print:w-6 print:h-6" />
-                )}
+            {/* ===== RECORD HEADER — Two-Column Layout ===== */}
+            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none print:border-[#0C0C0C]">
+              {/* Top: Left (image+name) | Right (client info) */}
+              <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x-2 divide-[#0C0C0C]/15">
+                {/* LEFT — Logo + Application Name + TM + Class */}
+                <div className="flex gap-3 p-4 print:p-2 sm:w-[55%] items-start">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 print:w-16 print:h-16 shrink-0 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
+                    {record.image ? (
+                      <img src={record.image} alt={record.appName} className="w-full h-full object-contain" />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-[#9d9488] print:w-5 print:h-5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5 print:space-y-0.5">
+                    <div className="font-serif text-xl sm:text-2xl print:text-base uppercase tracking-wide text-[#0C0C0C] font-bold leading-tight break-words">
+                      {record.appName || "—"}
+                    </div>
+                    <div className="font-mono text-xs print:text-[9px] text-[#6d6658] space-y-0.5">
+                      {record.tmCprNo && (
+                        <div>
+                          <span className="text-[#9d9488]">TM / CPR&nbsp;</span>
+                          <strong className="text-[#0C0C0C]">{record.tmCprNo}</strong>
+                        </div>
+                      )}
+                      {record.appClass && (
+                        <div>
+                          <span className="text-[#9d9488]">CLASS&nbsp;</span>
+                          <strong className="text-[#0C0C0C]">{record.appClass}</strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT — Client Info */}
+                <div className="flex-1 p-4 print:p-2 space-y-2 print:space-y-1">
+                  <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
+                    Client Information
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 print:gap-x-2 print:gap-y-0.5">
+                    {record.clientName && (
+                      <div className="col-span-2">
+                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Name</div>
+                        <div className="font-sans font-bold text-sm print:text-[10px] text-[#0C0C0C] break-words">{record.clientName}</div>
+                      </div>
+                    )}
+                    {record.clientCode && (
+                      <div>
+                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Code</div>
+                        <div className="font-mono font-bold text-xs print:text-[9px] text-[#6C1C1F]">{record.clientCode}</div>
+                      </div>
+                    )}
+                    {record.caseNumber && (
+                      <div>
+                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case No</div>
+                        <div className="font-mono font-bold text-xs print:text-[9px] text-[#0A6B52]">{record.caseNumber}</div>
+                      </div>
+                    )}
+                    {record.type && (
+                      <div>
+                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Type</div>
+                        <div className="font-serif font-bold text-base print:text-xs text-[#6C1C1F]">{record.type}</div>
+                      </div>
+                    )}
+                    {record.caseType && (
+                      <div>
+                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case Type</div>
+                        <div className="font-mono font-bold text-[10px] print:text-[8px] text-[#0C0C0C]">{record.caseType}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0 space-y-2 print:space-y-1">
-                <div className="font-serif text-2xl sm:text-3xl print:text-lg uppercase tracking-wide text-[#0C0C0C] font-bold leading-tight">
-                  {record.appName || "—"}
+
+              {/* Divider + Stage / Sub-stage / Previous Action */}
+              <div className="border-t-2 border-[#0C0C0C]/15 px-4 py-3 print:px-2 print:py-1.5 flex flex-col sm:flex-row sm:items-start gap-3 print:gap-1.5 bg-[#F8F4EC]">
+                {/* Current Stage + Sub Stage */}
+                <div className="flex-1 flex items-start gap-2 flex-wrap">
+                  <div>
+                    <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488] mb-0.5">Current Stage</div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {record.stage && (
+                        <span className={`px-2.5 py-0.5 font-mono text-xs print:text-[8px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
+                          {record.stage}
+                        </span>
+                      )}
+                      {record.subStage && (
+                        <span className="px-2 py-0.5 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+                          {formatWorkflowLabel(record.subStage)}
+                        </span>
+                      )}
+                      {record.date && (
+                        <span className="font-mono text-[10px] print:text-[8px] text-[#9d9488]">
+                          Filed: <strong className="text-[#0C0C0C]">{formatDateShort(record.date)}</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                  {record.stage && (
-                    <span className={`px-3 py-1 print:px-1.5 print:py-0.5 font-mono text-sm print:text-[9px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
-                      {record.stage}
-                    </span>
-                  )}
-                  {record.subStage && (
-                    <span className="px-2 py-0.5 print:px-1 print:py-0 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-[#F0E8D0]">
-                      {formatWorkflowLabel(record.subStage)}
-                    </span>
-                  )}
-                  <span className="font-serif text-2xl print:text-base font-bold text-[#6C1C1F]">{record.type || "—"}</span>
-                </div>
-                <div className="font-mono text-xs print:text-[9px] text-[#6d6658] flex flex-wrap gap-x-4 gap-y-0.5">
-                  <span>TM: <strong className="text-[#0C0C0C]">{record.tmCprNo || "—"}</strong></span>
-                  <span>CLASS: <strong className="text-[#0C0C0C]">{record.appClass || "—"}</strong></span>
-                  <span>CASE: <strong className="text-[#0A6B52]">{record.caseNumber || "—"}</strong></span>
-                </div>
+
+                {/* Previous Action from workflow history */}
+                {workflowHistory.length > 1 && (() => {
+                  const prev = workflowHistory[1]; // index 0 = latest, 1 = previous
+                  return (
+                    <div className="shrink-0 text-right print:text-left">
+                      <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488] mb-0.5">Previous Action</div>
+                      <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658]">
+                        {prev.fromStatus && (
+                          <span>{prev.fromStatus}{prev.fromSubStatus ? ` / ${formatWorkflowLabel(prev.fromSubStatus)}` : ""} → </span>
+                        )}
+                        <span className="font-bold text-[#0C0C0C]">
+                          {prev.toStatus}{prev.toSubStatus ? ` / ${formatWorkflowLabel(prev.toSubStatus)}` : ""}
+                        </span>
+                        {prev.eventAt && (
+                          <span className="ml-1.5 text-[#9d9488]">{formatDateShort(prev.eventAt)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -226,6 +311,8 @@ export function RecordView() {
                 <Field label="TM / CPR Number" value={record.tmCprNo} />
                 <Field label="Class" value={record.appClass} />
                 <Field label="Client Name" value={record.clientName} wide />
+                {record.city && <Field label="City / Agent City" value={record.city} />}
+                {record.agent && <Field label="Assigned Agent" value={record.agent} />}
               </div>
             </div>
 
@@ -241,13 +328,18 @@ export function RecordView() {
               canEdit={canEdit}
             />
 
-            {/* 3. Stage Documents */}
+            {/* 3. Workflow History — immediately after Stage Payments */}
+            <WorkflowHistorySection
+              workflowHistory={workflowHistory}
+            />
+
+            {/* 4. Stage Documents */}
             <StageDocumentsSection
               trademarkId={record.id}
               currentStage={record.stage}
             />
 
-            {/* 4. Document Status / TM Forms */}
+            {/* 5. Document Status / TM Forms */}
             <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#F0E8D0] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none">
               <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-1.5">
                 Document Status (TM Forms)
@@ -261,7 +353,7 @@ export function RecordView() {
               </div>
             </div>
 
-            {/* 5. Office Notes & Manual Proceeding Remarks */}
+            {/* 6. Office Notes & Manual Proceeding Remarks */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
               <div className="text-[8px] font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1 flex items-center gap-1.5">
                 <FileText className="w-3 h-3" /> Office Notes & Manual Proceeding Remarks
@@ -270,11 +362,6 @@ export function RecordView() {
                 {record.notes || "—"}
               </div>
             </div>
-
-            {/* 6. Workflow History */}
-            <WorkflowHistorySection
-              workflowHistory={workflowHistory}
-            />
 
             {/* Workflow Reminders (informational only) */}
             <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">

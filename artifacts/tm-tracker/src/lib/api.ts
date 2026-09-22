@@ -530,26 +530,65 @@ const TRADEMARK_LIST_COLUMNS = [
   "payment_reference",
 ].join(",");
 
+/**
+ * Normalizes ordinary business string values to UPPERCASE.
+ * Preserves null/undefined/empty appropriately.
+ */
+export function normalizeBusinessUpper(val: string | null | undefined): string | null {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim();
+  return s ? s.toUpperCase() : null;
+}
+
+export function normalizeBusinessUpperRequired(val: string | null | undefined, fallback = ""): string {
+  if (!val) return fallback;
+  return String(val).trim().toUpperCase();
+}
+
+/**
+ * Stage document section visibility rule:
+ * Show if:
+ * A. The stage is the current stage or an earlier stage
+ * OR
+ * B. That stage already contains existing documents (docCount > 0)
+ */
+export function isStageDocumentSectionVisible(
+  sectionStage: string,
+  currentStage?: string,
+  docCount = 0
+): boolean {
+  if (docCount > 0) return true;
+  const stageOrder: Record<string, number> = {
+    "STAGE 1": 1,
+    "STAGE 2": 2,
+    "STAGE 3": 3,
+    "STAGE 4": 4,
+  };
+  const currentNum = stageOrder[(currentStage || "STAGE 1").toUpperCase()] ?? 1;
+  const sectionNum = stageOrder[sectionStage.toUpperCase()] ?? 1;
+  return sectionNum <= currentNum;
+}
+
 export function inputToRow(input: TrademarkInput) {
   const image = input.image?.trim() || null;
   const externalImage = image?.startsWith("http") ?? false;
   return {
     filing_date: input.date,
-    type: input.type ?? input.prefix,
-    client_code: input.clientCode ?? input.clientNo,
-    client_name: input.clientName ?? null,
-    case_number: input.caseNumber ?? input.caseNo ?? input.folderNo,
-    application_name: input.appName,
-    tm_cpr_number: input.tmCprNo ?? input.tmNo ?? null,
-    nice_class: input.appClass ?? null,
-    status: input.stage,
+    type: normalizeBusinessUpperRequired(input.type ?? input.prefix),
+    client_code: normalizeBusinessUpperRequired(input.clientCode ?? input.clientNo),
+    client_name: normalizeBusinessUpper(input.clientName),
+    case_number: normalizeBusinessUpperRequired(input.caseNumber ?? input.caseNo ?? input.folderNo),
+    application_name: normalizeBusinessUpperRequired(input.appName),
+    tm_cpr_number: normalizeBusinessUpper(input.tmCprNo ?? input.tmNo),
+    nice_class: normalizeBusinessUpper(input.appClass),
+    status: input.stage ? input.stage.trim().toUpperCase() : "STAGE 1",
     sub_status: input.subStage ? normalizeWorkflowValue(input.subStage) : null,
-    case_type: input.caseType ?? null,
-    agent: input.agent ?? null,
-    city: input.city,
-    notes: input.notes ?? null,
-    logo_path: externalImage ? null : image,
-    legacy_image_url: externalImage ? image : null,
+    case_type: normalizeBusinessUpper(input.caseType),
+    agent: normalizeBusinessUpper(input.agent),
+    city: normalizeBusinessUpperRequired(input.city, "ISLAMABAD"),
+    notes: input.notes ?? null, // PRESERVE ORIGINAL CASE for free-form remarks
+    logo_path: externalImage ? null : image, // PRESERVE EXACT PATH
+    legacy_image_url: externalImage ? image : null, // PRESERVE EXACT URL
   };
 }
 
@@ -826,10 +865,10 @@ export async function assignStage2Agent(
     throw new StagePaymentRequiredError("Stage 1 payment is required before proceeding in Stage 2.");
   }
   const patch: Record<string, string> = {
-    agent: agentName.trim(),
+    agent: agentName.trim().toUpperCase(),
   };
   if (city && city.trim()) {
-    patch.city = city.trim();
+    patch.city = city.trim().toUpperCase();
   }
   const { error } = await supabase
     .from("trademarks")
@@ -904,8 +943,8 @@ export async function updateTrademarkAgent(
   if (!agentName || !agentName.trim()) {
     throw new Error("Agent name is required.");
   }
-  const patch: Record<string, string> = { agent: agentName.trim() };
-  if (city && city.trim()) patch.city = city.trim();
+  const patch: Record<string, string> = { agent: agentName.trim().toUpperCase() };
+  if (city && city.trim()) patch.city = city.trim().toUpperCase();
   const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
   throwIfError(error);
 }
@@ -1376,11 +1415,11 @@ export async function createAgentProfile(input: AgentInput): Promise<Agent> {
   const { data, error } = await supabase
     .from("agents")
     .insert({
-      name: input.name,
-      city: input.city ?? null,
+      name: input.name.trim().toUpperCase(),
+      city: input.city ? input.city.trim().toUpperCase() : null,
       phone: input.phone ?? null,
-      email: input.email ?? null,
-      notes: input.notes ?? null,
+      email: input.email ?? null, // PRESERVE ORIGINAL CASE
+      notes: input.notes ?? null, // PRESERVE ORIGINAL CASE
       is_active: input.isActive ?? true,
     })
     .select("*")
@@ -1403,11 +1442,11 @@ export async function createAgentProfile(input: AgentInput): Promise<Agent> {
 export async function updateAgentProfile(id: string, input: Partial<AgentInput>): Promise<void> {
   ensureConfigured();
   const patch: Record<string, unknown> = {};
-  if (input.name !== undefined) patch.name = input.name;
-  if (input.city !== undefined) patch.city = input.city;
+  if (input.name !== undefined) patch.name = input.name.trim().toUpperCase();
+  if (input.city !== undefined) patch.city = input.city ? input.city.trim().toUpperCase() : null;
   if (input.phone !== undefined) patch.phone = input.phone;
-  if (input.email !== undefined) patch.email = input.email;
-  if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.email !== undefined) patch.email = input.email; // PRESERVE ORIGINAL CASE
+  if (input.notes !== undefined) patch.notes = input.notes; // PRESERVE ORIGINAL CASE
   if (input.isActive !== undefined) patch.is_active = input.isActive;
   const { error } = await supabase.from("agents").update(patch).eq("id", id);
   throwIfError(error);

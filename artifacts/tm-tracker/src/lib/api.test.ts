@@ -329,7 +329,8 @@ describe("Brandex Supabase access patterns", () => {
     });
 
     await assignStage2Agent("BX-1", "Counsel B", "Karachi");
-    expect(updateQuery.update).toHaveBeenCalledWith({ agent: "Counsel B", city: "Karachi" });
+    // Agent name and city are uppercased at the API boundary (Batch 2 normalisation rule)
+    expect(updateQuery.update).toHaveBeenCalledWith({ agent: "COUNSEL B", city: "KARACHI" });
     expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
   });
 });
@@ -703,9 +704,10 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
     supabaseMock.from.mockReturnValue(updateQuery);
 
     await updateTrademarkAgent("BX-1", "Counsel A", "Islamabad");
+    // Agent name and city are uppercased at the API boundary (Batch 2 normalisation rule)
     expect(updateQuery.update).toHaveBeenCalledWith({
-      agent: "Counsel A",
-      city: "Islamabad",
+      agent: "COUNSEL A",
+      city: "ISLAMABAD",
     });
     expect(updateQuery.eq).toHaveBeenCalledWith("id", "BX-1");
   });
@@ -913,9 +915,10 @@ describe("Batch 13: Publication Workflow Integration", () => {
         .mockReturnValueOnce(updateQuery);
 
       await assignStage2Agent("BX-1", "  Agent Smith  ", "  Karachi  ");
+      // Whitespace is trimmed AND value is uppercased at the API boundary (Batch 2 normalisation rule)
       expect(updateQuery.update).toHaveBeenCalledWith({
-        agent: "Agent Smith",
-        city: "Karachi",
+        agent: "AGENT SMITH",
+        city: "KARACHI",
       });
     });
   });
