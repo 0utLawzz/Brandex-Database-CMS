@@ -189,5 +189,11 @@ This file is the single source of truth for project status.
 - [x] Verified `pnpm test` (13/13 passed), `pnpm typecheck` (0 errors), and `pnpm build` (12.35s production bundle)
 
 
+## 2026-09-22 — Batch 4: Assigned Operational Queue
 
+- [x] Added TYPE column to AssignedPage table (canonical order: Type → Client Code → Case No)
+- [x] Promoted CLIENT CODE to its own bold column (was secondary text under CLIENT NAME)
+- [x] Added S2 PMT (Stage 2 Payment) status pill per row: ✓ PAID (green) / ⚠ UNPAID (amber) — no extra query, reuses existing `stage2Paid` field
+- [x] Agents with no name now show italic "unassigned" placeholder instead of blank cell
+- [x] Verified: `pnpm test` 13/13 passed, `pnpm typecheck` 0 errors, `pnpm build` passed (11.55s)
 

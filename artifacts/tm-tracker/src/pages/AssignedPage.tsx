@@ -211,7 +211,7 @@ export function AssignedPage() {
           <table className="w-full text-left font-mono text-xs whitespace-nowrap border-collapse">
             <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10">
               <tr>
-                {["", "CASE NUMBER", "CLIENT", "APPLICATION NAME", "TM/CPR NUMBER", "CLASS", "STATUS", "SUB-STATUS", "CITY", "AGENT", "DATE", "ACTIONS"].map((h) => (
+                {["", "TYPE", "CLIENT CODE", "CASE NO", "APPLICATION NAME", "TM/CPR NO", "CLASS", "STAGE", "SUB-STAGE", "AGENT", "CITY", "S2 PMT", "DATE", "ACTIONS"].map((h) => (
                   <th key={h || "img"} className="px-3 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-[10px] last:border-r-0">
                     {h || "IMG"}
                   </th>
@@ -221,13 +221,13 @@ export function AssignedPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={12} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">
+                  <td colSpan={14} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">
                     LOADING ASSIGNED RECORDS…
                   </td>
                 </tr>
               ) : paged.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-6 py-16 text-center">
+                  <td colSpan={14} className="px-6 py-16 text-center">
                     <div className="font-mono font-bold text-[#6d6658] uppercase tracking-widest mb-1">
                       No assigned records found.
                     </div>
@@ -249,14 +249,16 @@ export function AssignedPage() {
                         {r.image ? <img src={r.image} alt="" className="w-full h-full object-contain" /> : <span className="text-[8px] text-[#9d9488]">—</span>}
                       </div>
                     </td>
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold text-[#6C1C1F]">
+                      {r.type || "—"}
+                    </td>
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold">
+                      {r.clientCode || "—"}
+                    </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold text-[#0A6B52]">
                       {r.caseNumber || ""}
                     </td>
-                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[140px]">
-                      <div className="font-bold truncate">{r.clientName || ""}</div>
-                      <div className="text-[#6d6658] text-[10px]">{r.clientCode || ""}</div>
-                    </td>
-                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[200px] truncate">
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[180px] truncate">
                       {r.appName || ""}
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold">
@@ -272,16 +274,27 @@ export function AssignedPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate">
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[110px] truncate">
                       {r.subStage || ""}
+                    </td>
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold max-w-[120px] truncate">
+                      {r.agent || <span className="text-[#9d9488] font-normal italic">unassigned</span>}
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10">
                       {r.city || ""}
                     </td>
-                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold">
-                      {r.agent || ""}
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10">
+                      {r.stage2Paid ? (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#D8F2E8] border border-[#0A6B52] text-[#0A6B52] text-[9px] font-bold uppercase">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> PAID
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#FFF0D0] border border-[#C94A00] text-[#C94A00] text-[9px] font-bold uppercase">
+                          <AlertCircle className="w-2.5 h-2.5" /> UNPAID
+                        </span>
+                      )}
                     </td>
-                    <td className="px-3 py-2 text-[#6d6658]">
+                    <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658]">
                       {formatDateShort(r.date)}
                     </td>
                     <td className="px-3 py-2">
