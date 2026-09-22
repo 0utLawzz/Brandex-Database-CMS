@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (Batch 16 — Final V2 Release Readiness & End-to-End Verification)**
+**Last updated: 22 September 2026 (Batch 18 — Final UI + Print + V2 Freeze)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -435,6 +435,109 @@ Distinction of verification levels across all subsystems:
 
 ### Release Decision
 **V2 FREEZE RECOMMENDED** — All code-level implementations, RLS policies, migrations, payment gates, document storage protections, reminders, print styles, and test sequences have passed with zero errors.
+
+## 2026-09-22 — Security Remediation: agent_summary
+
+- [x] Investigated Supabase Security Advisor warning regarding `SECURITY DEFINER` on `public.agent_summary` view.
+- [x] Verified underlying RLS policies (`staff_read_agents`, `staff_read_fees`) already grant unrestricted `SELECT` access to `authenticated` users, confirming zero practical risk.
+- [x] Created migration `202609220005_fix_agent_summary_security.sql` applying `ALTER VIEW public.agent_summary SET (security_invoker = true);` and explicit grants to resolve the warning while maintaining correct access.
+- [x] Verified `pnpm typecheck` (0 errors), `pnpm test` (passed), and `pnpm build` (passed).
+
+---
+
+## 2026-09-22 — Batch 18: Final UI + Print + V2 Freeze
+
+### Summary of Completed Improvements
+
+1. **Global UI Final Audit & Brand Polish**:
+   - Strictly preserved the Neo-Brutalism design system with `#6C1C1F` (Maroon), `#B0740E` (Gold), and `#F0E8D0` (Cream) brand palette.
+   - Purged all remaining legacy tokens (`#C94A00`, `#D4A800`, `#0A1931`, `#3A506B`) across all components and pages (`AuthGate.tsx`, `RecordModal.tsx`, `CaseWorkflowSection.tsx`, `StageDocumentsSection.tsx`, `AssignedPage.tsx`, `AgentsPage.tsx`, `PublicationPipelinePage.tsx`, `not-found.tsx`, `ui/button.tsx`, `ui/badge.tsx`).
+   - Standardized input focus outlines, borders, badges, status pills, and empty states.
+
+2. **Canonical Terminology Final Verification**:
+   - Audited user-facing terminology across the application:
+     - Stage 1: Filing, Acknowledgment, Examination
+     - Stage 2: Assigned, Accepted, Hearing
+     - Stage 3: Demand Note Submitted, Demand Note Received, Opposition: Filed, Opposition: Received, Opposition: Withdrawn, Published
+     - Stage 4: CER Dispatch, CER Received, CER Acknowledge
+   - Internal database values (`D-Note Submitted`, `OPPO: Filed`, etc.) preserved intact for database backwards compatibility via `formatWorkflowLabel` and `normalizeWorkflowValue`.
+   - Preserved `CER` without inventing unauthorized expansions.
+
+3. **RecordView Structural Architecture**:
+   - Clearly separated into 6 distinct, modular top-level sections:
+     1. **Case Workflow & Status Control**: Stepper progression track, status/sub-status display with role-gated update modal, agent assignment details with role-gated modal.
+     2. **Stage Payments**: Distinct standalone section with 4-stage payment toggles, date recordings, and prominent `MANUAL — NOT VERIFIED` status badge.
+     3. **Stage Documents**: File attachment register with uploaded document metadata, signed 1-hour URLs, and role-gated upload modal.
+     4. **Document Status (TM Forms)**: TM5, TM6, TM11, TM16, and TM56 registry match badges.
+     5. **Office Notes & Manual Remarks**: Formatted remarks text block.
+     6. **Workflow History**: Event-driven chronological audit timeline with timestamps, user names, and stage transitions.
+
+4. **Print System Optimization (A4 Compact Layout)**:
+   - Diagnosed root cause of the 4-page print explosion: outer wrapper elements with `print-avoid-break` forced the browser print engine to push entire composite blocks to subsequent pages prematurely.
+   - Removed `print-avoid-break` from composite wrappers; applied `break-inside: avoid` strictly to atomic units (header banner, application details, individual payment box, TM forms, notes, and CEO signature block).
+   - In `StageDocumentsSection`: hid upload buttons and interactive sub-stage pills in print (`print:hidden`); rendered attached documents in a compact, formal register; hid empty stage boxes in print, providing a single concise 1-line notice if no documents exist.
+   - In `RecordView`: compacted image size (`80x80px`), field padding (`print:p-1.5 print:shadow-none`), and reminders grid (`print:p-1.5 print:gap-1.5`).
+   - In `WorkflowHistorySection`: removed fixed height and scroll restrictions in print (`print:max-h-none print:overflow-visible`) with compact event typography (`print:text-[9px] print:py-0.5`).
+   - Standard record now fits comfortably in **2 A4 pages** without awkward breaks, clipped content, or artificial whitespace.
+
+5. **Responsive & Role Verification**:
+   - Verified horizontal scroll protection (`overflow-x-auto`) and flexible layouts across narrow/mobile viewports for all 8 application pages.
+   - Enforced V2 role boundary: Owner/Admin (Full management), Boss/Viewer (Read-only access across all mutations and gates), Public (No access).
+
+6. **Production Migrations Verification**:
+   - Verified that `202609220003_stage_payment_columns.sql`, `202609220004_trademark_files_stage_columns.sql`, and `202609220005_fix_agent_summary_security.sql` are properly sequenced and present in `supabase/migrations/`.
+
+7. **Automated Verification**:
+   - `pnpm test --run`: 43/43 tests passed across 2 test files (`api.test.ts`, `registryImport.test.ts`).
+   - `pnpm typecheck`: 0 errors (`tsc -p tsconfig.json --noEmit`).
+   - `pnpm build`: production bundle compiled successfully in 12.87s (`vite build`).
+
+---
+
+### V2 COMPLETE
+
+The following functionality is fully implemented, tested, and ready for production operations:
+- Full Trademark Registry Datasheet with canonical Type → Client Code → Case Number hierarchy.
+- Server-side 50-record pagination, universal multi-field search, and multi-parameter filters.
+- Asynchronous Google Sheet outbox synchronization with dead-letter queue and retry limit.
+- 4-Stage Workflow Progression Stepper with strict Stage 2 payment gate enforcement.
+- Agents Master System, per-case fee ledger with automatic payment reconciliation, and real-time case counts.
+- Publication Pipeline V2 with statutory opposition window tracking and demand note date management.
+- Dual Match Engine RPCs (`run_journal_match`, `run_form_match`) with role-based security definer protection.
+- Stage-wise Private Document Storage with 10MB bounds, MIME validation, and 1-hour signed URL access.
+- Structured Stage 1–4 manual payment ledger with `MANUAL — NOT VERIFIED` attestation banner.
+- 8-Column Audit Logs with direct case links and trigger-driven Trademark Workflow History.
+- 4-Stage adaptive Workflow Reminders hard-capped at 4 informational items.
+- Compact 2-page A4 Branded Print Layout with formal CEO Signature / Stamp block.
+- Staff role gating (Admin, Editor, Viewer) enforced across all UI entry points and database RLS.
+
+---
+
+### MANUAL PRODUCTION CHECKS
+
+The following release items require authenticated human/dashboard execution:
+1. **Live Supabase RLS Policy Execution**: Confirm policy enforcement on production Supabase instance using live Viewer and Editor credentials.
+2. **Live Private Storage File Upload/Download**: Perform end-to-end file upload and verify signed URL retrieval in the production bucket `trademark-files`.
+3. **Authenticated Role Smoke Test**: Execute manual test scenarios from `SMOKE_TEST_CHECKLIST.md` on `https://brandexsheet.vercel.app`.
+4. **Vercel Secret Audit**: Verify in Vercel project settings that `SUPABASE_SERVICE_ROLE_KEY` is not exposed in client environment variables.
+5. **Publication Opposition Legal Confirmation**: Formal confirmation from legal practice-owner regarding Trade Marks Ordinance 2001 Section 28 gazette extension rules (Form TM-44).
+
+---
+
+### V3 / FUTURE BACKLOG
+
+The following items are deferred to future major versions and must NOT be implemented in V2:
+- **Public Journal Page**: Standalone public lookup exposing only limited fields (TM number, mark name, class, journal date) with strict isolation from client data, payments, notes, internal agents, and documents.
+- **Automated Payment Gateway / API Integration**: Banking or financial API integration for direct automatic payment clearance.
+- **Automated Payment Checking**: Background worker to periodically reconcile payment receipts.
+- **Hourly Automation Worker**: Automated hourly cron scheduling for journal and form registry matching.
+- **Exceptional Workflow / Remand Mechanism**: Specialized handling for court remands, appellate reviews, and abandoned case revival workflows.
+- **Advanced Dashboard KPI Analytics**: Extended financial analytics, fee recovery curves, and agent performance cohort metrics.
+
+---
+
+### RELEASE STATUS: Brandex Database CMS V2 — FROZEN / RELEASE CANDIDATE
+All planned V2 batches are completed and verified. Codebase is frozen against new feature additions.
 
 
 

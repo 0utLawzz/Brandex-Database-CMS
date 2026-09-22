@@ -78,7 +78,7 @@ function FormInput({ className = "", ...props }: React.InputHTMLAttributes<HTMLI
   return (
     <input
       {...props}
-      className={`w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
+      className={`w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
     />
   );
 }
@@ -87,7 +87,7 @@ function FormSelect({ children, className = "", ...props }: React.SelectHTMLAttr
   return (
     <select
       {...props}
-      className={`w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
+      className={`w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
     >
       {children}
     </select>
@@ -627,7 +627,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                       {...form.register("notes")}
                       rows={3}
                       placeholder="Enter any notes here..."
-                      className="w-full p-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00] focus:outline-offset-0 resize-none"
+                      className="w-full p-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 resize-none"
                     />
                   </div>
 
@@ -649,7 +649,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploading}
-                          className="flex items-center gap-2 px-4 h-10 bg-[#0C0C0C] text-[#F0E8D0] border-2 border-[#0C0C0C] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#C94A00] hover:border-[#C94A00] hover:text-white transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2 px-4 h-10 bg-[#0C0C0C] text-[#F0E8D0] border-2 border-[#0C0C0C] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#6C1C1F] hover:border-[#6C1C1F] hover:text-white transition-colors disabled:opacity-50"
                         >
                           <UploadCloud className="w-4 h-4" />
                           {uploading ? "UPLOADING…" : watchImage ? "REPLACE IMAGE" : "BROWSE / UPLOAD IMAGE"}
@@ -675,7 +675,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                           </div>
                           <div className="w-full h-2 bg-[#E8DFC7] border border-[#0C0C0C] overflow-hidden">
                             <div
-                              className="h-full bg-[#C94A00] transition-all duration-300"
+                              className="h-full bg-[#6C1C1F] transition-all duration-300"
                               style={{ width: `${uploadProgress}%` }}
                             />
                           </div>
@@ -687,7 +687,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                         <div className="flex items-center gap-4 pt-2 border-t border-[#0C0C0C]/10">
                           <div
                             onClick={() => setPreviewModalOpen(true)}
-                            className="w-16 h-16 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center cursor-pointer hover:border-[#C94A00] overflow-hidden"
+                            className="w-16 h-16 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center cursor-pointer hover:border-[#6C1C1F] overflow-hidden"
                             title="Click to enlarge"
                           >
                             <img
@@ -706,7 +706,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                             <button
                               type="button"
                               onClick={() => setPreviewModalOpen(true)}
-                              className="flex items-center gap-1 text-[#C94A00] text-[11px] font-bold hover:underline"
+                              className="flex items-center gap-1 text-[#6C1C1F] text-[11px] font-bold hover:underline"
                             >
                               <Eye className="w-3.5 h-3.5" /> View Large Preview
                             </button>
@@ -773,7 +773,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                 <button
                   type="submit"
                   disabled={isPending || isViewer}
-                  className="flex items-center gap-2 bg-[#C94A00] text-white border-2 border-[#C94A00] px-6 h-10 font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] px-6 h-10 font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50"
                   title={isViewer ? "Editor or Admin role required" : undefined}
                 >
                   <Save className="w-4 h-4" />

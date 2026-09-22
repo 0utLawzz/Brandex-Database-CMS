@@ -12,8 +12,8 @@ const PAGE_SIZE = 50;
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
-  "STAGE 2": "bg-[#D4A800] text-[#0C0C0C]",
-  "STAGE 3": "bg-[#C94A00] text-white",
+  "STAGE 2": "bg-[#B0740E] text-white",
+  "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
   "STOPPED": "bg-[#CC0000] text-white",
 };
@@ -43,7 +43,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00] min-w-[130px]"
+        className="h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F] min-w-[130px]"
       >
         <option value="">ALL</option>
         {options.map((o) => (
@@ -289,7 +289,7 @@ export function AssignedPage() {
                           <CheckCircle2 className="w-2.5 h-2.5" /> PAID
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#FFF0D0] border border-[#C94A00] text-[#C94A00] text-[9px] font-bold uppercase">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#FFF0D0] border border-[#6C1C1F] text-[#6C1C1F] text-[9px] font-bold uppercase">
                           <AlertCircle className="w-2.5 h-2.5" /> UNPAID
                         </span>
                       )}
@@ -351,7 +351,7 @@ export function AssignedPage() {
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="border-2 border-[#0C0C0C] bg-white p-3 shadow-[3px_3px_0_#0C0C0C]"><div className="font-mono text-[9px] font-bold uppercase text-[#6d6658]">ASSIGNED QUEUE</div><div className="mt-1 font-serif text-3xl">{total}</div></div>
                 <div className="border-2 border-[#0C0C0C] bg-[#D8F2E8] p-3 shadow-[3px_3px_0_#0A6B52]"><div className="font-mono text-[9px] font-bold uppercase text-[#0A6B52]">COMPLETED STAGE 3/4</div><div className="mt-1 font-serif text-3xl text-[#0A6B52]">{completedQuery.data ?? "—"}</div></div>
-                <div className="border-2 border-[#0C0C0C] bg-[#FFF0D0] p-3 shadow-[3px_3px_0_#C94A00]"><div className="font-mono text-[9px] font-bold uppercase text-[#6C1C1F]">PENDING IN ASSIGNED QUEUE</div><div className="mt-1 font-serif text-3xl text-[#6C1C1F]">{total}</div></div>
+                <div className="border-2 border-[#0C0C0C] bg-[#FFF0D0] p-3 shadow-[3px_3px_0_#6C1C1F]"><div className="font-mono text-[9px] font-bold uppercase text-[#6C1C1F]">PENDING IN ASSIGNED QUEUE</div><div className="mt-1 font-serif text-3xl text-[#6C1C1F]">{total}</div></div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 border-2 border-[#0C0C0C] bg-white p-3 font-mono text-xs uppercase sm:grid-cols-4">
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">AGENT</span><strong>{assignmentRecord.agent || "—"}</strong></div>
@@ -361,9 +361,9 @@ export function AssignedPage() {
               </div>
               {!assignmentRecord.stage2Paid ? (
                 <>
-                  <div className="mt-3 p-3 bg-[#FFF0D0] border-2 border-[#C94A00] flex items-center justify-between">
+                  <div className="mt-3 p-3 bg-[#FFF0D0] border-2 border-[#6C1C1F] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-[#C94A00] shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-[#6C1C1F] shrink-0" />
                       <span className="font-mono text-xs font-bold text-[#6C1C1F]">
                         Stage 2 payment is required before proceeding.
                       </span>
@@ -411,7 +411,7 @@ export function AssignedPage() {
                               setSelectedAgentCity(matched.city);
                             }
                           }}
-                          className="w-full h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
+                          className="w-full h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F]"
                         >
                           <option value="">-- SELECT AGENT --</option>
                           {selectedAgentName && !activeAgentProfiles.some((a) => a.name === selectedAgentName) && (
@@ -429,7 +429,7 @@ export function AssignedPage() {
                         <select
                           value={selectedAgentCity}
                           onChange={(e) => setSelectedAgentCity(e.target.value)}
-                          className="w-full h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
+                          className="w-full h-9 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F]"
                         >
                           <option value="">-- SELECT CITY --</option>
                           {CITIES.map((c) => (
@@ -452,7 +452,7 @@ export function AssignedPage() {
                   </div>
                 </>
               )}
-              <p className="mt-4 border-l-4 border-[#C94A00] bg-[#FFF0D0] p-3 font-mono text-[10px] uppercase leading-relaxed">This view reports the current assignment queue from the trusted trademark status fields. Complete acceptance workflow history is available in the case detail record.</p>
+              <p className="mt-4 border-l-4 border-[#6C1C1F] bg-[#FFF0D0] p-3 font-mono text-[10px] uppercase leading-relaxed">This view reports the current assignment queue from the trusted trademark status fields. Complete acceptance workflow history is available in the case detail record.</p>
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => goToRecord(assignmentRecord.id)} className="inline-flex items-center gap-2 border-2 border-[#6C1C1F] bg-[#6C1C1F] px-3 py-2 font-mono text-xs font-bold uppercase text-white"><ExternalLink className="h-4 w-4" /> OPEN RECORD</button></div>
             </section>
           </div>

@@ -330,7 +330,7 @@ export function AgentsPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="border-2 border-[#0C0C0C] bg-white p-3 shadow-[2px_2px_0_#0C0C0C]">
                   <span className="block text-[9px] font-bold text-[#6d6658] uppercase">ASSIGNED (STAGE 2)</span>
-                  <strong className="font-serif text-2xl text-[#D4A800]">
+                  <strong className="font-serif text-2xl text-[#B0740E]">
                     {caseCountsLoading ? "…" : (caseCounts?.assignedCases ?? "—")}
                   </strong>
                 </div>
@@ -475,7 +475,7 @@ export function AgentsPage() {
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00]"
+                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="Agent name"
                 />
               </div>
@@ -485,7 +485,7 @@ export function AgentsPage() {
                   type="text"
                   value={editForm.city || ""}
                   onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00]"
+                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="City"
                 />
               </div>
@@ -495,7 +495,7 @@ export function AgentsPage() {
                   type="text"
                   value={editForm.phone || ""}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00]"
+                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="Phone number"
                 />
               </div>
@@ -505,7 +505,7 @@ export function AgentsPage() {
                   type="email"
                   value={editForm.email || ""}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#C94A00]"
+                  className="mt-1 h-10 w-full px-3 border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="Email address"
                 />
               </div>

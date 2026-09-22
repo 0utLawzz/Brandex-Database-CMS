@@ -20,8 +20,8 @@ export function Badge({
 }: BadgeProps) {
   const variants = {
     default: "bg-[#E8DFC7] text-[#0C0C0C]",
-    filed: "bg-[#F0E8D0] border-[#D4A800] text-[#D4A800]",
-    examination: "bg-[#F0E8D0] border-[#C94A00] text-[#C94A00]",
+    filed: "bg-[#F0E8D0] border-[#B0740E] text-[#B0740E]",
+    examination: "bg-[#F0E8D0] border-[#6C1C1F] text-[#6C1C1F]",
     accepted: "bg-[#F0E8D0] border-[#0D9970] text-[#0A6B52]",
     advertised: "bg-[#0D9970] border-[#0A6B52] text-white",
     opposed: "bg-[#F0E8D0] border-red-600 text-red-600",

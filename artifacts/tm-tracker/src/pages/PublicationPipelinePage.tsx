@@ -130,7 +130,7 @@ export function PublicationPipelinePage() {
 
   const getDaysColor = (days: number): string => {
     if (days < 0) return "text-[#CC0000]";
-    if (days <= 7) return "text-[#C94A00]";
+    if (days <= 7) return "text-[#6C1C1F]";
     if (days <= 30) return "text-[#B0740E]";
     return "text-[#0A6B52]";
   };
@@ -470,7 +470,7 @@ export function PublicationPipelinePage() {
                         type="date"
                         value={demandNoteDate}
                         onChange={(e) => setDemandNoteDate(e.target.value)}
-                        className="h-8 px-2 border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#C94A00]"
+                        className="h-8 px-2 border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F]"
                       />
                       <button
                         onClick={() =>

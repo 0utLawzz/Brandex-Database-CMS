@@ -153,15 +153,15 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
   const activeStageWorkflow = STAGE_DOCUMENT_WORKFLOW.find((s) => s.stage === targetStage);
 
   return (
-    <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#E8DFC7] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-4">
+    <div className="border-3 border-[#0C0C0C] bg-[#E8DFC7] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-4 print:space-y-2">
       {/* Section Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-3 print:pb-1.5">
         <div className="flex items-center gap-2">
-          <FolderArchive className="w-5 h-5 text-[#6C1C1F]" />
-          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">
+          <FolderArchive className="w-5 h-5 text-[#6C1C1F] print:w-4 print:h-4" />
+          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F] print:text-xs">
             Stage Documents
           </div>
-          <span className="font-mono text-[10px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+          <span className="font-mono text-[10px] print:text-[8px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
             {documents.length} {documents.length === 1 ? "FILE" : "FILES"}
           </span>
         </div>
@@ -190,8 +190,15 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
         </div>
       )}
 
+      {/* Print-only fallback when no documents attached across any stage */}
+      {documents.length === 0 && (
+        <div className="hidden print:block p-2 border border-dashed border-[#0C0C0C]/30 bg-white font-mono text-[9px] text-[#6d6658] italic text-center">
+          No stage documents attached to this record.
+        </div>
+      )}
+
       {/* Stage Cards Grid */}
-      <div className="space-y-4">
+      <div className="space-y-4 print:space-y-2">
         {STAGE_DOCUMENT_WORKFLOW.map((stageDef) => {
           const colors = STAGE_COLORS[stageDef.stage] ?? {
             bg: "bg-[#0C0C0C]",
@@ -207,17 +214,19 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
           return (
             <div
               key={stageDef.stage}
-              className="border-2 border-[#0C0C0C] bg-white shadow-[3px_3px_0_#0C0C0C] print:shadow-none p-3.5 space-y-3"
+              className={`border-2 border-[#0C0C0C] bg-white shadow-[3px_3px_0_#0C0C0C] print:shadow-none p-3.5 print:p-2 space-y-3 print:space-y-1.5 ${
+                stageDocs.length === 0 ? "print:hidden" : ""
+              }`}
             >
               {/* Stage Title and Available Sub-stages */}
-              <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#0C0C0C]/20 pb-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#0C0C0C]/20 pb-2 print:pb-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2.5 py-1 font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] ${colors.bg} ${colors.text}`}
+                    className={`px-2.5 py-1 print:px-1.5 print:py-0.5 font-mono text-xs print:text-[9px] font-bold uppercase border-2 border-[#0C0C0C] ${colors.bg} ${colors.text}`}
                   >
                     {stageDef.label}
                   </span>
-                  <span className="font-mono text-[10px] text-[#6d6658]">
+                  <span className="font-mono text-[10px] print:text-[8px] text-[#6d6658]">
                     ({stageDocs.length} {stageDocs.length === 1 ? "document" : "documents"})
                   </span>
                 </div>
@@ -234,8 +243,8 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                 )}
               </div>
 
-              {/* Available Sub-stages listing */}
-              <div>
+              {/* Available Sub-stages listing — hidden on print */}
+              <div className="print:hidden">
                 <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#6d6658] mb-1.5">
                   Available Sub-stages:
                 </div>
@@ -252,7 +261,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               </div>
 
               {/* Documents List */}
-              <div className="space-y-2 pt-1">
+              <div className="space-y-2 print:space-y-1 pt-1 print:pt-0.5">
                 {stageDocs.length === 0 ? (
                   <div className="p-3 border border-dashed border-[#0C0C0C]/30 bg-[#F0E8D0]/40 font-mono text-xs text-[#6d6658] italic text-center">
                     No documents attached for {stageDef.label}.
@@ -261,23 +270,23 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                   stageDocs.map((doc: StageDocument) => (
                     <div
                       key={doc.id}
-                      className="p-3 border-2 border-[#0C0C0C] bg-[#FDFBF7] shadow-[2px_2px_0_#0C0C0C] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                      className="p-3 print:p-1.5 border-2 border-[#0C0C0C] bg-[#FDFBF7] shadow-[2px_2px_0_#0C0C0C] print:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 print:gap-1"
                     >
-                      <div className="min-w-0 flex-1 space-y-1">
+                      <div className="min-w-0 flex-1 space-y-1 print:space-y-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-serif font-bold text-base text-[#0A1931] break-words">
+                          <span className="font-serif font-bold text-base print:text-xs text-[#0C0C0C] break-words">
                             {doc.title || doc.fileName}
                           </span>
                           {doc.subStage && (
-                            <span className="px-2 py-0.5 font-mono text-[10px] font-bold uppercase border border-[#0C0C0C]/40 bg-[#E8DFC7] text-[#0C0C0C]">
+                            <span className="px-2 py-0.5 print:px-1.5 print:py-0 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-[#E8DFC7] text-[#0C0C0C]">
                               {formatWorkflowLabel(doc.subStage)}
                             </span>
                           )}
-                          <span className="px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase bg-[#6C1C1F]/10 text-[#6C1C1F] border border-[#6C1C1F]/30">
+                          <span className="px-1.5 py-0.5 print:px-1 print:py-0 font-mono text-[9px] print:text-[8px] font-bold uppercase bg-[#6C1C1F]/10 text-[#6C1C1F] border border-[#6C1C1F]/30">
                             {formatMimeBadge(doc.mimeType, doc.fileName)}
                           </span>
                         </div>
-                        <div className="font-mono text-[11px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5">
+                        <div className="font-mono text-[11px] print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5">
                           <span className="truncate max-w-xs">
                             File: <strong className="text-[#0C0C0C]">{doc.fileName}</strong>
                           </span>
@@ -290,7 +299,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                         </div>
                       </div>
 
-                      <div className="shrink-0 flex items-center gap-2">
+                      <div className="shrink-0 flex items-center gap-2 print:hidden">
                         {doc.signedUrl ? (
                           <a
                             href={doc.signedUrl}

@@ -7,9 +7,9 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-[#C94A00] text-[#F0E8D0]",
+        primary: "bg-[#6C1C1F] text-[#F0E8D0]",
         secondary: "bg-[#0A6B52] text-white",
-        accent: "bg-[#D4A800] text-[#0C0C0C]",
+        accent: "bg-[#B0740E] text-white",
         destructive: "bg-red-600 text-white",
         outline: "bg-[#E8DFC7] text-[#0C0C0C]",
         ghost:

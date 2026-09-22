@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Workflow, ArrowRight, CheckCircle2, Clock, User, MapPin,
-  AlertCircle, Loader2, X, Edit3, ShieldAlert, Check,
+  AlertCircle, Loader2, X, Edit3, ShieldAlert, Check, CreditCard,
 } from "lucide-react";
 import {
   STATUS_WORKFLOW,
@@ -19,27 +19,24 @@ import {
 } from "@/lib/api";
 import { formatDateShort } from "@/lib/utils";
 
-interface CaseWorkflowSectionProps {
-  record: TrademarkRecord;
-  workflowHistory: TrademarkWorkflowEvent[];
-  canEdit: boolean;
-}
-
 const STAGE_ORDER = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4"] as const;
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
-  "STAGE 2": "bg-[#D4A800] text-[#0C0C0C]",
-  "STAGE 3": "bg-[#C94A00] text-white",
+  "STAGE 2": "bg-[#B0740E] text-white",
+  "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
   "STOPPED": "bg-[#CC0000] text-white",
 };
 
-export function CaseWorkflowSection({
-  record,
-  workflowHistory,
-  canEdit,
-}: CaseWorkflowSectionProps) {
+// ── 1. CASE WORKFLOW & STATUS CONTROL ────────────────────────────────────────
+
+interface CaseWorkflowSectionProps {
+  record: TrademarkRecord;
+  canEdit: boolean;
+}
+
+export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProps) {
   const queryClient = useQueryClient();
 
   // Modals state
@@ -56,7 +53,7 @@ export function CaseWorkflowSection({
   const [selectedCity, setSelectedCity] = useState<string>(record.city || "Islamabad");
   const [agentError, setAgentError] = useState<string | null>(null);
 
-  // 1. Agents list for assignment
+  // Agents list for assignment
   const { data: agents = [] } = useQuery({
     queryKey: ["agents-master"],
     queryFn: listAgentProfiles,
@@ -64,17 +61,7 @@ export function CaseWorkflowSection({
     enabled: agentModalOpen,
   });
 
-  // 2. Stage Payments mutation
-  const paymentMutation = useMutation({
-    mutationFn: (args: { stage: 1 | 2 | 3 | 4; paid: boolean; date: string }) =>
-      updateStagePayment(record.id, args.stage, args.paid, args.date || null),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
-      queryClient.invalidateQueries({ queryKey: ["trademark-workflow-history", record.id] });
-    },
-  });
-
-  // 3. Status Transition mutation
+  // Status Transition mutation
   const statusMutation = useMutation({
     mutationFn: async () => {
       await updateTrademarkStatus(record.id, targetStage, targetSubStage || null);
@@ -90,7 +77,7 @@ export function CaseWorkflowSection({
     },
   });
 
-  // 4. Agent Assignment mutation
+  // Agent Assignment mutation
   const agentMutation = useMutation({
     mutationFn: async () => {
       await updateTrademarkAgent(record.id, selectedAgent.trim(), selectedCity.trim() || undefined);
@@ -120,34 +107,31 @@ export function CaseWorkflowSection({
     setAgentModalOpen(true);
   };
 
-  // Progression calculation
   const currentStageIndex = STAGE_ORDER.indexOf(record.stage as any);
   const isStopped = record.stage === "STOPPED";
 
-  // Stage 2 payment check for target status
   const targetStageRequiresPayment = isStage2PaymentRequired(targetStage, record.stage2Paid);
   const agentAssignmentBlocked = isStage2PaymentRequired(record.stage, record.stage2Paid);
-
   const availableSubStages = STATUS_WORKFLOW[targetStage] ?? [];
 
   return (
-    <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#E8DFC7] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-4">
+    <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#E8DFC7] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-3">
       {/* Section Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-2.5 print:pb-1">
         <div className="flex items-center gap-2">
-          <Workflow className="w-5 h-5 text-[#6C1C1F]" />
-          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">
+          <Workflow className="w-5 h-5 text-[#6C1C1F] print:w-4 print:h-4" />
+          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F] print:text-xs">
             Case Workflow & Status Control
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span
-            className={`px-3 py-1 font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
+            className={`px-3 py-1 print:px-2 print:py-0.5 font-mono text-xs print:text-[10px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
           >
             {record.stage || "STAGE 1"}
           </span>
           {record.subStage && (
-            <span className="px-2.5 py-1 font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+            <span className="px-2.5 py-1 print:px-1.5 print:py-0.5 font-mono text-xs print:text-[10px] font-bold uppercase border-2 border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
               {formatWorkflowLabel(record.subStage)}
             </span>
           )}
@@ -155,17 +139,17 @@ export function CaseWorkflowSection({
       </div>
 
       {/* Lifecycle Progression Track */}
-      <div className="border-2 border-[#0C0C0C] bg-white p-3 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2">
+      <div className="border-2 border-[#0C0C0C] bg-white p-3 print:p-1.5 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
+        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
           Workflow Progression
         </div>
         {isStopped ? (
-          <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs font-bold flex items-center gap-2">
+          <div className="p-2.5 print:p-1.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs print:text-[10px] font-bold flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>CASE IS STOPPED — Workflow lifecycle halted</span>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 print:gap-1.5">
             {STAGE_ORDER.map((stageName, idx) => {
               const isPast = currentStageIndex > idx;
               const isCurrent = currentStageIndex === idx;
@@ -173,16 +157,16 @@ export function CaseWorkflowSection({
               return (
                 <div
                   key={stageName}
-                  className={`p-2 border-2 transition-all ${
+                  className={`p-2 print:p-1 border-2 transition-all ${
                     isCurrent
-                      ? "border-[#0C0C0C] bg-[#F0E8D0] shadow-[3px_3px_0_#0C0C0C]"
+                      ? "border-[#0C0C0C] bg-[#F0E8D0] shadow-[3px_3px_0_#0C0C0C] print:shadow-none"
                       : isPast
                         ? "border-[#0A6B52] bg-[#D8F2E8]/40"
                         : "border-[#0C0C0C]/20 bg-[#FBF9F5] opacity-65"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="font-mono text-xs font-bold text-[#0C0C0C]">
+                  <div className="flex items-center justify-between gap-1 mb-1 print:mb-0">
+                    <span className="font-mono text-xs print:text-[10px] font-bold text-[#0C0C0C]">
                       {stageName}
                     </span>
                     {isPast ? (
@@ -191,7 +175,7 @@ export function CaseWorkflowSection({
                       <span className="w-2 h-2 rounded-full bg-[#6C1C1F] animate-pulse" />
                     ) : null}
                   </div>
-                  <div className="font-mono text-[9px] text-[#6d6658]">
+                  <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658]">
                     {isCurrent ? "● ACTIVE" : isPast ? "✓ COMPLETED" : "UPCOMING"}
                   </div>
                 </div>
@@ -204,10 +188,10 @@ export function CaseWorkflowSection({
       {/* Control Grid: Status & Agent Details */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 print:gap-2">
         {/* Status Card */}
-        <div className="border-2 border-[#0C0C0C] bg-white p-3.5 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-3">
+        <div className="border-2 border-[#0C0C0C] bg-white p-3.5 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#3A506B]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658]">
                 Current Status & Sub-Status
               </span>
               {canEdit && (
@@ -221,16 +205,16 @@ export function CaseWorkflowSection({
                 </button>
               )}
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 print:space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-[#6d6658]">Stage:</span>
-                <span className="font-mono text-sm font-bold text-[#0A1931]">
+                <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Stage:</span>
+                <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                   {record.stage || "—"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-[#6d6658]">Sub-status:</span>
-                <span className="font-mono text-sm font-bold text-[#0A1931]">
+                <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Sub-status:</span>
+                <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                   {formatWorkflowLabel(record.subStage) || "—"}
                 </span>
               </div>
@@ -239,10 +223,10 @@ export function CaseWorkflowSection({
         </div>
 
         {/* Agent Details Card */}
-        <div className="border-2 border-[#0C0C0C] bg-white p-3.5 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-3">
+        <div className="border-2 border-[#0C0C0C] bg-white p-3.5 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#3A506B] flex items-center gap-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
                 <User className="w-3 h-3" /> Agent Details
               </span>
               {canEdit && (
@@ -256,118 +240,24 @@ export function CaseWorkflowSection({
                 </button>
               )}
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 print:space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-[#6d6658]">Agent:</span>
-                <span className={`font-mono text-sm font-bold text-[#0A1931] ${!record.agent ? "italic text-[#9d9488]" : ""}`}>
+                <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Agent:</span>
+                <span className={`font-mono text-sm print:text-xs font-bold text-[#0C0C0C] ${!record.agent ? "italic text-[#9d9488]" : ""}`}>
                   {record.agent || "Unassigned"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-[#6d6658] flex items-center gap-0.5">
+                <span className="font-mono text-xs print:text-[10px] text-[#6d6658] flex items-center gap-0.5">
                   <MapPin className="w-3 h-3" /> City:
                 </span>
-                <span className="font-mono text-sm font-bold text-[#0A1931]">
+                <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                   {record.city || "—"}
                 </span>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Stage Payments (Manual placeholder — NOT auto-verified) */}
-      <div className="border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#3A506B]">
-            Stage Payments
-          </div>
-          <span className="font-mono text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-[#F0E8D0]">
-            MANUAL — NOT VERIFIED
-          </span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:gap-2">
-          {(
-            [
-              { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
-              { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
-              { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
-              { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
-            ] as const
-          ).map(({ label, stageNum, paid, date }) => (
-            <div
-              key={label}
-              className={`border-2 p-3 print:p-1.5 ${
-                paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C]/30 bg-[#F0E8D0]"
-              }`}
-            >
-              <div className="font-mono text-[10px] font-bold uppercase mb-2 print:mb-1">{label}</div>
-              <label className={`flex items-center gap-2 mb-2 print:mb-1 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
-                <input
-                  type="checkbox"
-                  checked={paid}
-                  disabled={!canEdit || paymentMutation.isPending}
-                  onChange={() =>
-                    paymentMutation.mutate({
-                      stage: stageNum,
-                      paid: !paid,
-                      date: paid ? "" : (date || new Date().toISOString().slice(0, 10)),
-                    })
-                  }
-                  className="w-4 h-4 accent-[#0A6B52]"
-                />
-                <span className="font-mono text-xs font-bold">
-                  {paid ? "PAID" : "UNPAID"}
-                </span>
-              </label>
-              <input
-                type="date"
-                value={date}
-                disabled={!canEdit || !paid || paymentMutation.isPending}
-                onChange={(e) =>
-                  paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
-                }
-                className="w-full h-8 print:h-6 px-2 border border-[#0C0C0C]/40 font-mono text-xs bg-white disabled:opacity-40"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Chronological Workflow History */}
-      <div className="border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#3A506B] mb-3 print:mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" /> Workflow History
-          </span>
-          <span className="text-[9px] text-[#6d6658]">
-            ({workflowHistory.length} {workflowHistory.length === 1 ? "event" : "events"})
-          </span>
-        </div>
-        {workflowHistory.length === 0 ? (
-          <div className="p-3 border border-dashed border-[#0C0C0C]/30 bg-[#F0E8D0]/40 font-mono text-xs text-[#6d6658] italic text-center">
-            No workflow history recorded.
-          </div>
-        ) : (
-          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-            {workflowHistory.map((event) => {
-              const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
-              const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
-
-              return (
-                <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 py-1">
-                  <div className="font-mono text-sm font-bold text-[#0A1931]">
-                    {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
-                  </div>
-                  <div className="font-mono text-[10px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                    <span>{formatDateShort(event.eventAt)}</span>
-                    <span>Changed by: <strong>{event.changedByName}</strong></span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Status Transition Modal */}
@@ -399,7 +289,7 @@ export function CaseWorkflowSection({
             )}
 
             {targetStageRequiresPayment && (
-              <div className="p-2.5 border-2 border-[#C94A00] bg-[#FFF0D0] text-[#963800] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#B0740E] bg-[#FFF0D0] text-[#6C1C1F] font-mono text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>Stage 2 payment is required before proceeding to Stage 2.</span>
               </div>
@@ -518,7 +408,7 @@ export function CaseWorkflowSection({
             )}
 
             {agentAssignmentBlocked && (
-              <div className="p-2.5 border-2 border-[#C94A00] bg-[#FFF0D0] text-[#963800] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#B0740E] bg-[#FFF0D0] text-[#6C1C1F] font-mono text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>Stage 2 payment is required before assigning an agent.</span>
               </div>
@@ -610,6 +500,136 @@ export function CaseWorkflowSection({
               </div>
             </form>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 2. STAGE PAYMENTS (MANUAL — NOT VERIFIED) ────────────────────────────────
+
+interface StagePaymentsSectionProps {
+  record: TrademarkRecord;
+  canEdit: boolean;
+}
+
+export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionProps) {
+  const queryClient = useQueryClient();
+
+  const paymentMutation = useMutation({
+    mutationFn: (args: { stage: 1 | 2 | 3 | 4; paid: boolean; date: string }) =>
+      updateStagePayment(record.id, args.stage, args.paid, args.date || null),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
+      queryClient.invalidateQueries({ queryKey: ["trademark-workflow-history", record.id] });
+    },
+  });
+
+  return (
+    <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#F0E8D0] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-2.5 print:pb-1">
+        <div className="flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-[#6C1C1F] print:w-4 print:h-4" />
+          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F] print:text-xs">
+            Stage Payments
+          </div>
+        </div>
+        <span className="font-mono text-[9px] print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-[1px_1px_0_#B0740E] print:shadow-none">
+          MANUAL — NOT VERIFIED
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
+        {(
+          [
+            { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
+            { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
+            { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
+            { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
+          ] as const
+        ).map(({ label, stageNum, paid, date }) => (
+          <div
+            key={label}
+            className={`border-2 p-3 print:p-1.5 ${
+              paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C]/30 bg-white"
+            }`}
+          >
+            <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
+            <label className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
+              <input
+                type="checkbox"
+                checked={paid}
+                disabled={!canEdit || paymentMutation.isPending}
+                onChange={() =>
+                  paymentMutation.mutate({
+                    stage: stageNum,
+                    paid: !paid,
+                    date: paid ? "" : (date || new Date().toISOString().slice(0, 10)),
+                  })
+                }
+                className="w-4 h-4 print:w-3 print:h-3 accent-[#0A6B52]"
+              />
+              <span className={`font-mono text-xs print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
+                {paid ? "PAID" : "UNPAID"}
+              </span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              disabled={!canEdit || !paid || paymentMutation.isPending}
+              onChange={(e) =>
+                paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
+              }
+              className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-xs print:text-[8px] bg-white disabled:opacity-40"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── 3. WORKFLOW HISTORY ──────────────────────────────────────────────────────
+
+interface WorkflowHistorySectionProps {
+  workflowHistory: TrademarkWorkflowEvent[];
+}
+
+export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySectionProps) {
+  return (
+    <div className="border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none space-y-3 print:space-y-1.5">
+      <div className="flex items-center justify-between gap-2 border-b border-[#0C0C0C]/20 pb-2 print:pb-1">
+        <div className="flex items-center gap-1.5 font-mono text-[10px] print:text-[9px] font-bold uppercase tracking-widest text-[#6d6658]">
+          <Clock className="w-3.5 h-3.5 print:w-3 print:h-3" />
+          <span>Workflow History</span>
+        </div>
+        <span className="font-mono text-[9px] print:text-[8px] text-[#6d6658]">
+          ({workflowHistory.length} {workflowHistory.length === 1 ? "event" : "events"})
+        </span>
+      </div>
+
+      {workflowHistory.length === 0 ? (
+        <div className="p-3 print:p-1.5 border border-dashed border-[#0C0C0C]/30 bg-[#F0E8D0]/40 font-mono text-xs print:text-[9px] text-[#6d6658] italic text-center">
+          No workflow history recorded.
+        </div>
+      ) : (
+        <div className="space-y-2.5 print:space-y-1 max-h-60 print:max-h-none overflow-y-auto print:overflow-visible pr-1">
+          {workflowHistory.map((event) => {
+            const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
+            const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
+
+            return (
+              <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 print:pl-2 py-1 print:py-0.5">
+                <div className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
+                  {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
+                </div>
+                <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                  <span>{formatDateShort(event.eventAt)}</span>
+                  <span>Changed by: <strong className="text-[#0C0C0C]">{event.changedByName}</strong></span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

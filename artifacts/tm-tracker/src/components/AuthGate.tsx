@@ -26,8 +26,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <main className="min-h-screen bg-[#F0E8D0] grid place-items-center p-6">
         <section className="max-w-xl border-2 border-[#0C0C0C] bg-white p-8 shadow-[8px_8px_0_#0C0C0C]">
-          <h1 className="font-serif text-3xl text-[#0A1931]">SUPABASE SETUP REQUIRED</h1>
-          <p className="mt-3 font-mono text-sm text-[#3A506B]">
+          <h1 className="font-serif text-3xl text-[#0C0C0C]">SUPABASE SETUP REQUIRED</h1>
+          <p className="mt-3 font-mono text-sm text-[#6d6658]">
             Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to the environment, then restart the app.
           </p>
         </section>
@@ -53,8 +53,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <main className="min-h-screen bg-[#F0E8D0] grid place-items-center p-6">
         <form onSubmit={signIn} className="w-full max-w-md border-2 border-[#0C0C0C] bg-white p-8 shadow-[8px_8px_0_#0C0C0C]">
           <img src="/brandex-wordmark.svg" alt="Brandex Law Associates" className="h-24 w-full object-contain object-left mb-5" />
-          <h1 className="font-serif text-3xl tracking-wider text-[#0A1931]">STAFF SIGN IN</h1>
-          <p className="font-mono text-xs text-[#3A506B] mt-1 mb-6">BRANDEX SECURE DATASHEET</p>
+          <h1 className="font-serif text-3xl tracking-wider text-[#0C0C0C]">STAFF SIGN IN</h1>
+          <p className="font-mono text-xs text-[#6d6658] mt-1 mb-6">BRANDEX SECURE DATASHEET</p>
           <label className="block font-mono text-[10px] font-bold tracking-widest mb-1">EMAIL</label>
           <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="w-full h-11 border-2 border-[#0C0C0C] px-3 font-mono mb-4" />
           <label className="block font-mono text-[10px] font-bold tracking-widest mb-1">PASSWORD</label>
