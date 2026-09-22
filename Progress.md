@@ -536,8 +536,8 @@ The following items are deferred to future major versions and must NOT be implem
 
 ---
 
-### RELEASE STATUS: Brandex Database CMS V2 — FROZEN / RELEASE CANDIDATE
-All planned V2 batches are completed and verified. Codebase is frozen against new feature additions.
+### RELEASE STATUS: Brandex Database CMS V2 — FROZEN / OFFICIAL RELEASE (v2.0.0)
+All planned V2 batches are completed and verified. Codebase is frozen against new feature additions. Official release tag `v2.0.0` created.
 
 
 
