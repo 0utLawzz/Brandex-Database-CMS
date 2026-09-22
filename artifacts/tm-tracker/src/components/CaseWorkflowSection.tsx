@@ -10,6 +10,7 @@ import {
   CITIES,
   formatWorkflowLabel,
   isStage2PaymentRequired,
+  isValidStageTransition,
   updateTrademarkStatus,
   updateTrademarkAgent,
   updateStagePayment,
@@ -110,8 +111,23 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const currentStageIndex = STAGE_ORDER.indexOf(record.stage as any);
   const isStopped = record.stage === "STOPPED";
 
-  const targetStageRequiresPayment = isStage2PaymentRequired(targetStage, record.stage2Paid);
-  const agentAssignmentBlocked = isStage2PaymentRequired(record.stage, record.stage2Paid);
+  const getPaymentGateWarning = (target: string): string | null => {
+    if (target === "STAGE 2" && !record.stage1Paid) {
+      return "Stage 2 cannot be started until Stage 1 payment is cleared.";
+    }
+    if (target === "STAGE 3" && !record.stage2Paid) {
+      return "Stage 3 cannot be started until Stage 2 payment is cleared.";
+    }
+    if (target === "STAGE 4" && !record.stage3Paid) {
+      return "Stage 4 cannot be started until Stage 3 payment is cleared.";
+    }
+    return null;
+  };
+
+  const paymentGateWarning = getPaymentGateWarning(targetStage);
+  const targetStageRequiresPayment = Boolean(paymentGateWarning);
+  const agentAssignmentBlocked = record.stage === "STAGE 2" && !record.stage1Paid;
+  const validTargetStages = STAGES.filter((s) => isValidStageTransition(record.stage, s));
   const availableSubStages = STATUS_WORKFLOW[targetStage] ?? [];
 
   return (
@@ -288,10 +304,10 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
             )}
 
-            {targetStageRequiresPayment && (
+            {paymentGateWarning && (
               <div className="p-2.5 border-2 border-[#B0740E] bg-[#FFF0D0] text-[#6C1C1F] font-mono text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Stage 2 payment is required before proceeding to Stage 2.</span>
+                <span>{paymentGateWarning}</span>
               </div>
             )}
 
@@ -299,8 +315,8 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               onSubmit={(e) => {
                 e.preventDefault();
                 setStatusError(null);
-                if (targetStageRequiresPayment) {
-                  setStatusError("Stage 2 payment is required before proceeding.");
+                if (paymentGateWarning) {
+                  setStatusError(paymentGateWarning);
                   return;
                 }
                 statusMutation.mutate();
@@ -323,7 +339,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   disabled={statusMutation.isPending}
                   className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
                 >
-                  {STAGES.map((s) => (
+                  {validTargetStages.map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>

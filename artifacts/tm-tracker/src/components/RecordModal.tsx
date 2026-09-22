@@ -207,7 +207,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
       tmCprNo:    "",
       appClass:   "",
       stage:      "STAGE 1",
-      subStage:   "",
+      subStage:   "Filing",
       caseType:   "Trademark",
       agent:      "",
       city:       "Islamabad",

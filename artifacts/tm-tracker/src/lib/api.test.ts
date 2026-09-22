@@ -26,6 +26,8 @@ import {
   getWorkflowHistory,
   inputToRow,
   isStage2PaymentRequired,
+  isValidStageTransition,
+  validatePaymentGate,
   listStageDocuments,
   listTrademarkPage,
   listTrademarksForExport,
@@ -211,10 +213,12 @@ describe("Brandex Supabase access patterns", () => {
 
   it("routes create, update, and delete through RLS-protected trademark mutations", async () => {
     const createQueryMock = createQuery({ data: { id: "BX-2", case_number: "CASE-10" }, error: null });
+    const selectBeforeUpdateMock = createQuery({ data: { status: "STAGE 1", stage1_paid: true }, error: null });
     const updateQueryMock = createQuery({ data: { id: "BX-2", version: 4 }, error: null });
     const deleteQueryMock = createQuery({ error: null });
     supabaseMock.from
       .mockReturnValueOnce(createQueryMock)
+      .mockReturnValueOnce(selectBeforeUpdateMock)
       .mockReturnValueOnce(updateQueryMock)
       .mockReturnValueOnce(deleteQueryMock);
 
@@ -230,8 +234,11 @@ describe("Brandex Supabase access patterns", () => {
   });
 
   it("raises a conflict when optimistic locking updates no row", async () => {
-    const query = createQuery({ data: null, error: null });
-    supabaseMock.from.mockReturnValue(query);
+    const selectQuery = createQuery({ data: { status: "STAGE 1", stage1_paid: true }, error: null });
+    const updateQuery = createQuery({ data: null, error: null });
+    supabaseMock.from
+      .mockReturnValueOnce(selectQuery)
+      .mockReturnValueOnce(updateQuery);
 
     await expect(
       updateTrademark("BX-1", { type: "X", clientCode: "C-7", caseNumber: "CASE-9", appName: "BRANDEX", city: "Islamabad", stage: "STAGE 2" }, 3),
@@ -288,32 +295,32 @@ describe("Brandex Supabase access patterns", () => {
     expect(history[0].changedByName).toBe("User A");
   });
 
-  it("enforces Stage 2 payment gate (stage2_paid = true required)", () => {
-    // Stage 2 with unpaid status must be blocked
+  it("enforces Stage 2 payment gate (stage1_paid = true required)", () => {
+    // Stage 2 with unpaid Stage 1 status must be blocked
     expect(isStage2PaymentRequired("STAGE 2", false)).toBe(true);
     expect(isStage2PaymentRequired("STAGE 2", undefined)).toBe(true);
     expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(StagePaymentRequiredError);
     expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(
-      "Stage 2 payment is required before proceeding.",
+      "Stage 2 cannot be started until Stage 1 payment is cleared.",
     );
 
-    // Stage 2 with paid status must pass
+    // Stage 2 with Stage 1 paid status must pass
     expect(isStage2PaymentRequired("STAGE 2", true)).toBe(false);
     expect(() => validateStage2PaymentGate("STAGE 2", true)).not.toThrow();
 
-    // Non-Stage 2 (e.g. STAGE 1, STAGE 3) must pass without requiring stage2_paid
+    // Non-Stage 2 (e.g. STAGE 1) must pass without requiring stage1_paid
     expect(isStage2PaymentRequired("STAGE 1", false)).toBe(false);
     expect(() => validateStage2PaymentGate("STAGE 1", false)).not.toThrow();
   });
 
   it("enforces Stage 2 agent assignment: blocked when unpaid, allowed when paid", async () => {
     // Unpaid case: must throw StagePaymentRequiredError
-    const unpaidQuery = createQuery({ data: { stage2_paid: false, status: "STAGE 2", sub_status: "Assigned" }, error: null });
+    const unpaidQuery = createQuery({ data: { stage1_paid: false, status: "STAGE 2", sub_status: "Assigned" }, error: null });
     supabaseMock.from.mockReturnValue(unpaidQuery);
     await expect(assignStage2Agent("BX-1", "Counsel A", "Islamabad")).rejects.toBeInstanceOf(StagePaymentRequiredError);
 
     // Paid case: updates agent and city
-    const paidSelectQuery = createQuery({ data: { stage2_paid: true, status: "STAGE 2", sub_status: "Assigned" }, error: null });
+    const paidSelectQuery = createQuery({ data: { stage1_paid: true, status: "STAGE 2", sub_status: "Assigned" }, error: null });
     const updateQuery = createQuery({ data: null, error: null });
     let callCount = 0;
     supabaseMock.from.mockImplementation(() => {
@@ -652,9 +659,9 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
     ).rejects.toBeInstanceOf(StagePaymentRequiredError);
   });
 
-  it("updateTrademarkStatus — allows transition to STAGE 2 when stage2_paid is true", async () => {
+  it("updateTrademarkStatus — allows transition to STAGE 2 when stage1_paid is true", async () => {
     const selectQuery = createQuery({
-      data: { stage2_paid: true, status: "STAGE 1" },
+      data: { stage1_paid: true, status: "STAGE 1" },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -674,7 +681,7 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkStatus — normalizes user-facing subStage when updating status", async () => {
     const selectQuery = createQuery({
-      data: { stage2_paid: false, status: "STAGE 1" },
+      data: { status: "STAGE 1", stage1_paid: true, stage2_paid: true },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -691,29 +698,9 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
     });
   });
 
-  it("updateTrademarkAgent — blocks assignment in STAGE 2 when stage2_paid is false", async () => {
-    const selectQuery = createQuery({
-      data: { stage2_paid: false, status: "STAGE 2" },
-      error: null,
-    });
-    supabaseMock.from.mockReturnValue(selectQuery);
-
-    await expect(
-      updateTrademarkAgent("BX-1", "Counsel A", "Islamabad"),
-    ).rejects.toBeInstanceOf(StagePaymentRequiredError);
-  });
-
-  it("updateTrademarkAgent — allows assignment when stage2_paid is true or in other stages", async () => {
-    const selectQuery = createQuery({
-      data: { stage2_paid: true, status: "STAGE 2" },
-      error: null,
-    });
+  it("updateTrademarkAgent — allows assignment of agent and city", async () => {
     const updateQuery = createQuery({ data: null, error: null });
-    let callCount = 0;
-    supabaseMock.from.mockImplementation(() => {
-      callCount++;
-      return callCount === 1 ? selectQuery : updateQuery;
-    });
+    supabaseMock.from.mockReturnValue(updateQuery);
 
     await updateTrademarkAgent("BX-1", "Counsel A", "Islamabad");
     expect(updateQuery.update).toHaveBeenCalledWith({
@@ -919,7 +906,7 @@ describe("Batch 13: Publication Workflow Integration", () => {
     });
 
     it("trims agent and city whitespace on assignStage2Agent", async () => {
-      const selectQuery = createQuery({ data: { stage2_paid: true, status: "STAGE 2", sub_status: "Assigned" }, error: null });
+      const selectQuery = createQuery({ data: { stage1_paid: true, status: "STAGE 2", sub_status: "Assigned" }, error: null });
       const updateQuery = createQuery({ data: null, error: null });
       supabaseMock.from
         .mockReturnValueOnce(selectQuery)
@@ -930,6 +917,81 @@ describe("Batch 13: Publication Workflow Integration", () => {
         agent: "Agent Smith",
         city: "Karachi",
       });
+    });
+  });
+
+  describe("Batch 1 (v2.0.1): Core Workflow + New Record Creation Corrections", () => {
+    it("A. New record defaults (STAGE 1, Filing, stage1_paid = true, filing_date)", async () => {
+      supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+      const insertQuery = createQuery({ data: { id: "new-tm-1", case_number: "TM-001" }, error: null });
+      supabaseMock.from.mockReturnValue(insertQuery);
+
+      const result = await createTrademark({
+        date: "2026-09-22",
+        type: "X",
+        clientCode: "C-01",
+        caseNumber: "TM-001",
+        appName: "Test Brand",
+        city: "Islamabad",
+      });
+
+      expect(result).toEqual({ id: "new-tm-1", caseNumber: "TM-001" });
+      expect(insertQuery.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "STAGE 1",
+          sub_status: "Filing",
+          stage1_paid: true,
+          stage1_paid_date: "2026-09-22",
+        })
+      );
+    });
+
+    it("B. Forward workflow progression rules", () => {
+      // Valid forward transitions
+      expect(isValidStageTransition("STAGE 1", "STAGE 2")).toBe(true);
+      expect(isValidStageTransition("STAGE 2", "STAGE 3")).toBe(true);
+      expect(isValidStageTransition("STAGE 3", "STAGE 4")).toBe(true);
+      expect(isValidStageTransition("STAGE 1", "STAGE 4")).toBe(true);
+      expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
+      expect(isValidStageTransition("STAGE 2", "STOPPED")).toBe(true);
+
+      // Backward transitions (must fail)
+      expect(isValidStageTransition("STAGE 2", "STAGE 1")).toBe(false);
+      expect(isValidStageTransition("STAGE 3", "STAGE 2")).toBe(false);
+      expect(isValidStageTransition("STAGE 3", "STAGE 1")).toBe(false);
+      expect(isValidStageTransition("STAGE 4", "STAGE 3")).toBe(false);
+      expect(isValidStageTransition("STAGE 4", "STAGE 2")).toBe(false);
+      expect(isValidStageTransition("STAGE 4", "STAGE 1")).toBe(false);
+
+      // Cannot exit STOPPED
+      expect(isValidStageTransition("STOPPED", "STAGE 1")).toBe(false);
+      expect(isValidStageTransition("STOPPED", "STAGE 2")).toBe(false);
+    });
+
+    it("C. Payment gate validation logic", () => {
+      // Stage 2 requires stage1_paid
+      expect(() => validatePaymentGate("STAGE 2", { stage1_paid: false })).toThrow(StagePaymentRequiredError);
+      expect(() => validatePaymentGate("STAGE 2", { stage1_paid: true })).not.toThrow();
+
+      // Stage 3 requires stage1_paid AND stage2_paid
+      expect(() => validatePaymentGate("STAGE 3", { stage1_paid: true, stage2_paid: false })).toThrow(StagePaymentRequiredError);
+      expect(() => validatePaymentGate("STAGE 3", { stage1_paid: true, stage2_paid: true })).not.toThrow();
+
+      // Stage 4 requires stage1_paid AND stage2_paid AND stage3_paid
+      expect(() => validatePaymentGate("STAGE 4", { stage1_paid: true, stage2_paid: true, stage3_paid: false })).toThrow(StagePaymentRequiredError);
+      expect(() => validatePaymentGate("STAGE 4", { stage1_paid: true, stage2_paid: true, stage3_paid: true })).not.toThrow();
+    });
+
+    it("D. Backward status update rejection at API level", async () => {
+      const selectQuery = createQuery({
+        data: { status: "STAGE 3", stage1_paid: true, stage2_paid: true, stage3_paid: true },
+        error: null,
+      });
+      supabaseMock.from.mockReturnValue(selectQuery);
+
+      await expect(updateTrademarkStatus("BX-1", "STAGE 2", "Assigned")).rejects.toThrow(
+        "Backward workflow transitions are not allowed (cannot move from STAGE 3 to STAGE 2)."
+      );
     });
   });
 });

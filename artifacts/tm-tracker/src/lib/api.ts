@@ -191,6 +191,14 @@ export interface TrademarkInput {
   city?: string;
   notes?: string;
   image?: string;
+  stage1Paid?: boolean;
+  stage1PaidDate?: string;
+  stage2Paid?: boolean;
+  stage2PaidDate?: string;
+  stage3Paid?: boolean;
+  stage3PaidDate?: string;
+  stage4Paid?: boolean;
+  stage4PaidDate?: string;
 }
 
 export interface TmSearchResult {
@@ -658,40 +666,6 @@ export async function searchTm(tmNo: string): Promise<TmSearchResult> {
   };
 }
 
-export async function createTrademark(input: TrademarkInput): Promise<{ id: string; caseNumber: string }> {
-  ensureConfigured();
-
-  // Validate workflow values if stage is supplied
-  if (input.stage) {
-    if (!STAGES.includes(input.stage as any)) {
-      throw new Error(`Invalid stage "${input.stage}". Permitted stages: ${STAGES.join(", ")}`);
-    }
-    if (input.subStage && input.stage in STATUS_WORKFLOW) {
-      const validSubStages = STATUS_WORKFLOW[input.stage] || [];
-      const normalizedSub = normalizeWorkflowValue(input.subStage);
-      const isValid = validSubStages.some(
-        (s) => s === input.subStage || normalizeWorkflowValue(s) === normalizedSub,
-      );
-      if (!isValid) {
-        throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
-      }
-    }
-    if (input.stage === "STAGE 2" && isStage2PaymentRequired("STAGE 2", false)) {
-      throw new StagePaymentRequiredError("Stage 2 payment is required before creating a record in Stage 2.");
-    }
-  }
-
-  const { data: authData } = await supabase.auth.getUser();
-  const { data, error } = await supabase
-    .from("trademarks")
-    .insert({ ...inputToRow(input), created_by: authData.user?.id, updated_by: authData.user?.id })
-    .select("id,case_number")
-    .single();
-  throwIfError(error);
-  if (!data) throw new Error("Supabase did not return the created record.");
-  return { id: data.id, caseNumber: data.case_number };
-}
-
 export class ConflictError extends Error {
   constructor(message = "Record was modified by another user. Reload and try again.") {
     super(message);
@@ -700,29 +674,137 @@ export class ConflictError extends Error {
 }
 
 export class StagePaymentRequiredError extends Error {
-  constructor(message = "Stage 2 payment is required before proceeding.") {
+  constructor(message = "Previous stage payment is required before proceeding.") {
     super(message);
     this.name = "StagePaymentRequiredError";
   }
 }
 
 /**
- * Stage 2 workflow (Assigned -> Accepted -> Hearing) requires stage2_paid = true.
- * Manual / placeholder only — payment is NOT auto-verified.
+ * Validates stage forward-only workflow transition.
+ * Stage 1 -> Stage 2 -> Stage 3 -> Stage 4.
+ * STOPPED can be entered from any stage, but cannot be exited.
+ * Backward transitions (e.g. Stage 2 -> Stage 1, Stage 4 -> Stage 3) are rejected.
  */
-export function isStage2PaymentRequired(stage?: string, stage2Paid?: boolean): boolean {
-  return stage === "STAGE 2" && !stage2Paid;
+export function isValidStageTransition(fromStage: string, toStage: string): boolean {
+  if (!fromStage || !toStage || fromStage === toStage) return true;
+  if (toStage === "STOPPED") return true;
+  if (fromStage === "STOPPED") return false;
+
+  const stageOrder: Record<string, number> = {
+    "STAGE 1": 1,
+    "STAGE 2": 2,
+    "STAGE 3": 3,
+    "STAGE 4": 4,
+  };
+
+  const fromIndex = stageOrder[fromStage];
+  const toIndex = stageOrder[toStage];
+
+  if (fromIndex !== undefined && toIndex !== undefined) {
+    return toIndex >= fromIndex;
+  }
+
+  return false;
 }
 
-export function validateStage2PaymentGate(stage?: string, stage2Paid?: boolean): void {
-  if (isStage2PaymentRequired(stage, stage2Paid)) {
-    throw new StagePaymentRequiredError();
+/**
+ * Validates payment gates for moving into a target stage.
+ * To enter STAGE 2: stage1_paid must be true.
+ * To enter STAGE 3: stage2_paid must be true.
+ * To enter STAGE 4: stage3_paid must be true.
+ */
+export function validatePaymentGate(
+  targetStage: string,
+  record: { stage1_paid?: boolean; stage2_paid?: boolean; stage3_paid?: boolean }
+): void {
+  if (targetStage === "STAGE 2") {
+    if (!record.stage1_paid) {
+      throw new StagePaymentRequiredError("Stage 2 cannot be started until Stage 1 payment is cleared.");
+    }
+  } else if (targetStage === "STAGE 3") {
+    if (!record.stage1_paid) {
+      throw new StagePaymentRequiredError("Stage 3 cannot be started until Stage 1 payment is cleared.");
+    }
+    if (!record.stage2_paid) {
+      throw new StagePaymentRequiredError("Stage 3 cannot be started until Stage 2 payment is cleared.");
+    }
+  } else if (targetStage === "STAGE 4") {
+    if (!record.stage1_paid) {
+      throw new StagePaymentRequiredError("Stage 4 cannot be started until Stage 1 payment is cleared.");
+    }
+    if (!record.stage2_paid) {
+      throw new StagePaymentRequiredError("Stage 4 cannot be started until Stage 2 payment is cleared.");
+    }
+    if (!record.stage3_paid) {
+      throw new StagePaymentRequiredError("Stage 4 cannot be started until Stage 3 payment is cleared.");
+    }
   }
+}
+
+export function isStage2PaymentRequired(stage?: string, stage1Paid?: boolean): boolean {
+  return stage === "STAGE 2" && !stage1Paid;
+}
+
+export function validateStage2PaymentGate(stage?: string, stage1Paid?: boolean): void {
+  validatePaymentGate(stage || "", { stage1_paid: stage1Paid });
+}
+
+export async function createTrademark(input: TrademarkInput): Promise<{ id: string; caseNumber: string }> {
+  ensureConfigured();
+
+  const targetStage = input.stage || "STAGE 1";
+  const targetSubStage = input.subStage || "Filing";
+
+  // Validate workflow values if stage is supplied
+  if (!STAGES.includes(targetStage as any)) {
+    throw new Error(`Invalid stage "${targetStage}". Permitted stages: ${STAGES.join(", ")}`);
+  }
+  if (targetStage in STATUS_WORKFLOW) {
+    const validSubStages = STATUS_WORKFLOW[targetStage] || [];
+    const normalizedSub = normalizeWorkflowValue(targetSubStage);
+    const isValid = validSubStages.some(
+      (s) => s === targetSubStage || normalizeWorkflowValue(s) === normalizedSub,
+    );
+    if (!isValid) {
+      throw new Error(`Invalid sub-stage "${targetSubStage}" for ${targetStage}.`);
+    }
+  }
+
+  const filingDate = input.date || new Date().toISOString().split("T")[0];
+
+  // Prepare initial row data with Batch 1 defaults
+  const rowPayload: Record<string, any> = {
+    ...inputToRow({ ...input, stage: targetStage, subStage: targetSubStage }),
+    stage1_paid: input.stage1Paid ?? true,
+    stage1_paid_date: input.stage1PaidDate ?? filingDate,
+  };
+
+  if (input.stage2Paid !== undefined) rowPayload.stage2_paid = input.stage2Paid;
+  if (input.stage3Paid !== undefined) rowPayload.stage3_paid = input.stage3Paid;
+  if (input.stage4Paid !== undefined) rowPayload.stage4_paid = input.stage4Paid;
+
+  // Validate payment gate for target stage
+  validatePaymentGate(targetStage, {
+    stage1_paid: rowPayload.stage1_paid,
+    stage2_paid: rowPayload.stage2_paid,
+    stage3_paid: rowPayload.stage3_paid,
+  });
+
+  const { data: authData } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("trademarks")
+    .insert({ ...rowPayload, created_by: authData.user?.id, updated_by: authData.user?.id })
+    .select("id,case_number")
+    .single();
+  throwIfError(error);
+  if (!data) throw new Error("Supabase did not return the created record.");
+  return { id: data.id, caseNumber: data.case_number };
 }
 
 /**
  * Assigns an agent to a Stage 2 Assigned trademark.
- * Requires stage2_paid = true.
+ * Requires stage2_paid = true or stage1_paid = true.
  * Reuses existing agent string field and agents master profiles.
  */
 export async function assignStage2Agent(
@@ -736,12 +818,12 @@ export async function assignStage2Agent(
   }
   const { data, error: fetchErr } = await supabase
     .from("trademarks")
-    .select("stage2_paid, status, sub_status")
+    .select("stage1_paid, stage2_paid, status, sub_status")
     .eq("id", id)
     .single();
   throwIfError(fetchErr);
-  if (!data?.stage2_paid) {
-    throw new StagePaymentRequiredError("Stage 2 payment is required before assigning an agent.");
+  if (!data?.stage1_paid) {
+    throw new StagePaymentRequiredError("Stage 1 payment is required before proceeding in Stage 2.");
   }
   const patch: Record<string, string> = {
     agent: agentName.trim(),
@@ -758,7 +840,7 @@ export async function assignStage2Agent(
 
 /**
  * Updates a trademark's stage and sub-stage directly.
- * Enforces the Stage 2 payment gate (stage2_paid = true required for STAGE 2).
+ * Enforces strict forward-only workflow and payment gates.
  * Normalizes user-facing subStage values to database values.
  */
 export async function updateTrademarkStatus(
@@ -787,13 +869,16 @@ export async function updateTrademarkStatus(
 
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
-    .select("stage2_paid, status")
+    .select("status, stage1_paid, stage2_paid, stage3_paid, stage4_paid")
     .eq("id", id)
     .single();
   throwIfError(fetchErr);
 
-  if (isStage2PaymentRequired(stage, current?.stage2_paid)) {
-    throw new StagePaymentRequiredError("Stage 2 payment is required before proceeding to Stage 2.");
+  if (current) {
+    if (!isValidStageTransition(current.status, stage)) {
+      throw new Error(`Backward workflow transitions are not allowed (cannot move from ${current.status} to ${stage}).`);
+    }
+    validatePaymentGate(stage, current);
   }
 
   const canonicalSubStage = subStage ? normalizeWorkflowValue(subStage) : null;
@@ -809,7 +894,6 @@ export async function updateTrademarkStatus(
 
 /**
  * Updates a trademark's assigned agent and city.
- * Enforces the Stage 2 payment gate if the trademark is currently in Stage 2.
  */
 export async function updateTrademarkAgent(
   id: string,
@@ -820,17 +904,6 @@ export async function updateTrademarkAgent(
   if (!agentName || !agentName.trim()) {
     throw new Error("Agent name is required.");
   }
-  const { data: current, error: fetchErr } = await supabase
-    .from("trademarks")
-    .select("stage2_paid, status")
-    .eq("id", id)
-    .single();
-  throwIfError(fetchErr);
-
-  if (isStage2PaymentRequired(current?.status, current?.stage2_paid)) {
-    throw new StagePaymentRequiredError("Stage 2 payment is required before assigning an agent.");
-  }
-
   const patch: Record<string, string> = { agent: agentName.trim() };
   if (city && city.trim()) patch.city = city.trim();
   const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
@@ -860,15 +933,16 @@ export async function updateTrademark(
       }
     }
 
-    if (input.stage === "STAGE 2") {
-      const { data: current, error: fetchErr } = await supabase
-        .from("trademarks")
-        .select("stage2_paid")
-        .eq("id", id)
-        .single();
-      if (!fetchErr && current && isStage2PaymentRequired("STAGE 2", current.stage2_paid)) {
-        throw new StagePaymentRequiredError("Stage 2 payment is required before proceeding to Stage 2.");
+    const { data: current, error: fetchErr } = await supabase
+      .from("trademarks")
+      .select("status, stage1_paid, stage2_paid, stage3_paid, stage4_paid")
+      .eq("id", id)
+      .single();
+    if (!fetchErr && current) {
+      if (!isValidStageTransition(current.status, input.stage)) {
+        throw new Error(`Backward workflow transitions are not allowed (cannot move from ${current.status} to ${input.stage}).`);
       }
+      validatePaymentGate(input.stage, current);
     }
   }
 

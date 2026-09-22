@@ -539,5 +539,18 @@ The following items are deferred to future major versions and must NOT be implem
 ### RELEASE STATUS: Brandex Database CMS V2 — FROZEN / OFFICIAL RELEASE (v2.0.0)
 All planned V2 batches are completed and verified. Codebase is frozen against new feature additions. Official release tag `v2.0.0` created.
 
+---
+
+## 2026-09-22 — V2.0.1 Batch 1: Core Workflow & New Record Creation Corrections
+
+- [x] Applied additive migration `202609220006_workflow_creation_trigger.sql` adding `AFTER INSERT` trigger (`trademarks_workflow_created_trigger`) writing initial `RECORD_CREATED` event to `trademark_workflow_history`.
+- [x] Enforced strict forward-only workflow progression (`STAGE 1` → `STAGE 2` → `STAGE 3` → `STAGE 4`) and rejection of backward transitions at the API level (`updateTrademark`, `updateTrademarkStatus`).
+- [x] Enforced progression payment gates: Stage 2 requires `stage1_paid`, Stage 3 requires `stage2_paid`, Stage 4 requires `stage3_paid` with clear user-facing error messaging.
+- [x] Initialized new record defaults with `STAGE 1`, `Filing`, `stage1_paid = true`, and `stage1_paid_date` set to filing date.
+- [x] Filtered target stage dropdown in `CaseWorkflowSection.tsx` to valid forward stages and added payment gate warning banners.
+- [x] Updated default form state in `RecordModal.tsx` to `subStage: "Filing"`.
+- [x] Added automated tests in `api.test.ts` covering new record defaults, forward progression, payment gate validation, and backward blocking (46/46 passed).
+
+
 
 
