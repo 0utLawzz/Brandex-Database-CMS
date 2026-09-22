@@ -10,6 +10,7 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import {
   BookOpen,
   Clock,
@@ -19,6 +20,7 @@ import {
   Calendar,
   X,
   FileText,
+  ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -314,17 +316,27 @@ export function PublicationPipelinePage() {
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedRecord(record);
-                          setDemandNoteDate(new Date().toISOString().slice(0, 10));
-                        }}
-                        className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
-                      >
-                        <Calendar className="h-3 w-3" /> DETAILS
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRecord(record);
+                            setDemandNoteDate(new Date().toISOString().slice(0, 10));
+                          }}
+                          className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
+                        >
+                          <Calendar className="h-3 w-3" /> DETAILS
+                        </button>
+                        <Link
+                          href={`/record/${record.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white text-[#6C1C1F]"
+                          title="Open full record"
+                        >
+                          <ExternalLink className="h-3 w-3" /> OPEN
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -493,6 +505,16 @@ export function PublicationPipelinePage() {
                 </div>
               </div>
             )}
+
+            {/* Direct Link to Full Record */}
+            <div className="mt-4 pt-3 border-t-2 border-[#0C0C0C] flex justify-end">
+              <Link
+                href={`/record/${selectedRecord.id}`}
+                className="inline-flex items-center gap-1.5 border-2 border-[#0C0C0C] bg-[#6C1C1F] text-white px-4 py-2 font-mono text-xs font-bold uppercase hover:bg-[#501416] transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> OPEN FULL RECORD
+              </Link>
+            </div>
           </section>
         </div>
       )}

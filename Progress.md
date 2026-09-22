@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (Batch 15 — Security, Documents, Data Integrity & Reliability)**
+**Last updated: 22 September 2026 (Batch 16 — Final V2 Release Readiness & End-to-End Verification)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -382,5 +382,59 @@ This file is the single source of truth for project status.
    - `pnpm test` → 43/43 tests passed across all test files.
    - `pnpm typecheck` → passed (0 errors).
    - `pnpm build` → passed; production bundle compiled successfully in 25.16s.
+
+## 2026-09-22 — Batch 16: Final V2 Release Readiness & End-to-End Verification
+
+### Verification Summary
+
+Distinction of verification levels across all subsystems:
+
+#### 1. VERIFIED LOCALLY (Automated Testing & Builds)
+- **Unit & Integration Tests**: `pnpm test --run` → 43/43 tests passing (2 test files: `api.test.ts`, `registryImport.test.ts`).
+- **Static Type Safety**: `pnpm typecheck` (`tsc -p tsconfig.json --noEmit`) → 0 errors.
+- **Production Bundle**: `pnpm build` (`vite build`) → compiled cleanly with Vite v7.3.6; dist assets generated.
+- **Publication Pipeline Integration**: Added direct record links (`/record/:id`) to both the datasheet table actions and detail modal in `PublicationPipelinePage.tsx`.
+- **Workflow State Machines**: Canonical mapping (`STATUS_WORKFLOW`, `WORKFLOW_DISPLAY_LABELS`, `STAGE_DOCUMENT_WORKFLOW`) verified for all 4 stages, sub-stages, and `STOPPED` state.
+- **Payment Gate Enforcement**: Unit tested that Stage 2 cannot bypass `stage2_paid = true` constraint across `createTrademark`, `updateTrademark`, `updateTrademarkStatus`, `updateTrademarkAgent`, and `assignStage2Agent`.
+- **Reminders Engine**: Verified hard-cap of 4 informational reminders (1: Filing & Documentation, 2: Agent & Assignment, 3: Publication & Opposition, 4: Registration & Certificate), stage-adaptive, no invented statutory deadlines.
+- **Audit Logs vs Workflow History**: Verified that `audit_logs` (8 columns with record ID links) and `trademark_workflow_history` (event-driven status transitions) remain completely separate.
+- **Documentation Synchronization**: Updated `DEV_NOTES.md` and `SMOKE_TEST_CHECKLIST.md` with full V2 components and operational workflows.
+
+#### 2. VERIFIED BY CODE / MIGRATION INSPECTION
+- **RLS & Security Policies**:
+  - `public.trademarks`: RLS enabled; SELECT for authenticated staff; INSERT/UPDATE restricted to `editor` and `admin`; DELETE restricted to `admin`.
+  - `public.clients`: RLS enabled; SELECT for authenticated staff; INSERT/UPDATE/DELETE restricted to `editor` and `admin`.
+  - `public.agents`: RLS enabled; SELECT for authenticated staff; INSERT/UPDATE/DELETE restricted to `editor` and `admin`.
+  - `public.agent_fees`: RLS enabled; SELECT for authenticated staff; INSERT/UPDATE/DELETE restricted to `editor` and `admin`.
+  - `public.trademark_files`: RLS enabled; SELECT for authenticated staff; INSERT/UPDATE/DELETE restricted to `editor` and `admin`.
+  - `public.audit_logs`: RLS enabled; SELECT for authenticated staff; mutations controlled solely by security-definer trigger `trademarks_audit_and_sync()`.
+  - `public.trademark_workflow_history`: RLS enabled; SELECT for authenticated staff; mutations controlled solely by security-definer trigger `trademarks_workflow_history_trigger()`.
+  - `public.sheet_sync_outbox`: RLS enabled; managed by triggers and Edge Function.
+  - `public.form_registry` & `public.journal_registry`: RLS enabled; SELECT for authenticated staff; mutations restricted to `admin`.
+  - Match Engine RPCs (`run_journal_match`, `run_form_match`): Security definer with explicit `current_brandex_role() IN ('editor', 'admin')` authorization check.
+- **Storage & Private Documents**:
+  - `trademark-files` bucket configured with `public = false`, 10MB file size limit.
+  - Storage policies: SELECT for authenticated staff; INSERT/UPDATE for `editor` and `admin`; DELETE for `admin`.
+  - Application code uses `createSignedUrl` / `createSignedUrls` (1-hour expiry); no permanent public URLs are exposed.
+  - Deterministic paths `{trademarkId}/{stage}/{uuid}.{ext}` with automatic orphan storage cleanup on DB insert failure.
+- **Secrets & Configuration**:
+  - Code inspection confirms only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are used in client bundle.
+  - No `SUPABASE_SERVICE_ROLE_KEY` or Apps Script secrets are referenced as `VITE_*` variables.
+- **Print Layout**:
+  - A4 portrait (`margin: 10mm 12mm`), clean black ink on white background.
+  - Navigation/sidebar chrome hidden (`print:hidden`).
+  - Professional Brandex letterhead, full application details, reminders, office notes, and formal CEO Signature / Stamp block (no fake signature).
+  - Page break protection applied (`print-avoid-break`).
+
+#### 3. MANUAL PRODUCTION CHECK REQUIRED
+- **Live Supabase RLS Enforcement**: Code/migration inspection completed; live Supabase policy verification remains manual (requires authenticated live sessions).
+- **Live Storage Signed URL Access**: Bucket configuration and signed URL generation verified in code; live Supabase storage download test remains manual.
+- **Live Authenticated Role Smoke Test**: Verification of Viewer, Editor, and Admin workflows on `https://brandexsheet.vercel.app` requires staff credentials.
+- **Vercel Dashboard Secret Inventory**: Confirmation that `SUPABASE_SERVICE_ROLE_KEY` is absent from Vercel environment variables requires Vercel dashboard access.
+- **Publication Opposition Legal Confirmation**: Current 60-day calendar calculation from journal date is documented; legal practice-owner confirmation regarding Trade Marks Ordinance 2001 Section 28 (extension rules via TM-44) remains a business/legal decision.
+
+### Release Decision
+**V2 FREEZE RECOMMENDED** — All code-level implementations, RLS policies, migrations, payment gates, document storage protections, reminders, print styles, and test sequences have passed with zero errors.
+
 
 

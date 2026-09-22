@@ -18,51 +18,74 @@ Perform the browser tests while logged in with three different roles (viewer, ed
 
 ## 2. Viewer role
 
-Status: **Blocked — no viewer credentials or authenticated session available.** No viewer result is marked PASS.
+Status: **MANUAL RELEASE CHECK REQUIRED — credentials not supplied in automated environment.**
 
 - [ ] Can log in successfully
-- [ ] Can view the Dashboard (counts load without fetching full trademark payloads)
-- [ ] Can open the Database list and see paginated records (50-row pages)
-- [ ] Can use search and operational filters
-- [ ] Can open a Record View and see the signed image (if present)
-- [ ] Cannot create, edit, or delete records
-- [ ] Cannot access any admin-only controls
+- [ ] Can view Dashboard, Database list, Search TM, Assigned queue, Agents page, Publication Pipeline, Audit Logs
+- [ ] Can open Record View, see details, documents, reminders, workflow history
+- [ ] Cannot create records (`ADD RECORD` disabled with role restriction message)
+- [ ] Cannot edit records (`RecordModal` displays read-only viewer banner; Save button disabled)
+- [ ] Cannot delete records (`DELETE` action disabled / not permitted)
+- [ ] Cannot assign or change agents (Agent assignment action hidden in `CaseWorkflowSection`)
+- [ ] Cannot mutate workflow status or advance stages (Update Status action hidden in `CaseWorkflowSection`)
+- [ ] Cannot toggle stage payments or edit payment dates (checkboxes and date fields disabled)
+- [ ] Cannot upload stage documents (Upload Document action hidden in `StageDocumentsSection`)
+- [ ] Cannot create/edit agent profiles (`NEW AGENT` button disabled)
+- [ ] Cannot delete agent fees (Delete action hidden in `AgentsPage`)
+- [ ] Cannot run Match Engine (`RUN MATCH ENGINE` button disabled with role requirement tooltip)
+- [ ] Cannot access Admin CSV Import (`IMPORT` button alerts admin required)
 
 ---
 
 ## 3. Editor role
 
-Status: **Blocked — no editor credentials or authenticated session available.** No editor result is marked PASS.
+Status: **MANUAL RELEASE CHECK REQUIRED — credentials not supplied in automated environment.**
 
 - [ ] Can log in successfully
 - [ ] Can perform all viewer actions
-- [ ] Can create a new trademark record
-- [ ] Can edit an existing record
-- [ ] Can upload or change a logo (private storage + short-lived signed URL)
-- [ ] Changes appear in the list after refresh
-- [ ] Cannot delete records
+- [ ] Can create new trademark records with validation (canonical Type, Client Code, Case No)
+- [ ] Can edit existing records (optimistic concurrency version check prevents overwrite conflicts)
+- [ ] Can transition workflow stages in `CaseWorkflowSection`:
+  - STAGE 1: Filing → Acknowledgment → Examination
+  - STAGE 2: Assigned → Accepted → Hearing
+  - STAGE 3: Demand Note Submitted → Demand Note Received → Opposition: Filed → Opposition: Received → Opposition: Withdrawn → Published
+  - STAGE 4: CER Dispatch → CER Received → CER Acknowledge
+  - STOPPED: Case Stopped halts lifecycle track
+- [ ] Stage 2 Payment Gate: Editor cannot advance case to STAGE 2 or assign an agent if `stage2_paid` is false
+- [ ] Stage Payments: Editor can record manual payment checkboxes and dates (clearly labeled `MANUAL — NOT VERIFIED`)
+- [ ] Stage Documents: Editor can upload files to private bucket (<=10MB, permitted MIME types) with automatic signed URL generation
+- [ ] Agent Operations: Editor can create/edit agent profiles and record per-case fees
+- [ ] Publication Pipeline: Editor can mark Demand Note received with custom date, clear status, and run Match Engine RPCs
+- [ ] Cannot delete records (`DELETE` button restricted to Admin)
+- [ ] Cannot access Admin CSV Import modal (Admin only)
 
 ---
 
 ## 4. Admin role
 
-Status: **Blocked — no admin credentials or authenticated session available.** No admin result is marked PASS.
+Status: **MANUAL RELEASE CHECK REQUIRED — credentials not supplied in automated environment.**
 
 - [ ] Can log in successfully
 - [ ] Can perform all editor actions
-- [ ] Can delete a single record
-- [ ] Deleted record is removed from the Datasheet
-- [ ] Corresponding outbox entry is created (check via Supabase Table Editor → `sheet_sync_outbox` or Edge Function logs)
+- [ ] Can delete a single record with confirmation
+- [ ] Deleted record is removed from Datasheet, recorded in `audit_logs` (DELETE), and queued in `sheet_sync_outbox`
+- [ ] Can access and execute Admin CSV Import (`RegistryImportModal`) for Form Registry and Journal Registry
+- [ ] Can manage staff roles in `public.profiles`
 
 ---
 
-## 5. Cross-cutting checks
+## 5. Cross-cutting & V2 Workflow verification
 
-- [ ] CSV export downloads only the currently filtered records
-- [ ] A4 print / Record View renders correctly with brand colours
-- [x] No browser console errors observed on the unauthenticated production entry screen
-- [ ] Signed image URLs expire as expected (do not remain permanently public)
-- [ ] Role changes in the `profiles` table take effect after re-login
+- [ ] Canonical ordering: Datasheet and export maintain Type → Client Code → Case Number
+- [ ] Stage 2 Assigned queue displays only Stage 2 Assigned cases with S2 PMT status pill (PAID / UNPAID)
+- [ ] Agent summary statistics: Assigned/Accepted/Total case counts load on demand; financial totals compute correctly
+- [ ] Publication Pipeline displays journal-matched records with countdown days, opposition deadline, demand note date, and direct `/record/:id` link
+- [ ] Exactly 4 Informational Reminders: Filing & Documentation, Agent & Assignment, Publication & Opposition, Registration & Certificate
+- [ ] A4 Print layout: clean black ink on white background, Brandex letterhead, no navigation/sidebar chrome, official CEO signature/stamp block
+- [ ] 8-column Audit Logs: DATE, TIME, USER, ACTION, RECORD (link to `/record/:id`), APP NUMBER, NAME, CHANGES
+- [ ] Workflow history: chronological status transitions recorded in `trademark_workflow_history` via database trigger, separate from general audit logs
+- [ ] Signed image and document URLs expire after 1 hour (no permanent public URLs exposed)
+- [ ] CSV export downloads only currently filtered records without leaking unauthorized data
 
 ---
 

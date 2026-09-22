@@ -19,10 +19,16 @@
 
 ## Core files
 
-- `artifacts/tm-tracker/src/lib/api.ts`: typed Supabase data layer
+- `artifacts/tm-tracker/src/lib/api.ts`: typed Supabase data layer and workflow logic
 - `artifacts/tm-tracker/src/pages/DatabasePage.tsx`: canonical Datasheet and CSV export
 - `artifacts/tm-tracker/src/pages/Dashboard.tsx`: count-only operational summary
 - `artifacts/tm-tracker/src/pages/RecordView.tsx`: full digital and A4 record
+- `artifacts/tm-tracker/src/pages/AssignedPage.tsx`: Stage 2 Assigned operational queue
+- `artifacts/tm-tracker/src/pages/AgentsPage.tsx`: agent master profiles and per-case fee tracking
+- `artifacts/tm-tracker/src/pages/PublicationPipelinePage.tsx`: journal-matched publication pipeline & demand notes
+- `artifacts/tm-tracker/src/pages/LogsPage.tsx`: 8-column audit logs viewer
+- `artifacts/tm-tracker/src/components/CaseWorkflowSection.tsx`: Stage 1–4 progression stepper, payment gate & history
+- `artifacts/tm-tracker/src/components/StageDocumentsSection.tsx`: stage-wise document upload and signed URL view
 - `artifacts/tm-tracker/src/components/RecordModal.tsx`: create/edit workflow
 - `supabase/migrations`: authoritative database schema
 - `supabase/functions/sync-google-sheet`: asynchronous mirror worker
