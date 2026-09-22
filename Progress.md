@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (V2.0.1 Batch 3 — Final print and upload UX polish)**
+**Last updated: 23 September 2026 (V2.0.1 OFFICIAL RELEASE)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -592,6 +592,41 @@ All planned V2 batches are completed and verified. Codebase is frozen against ne
 - [x] Filtered target stage dropdown in `CaseWorkflowSection.tsx` to valid forward stages and added payment gate warning banners.
 - [x] Updated default form state in `RecordModal.tsx` to `subStage: "Filing"`.
 - [x] Added automated tests in `api.test.ts` covering new record defaults, forward progression, payment gate validation, and backward blocking (46/46 passed).
+
+## V2.0.1 OFFICIAL RELEASE (23 September 2026)
+
+### Release Status
+- [x] V2.0.1 = OFFICIAL RELEASE
+- [x] Batch 1 complete (Core Workflow & New Record Creation)
+- [x] Batch 2 complete (RecordView UX Corrections)
+- [x] Batch 3 complete (Final Print & Upload UX Polish)
+- [x] Final commit: 8a29729
+- [x] Release tag: v2.0.1
+- [x] Release notes created: RELEASE_NOTES_V2.0.1.md
+- [x] All verification checks passed (46/46 tests, typecheck, production build)
+- [x] Previous history intact (v2.0.0 unchanged)
+
+### Release Composition
+V2.0.1 is a correction/polish release on top of V2.0.0 with:
+- Strict forward-only Stage 1 → Stage 2 → Stage 3 → Stage 4 workflow
+- Stage payment gates enforced
+- New record defaults to Stage 1 / Filing with automatic payment initialization
+- Initial workflow history event on record creation
+- STOPPED protection
+- Workflow History positioned after Stage Payments
+- Two-column RecordView header
+- Stage document visibility based on current stage/existing documents
+- Uppercase normalization for ordinary business fields
+- Improved document upload success/reset UX
+- Print-friendly light badges/backgrounds
+- Reduced print shadows and heavy shading
+
+### Verification
+- 46/46 tests passed
+- Typecheck passed
+- Production build passed
+- Production migration 202609220006 applied
+- Working tree clean
 
 
 
