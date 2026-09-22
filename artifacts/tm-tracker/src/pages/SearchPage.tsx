@@ -1,4 +1,4 @@
-import { listTrademarks, searchTm, STAGES, CITIES } from "@/lib/api";
+import { listTrademarks, searchTm, STAGES, CITIES, formatWorkflowLabel } from "@/lib/api";
 import type { TrademarkRecord, TmSearchResult } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
@@ -119,7 +119,7 @@ function TmCard({ result, onViewRecord }: {
                 )}
                 {rec.subStage && (
                   <span className="inline-block px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider border border-[#0C0C0C]/40 text-[#0C0C0C] bg-[#F0E8D0]">
-                    {rec.subStage}
+                    {formatWorkflowLabel(rec.subStage)}
                   </span>
                 )}
               </div>
@@ -404,7 +404,7 @@ export function SearchPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate">{tm.subStage || ""}</td>
+                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate">{formatWorkflowLabel(tm.subStage) || ""}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold">{tm.tmCprNo || ""}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10">{tm.appClass || ""}</td>
                         <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[100px] truncate">{tm.agent || ""}</td>

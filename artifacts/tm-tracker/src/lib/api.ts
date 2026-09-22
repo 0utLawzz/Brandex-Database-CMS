@@ -206,6 +206,42 @@ export const STATUS_WORKFLOW: Record<string, string[]> = {
   "STOPPED": ["Case Stopped"],
 };
 
+/**
+ * Canonical dictionary mapping abbreviated workflow / sub-stage codes
+ * to complete user-facing terminology.
+ */
+export const WORKFLOW_DISPLAY_LABELS: Record<string, string> = {
+  "D-Note Submitted": "Demand Note Submitted",
+  "D-Note Received": "Demand Note Received",
+  "OPPO: Filed": "Opposition: Filed",
+  "OPPO: Received": "Opposition: Received",
+  "OPPO: Withdrawn": "Opposition: Withdrawn",
+};
+
+/**
+ * Reverse mapping to resolve complete terminology back to internal values.
+ */
+export const WORKFLOW_INTERNAL_VALUES: Record<string, string> = Object.entries(
+  WORKFLOW_DISPLAY_LABELS,
+).reduce((acc, [k, v]) => ({ ...acc, [v]: k }), {} as Record<string, string>);
+
+/**
+ * Returns the complete user-facing display label for a workflow status or sub-status.
+ * If no mapping exists (or if already expanded), returns the value as-is.
+ */
+export function formatWorkflowLabel(label: string | null | undefined): string {
+  if (!label) return "";
+  return WORKFLOW_DISPLAY_LABELS[label] ?? label;
+}
+
+/**
+ * Resolves a workflow label to its canonical internal database value.
+ */
+export function normalizeWorkflowValue(val: string | null | undefined): string {
+  if (!val) return "";
+  return WORKFLOW_INTERNAL_VALUES[val] ?? val;
+}
+
 export const CITIES = ["Islamabad", "Karachi", "Lahore", "Multan", "Rawalpindi", "Peshawar", "Quetta"] as const;
 export const VALID_TYPES = ["X", "A", "N"] as const;
 export const CASE_TYPES = ["Trademark", "Copyright", "Design", "Patent", "Renewal", "Opposition", "Other"] as const;
@@ -449,7 +485,7 @@ export function inputToRow(input: TrademarkInput) {
     tm_cpr_number: input.tmCprNo ?? input.tmNo ?? null,
     nice_class: input.appClass ?? null,
     status: input.stage,
-    sub_status: input.subStage ?? null,
+    sub_status: input.subStage ? normalizeWorkflowValue(input.subStage) : null,
     case_type: input.caseType ?? null,
     agent: input.agent ?? null,
     city: input.city,
@@ -499,7 +535,20 @@ export async function listTrademarkPage(params: TrademarkListParams = {}): Promi
   if (params.type) query = query.eq("type", params.type);
   if (params.clientCode) query = query.ilike("client_code", `%${safeSearchTerm(params.clientCode)}%`);
   if (params?.stage) query = query.eq("status", params.stage);
-  if (params?.subStage) query = query.ilike("sub_status", `%${safeSearchTerm(params.subStage)}%`);
+  if (params?.subStage) {
+    const term = safeSearchTerm(params.subStage);
+    let altTerm: string | null = null;
+    if (/demand\s*note/i.test(term)) altTerm = "D-Note";
+    else if (/d-note/i.test(term)) altTerm = "Demand Note";
+    else if (/opposition/i.test(term)) altTerm = "OPPO";
+    else if (/oppo/i.test(term)) altTerm = "Opposition";
+
+    if (altTerm) {
+      query = query.or(`sub_status.ilike.%${term}%,sub_status.ilike.%${altTerm}%`);
+    } else {
+      query = query.ilike("sub_status", `%${term}%`);
+    }
+  }
   if (params?.city) query = query.eq("city", params.city);
   if (params?.caseType) query = query.eq("case_type", params.caseType);
   if (params?.agent) query = query.eq("agent", params.agent);

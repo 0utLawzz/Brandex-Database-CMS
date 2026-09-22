@@ -36,6 +36,9 @@ import {
   uploadStageDocument,
   validateStage2PaymentGate,
   assignStage2Agent,
+  formatWorkflowLabel,
+  normalizeWorkflowValue,
+  WORKFLOW_DISPLAY_LABELS,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -469,5 +472,61 @@ describe("Batch 9: Stage document API", () => {
     expect(docs[0].subStage).toBe("Filing");
     expect(docs[0].title).toBe("Application Form");
     expect(docs[0].signedUrl).toBe("https://signed.example/stage1.pdf");
+  });
+});
+
+describe("Batch 10: Workflow Terminology Expansion", () => {
+  it("formatWorkflowLabel — expands abbreviated sub-stage codes to full terminology", () => {
+    expect(formatWorkflowLabel("D-Note Submitted")).toBe("Demand Note Submitted");
+    expect(formatWorkflowLabel("D-Note Received")).toBe("Demand Note Received");
+    expect(formatWorkflowLabel("OPPO: Filed")).toBe("Opposition: Filed");
+    expect(formatWorkflowLabel("OPPO: Received")).toBe("Opposition: Received");
+    expect(formatWorkflowLabel("OPPO: Withdrawn")).toBe("Opposition: Withdrawn");
+  });
+
+  it("formatWorkflowLabel — leaves unmapped or already expanded terminology unchanged", () => {
+    expect(formatWorkflowLabel("Filing")).toBe("Filing");
+    expect(formatWorkflowLabel("Assigned")).toBe("Assigned");
+    expect(formatWorkflowLabel("Accepted")).toBe("Accepted");
+    expect(formatWorkflowLabel("Hearing")).toBe("Hearing");
+    expect(formatWorkflowLabel("Published")).toBe("Published");
+    expect(formatWorkflowLabel("CER Dispatch")).toBe("CER Dispatch");
+    expect(formatWorkflowLabel("CER Received")).toBe("CER Received");
+    expect(formatWorkflowLabel("CER Acknowledge")).toBe("CER Acknowledge");
+    expect(formatWorkflowLabel("Demand Note Submitted")).toBe("Demand Note Submitted");
+  });
+
+  it("formatWorkflowLabel — safely handles empty or null/undefined values", () => {
+    expect(formatWorkflowLabel("")).toBe("");
+    expect(formatWorkflowLabel(null)).toBe("");
+    expect(formatWorkflowLabel(undefined)).toBe("");
+  });
+
+  it("normalizeWorkflowValue — maps full terminology back to canonical internal database values", () => {
+    expect(normalizeWorkflowValue("Demand Note Submitted")).toBe("D-Note Submitted");
+    expect(normalizeWorkflowValue("Demand Note Received")).toBe("D-Note Received");
+    expect(normalizeWorkflowValue("Opposition: Filed")).toBe("OPPO: Filed");
+    expect(normalizeWorkflowValue("Opposition: Received")).toBe("OPPO: Received");
+    expect(normalizeWorkflowValue("Opposition: Withdrawn")).toBe("OPPO: Withdrawn");
+
+    // Existing internal values remain unchanged
+    expect(normalizeWorkflowValue("D-Note Submitted")).toBe("D-Note Submitted");
+    expect(normalizeWorkflowValue("Assigned")).toBe("Assigned");
+    expect(normalizeWorkflowValue(null)).toBe("");
+  });
+
+  it("inputToRow — normalizes expanded user-facing subStage to canonical database value", () => {
+    const row = inputToRow({
+      date: "2026-09-22",
+      type: "X",
+      clientCode: "C-1",
+      caseNumber: "100",
+      appName: "Test App",
+      stage: "STAGE 3",
+      subStage: "Demand Note Submitted",
+      city: "Islamabad",
+    });
+
+    expect(row.sub_status).toBe("D-Note Submitted");
   });
 });

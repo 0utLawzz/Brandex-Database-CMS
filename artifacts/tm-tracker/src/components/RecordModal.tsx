@@ -13,6 +13,8 @@ import {
   VALID_TYPES,
   isStage2PaymentRequired,
   listAgentProfiles,
+  formatWorkflowLabel,
+  normalizeWorkflowValue,
 } from "@/lib/api";
 import type { TrademarkInput, TrademarkRecord } from "@/lib/api";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -218,7 +220,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
         tmCprNo:    trademark.tmCprNo ?? "",
         appClass:   trademark.appClass ?? "",
         stage:      trademark.stage || "STAGE 1",
-        subStage:   trademark.subStage ?? "",
+        subStage:   normalizeWorkflowValue(trademark.subStage ?? ""),
         caseType:   trademark.caseType || "Trademark",
         agent:      trademark.agent ?? "",
         city:       trademark.city || "Islamabad",
@@ -488,7 +490,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                         const newStage = e.target.value;
                         form.setValue("stage", newStage);
                         const validSubs = STATUS_WORKFLOW[newStage] ?? [];
-                        const currentSub = form.getValues("subStage");
+                        const currentSub = normalizeWorkflowValue(form.getValues("subStage"));
                         if (!currentSub || !validSubs.includes(currentSub)) {
                           form.setValue("subStage", "");
                         }
@@ -501,7 +503,11 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     <FieldLabel>SUB-STAGE</FieldLabel>
                     <FormSelect {...form.register("subStage")}>
                       <option value="">SELECT SUB-STAGE</option>
-                      {availableSubStages.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {availableSubStages.map((s) => (
+                        <option key={s} value={s}>
+                          {formatWorkflowLabel(s)}
+                        </option>
+                      ))}
                     </FormSelect>
                   </div>
                 </div>

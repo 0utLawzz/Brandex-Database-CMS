@@ -1,4 +1,4 @@
-import { getRecord, getWorkflowHistory, updateStagePayment } from "@/lib/api";
+import { getRecord, getWorkflowHistory, updateStagePayment, formatWorkflowLabel } from "@/lib/api";
 import type { TrademarkRecord, TmMatches, JournalRecord, TrademarkWorkflowEvent } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort, formatDate } from "@/lib/utils";
@@ -181,7 +181,7 @@ export function RecordView() {
                   )}
                   {record.subStage && (
                     <span className="px-2 py-0.5 font-mono text-[10px] font-bold uppercase border border-[#0C0C0C]/40 bg-[#F0E8D0]">
-                      {record.subStage}
+                      {formatWorkflowLabel(record.subStage)}
                     </span>
                   )}
                   <span className="font-serif text-2xl print:text-lg font-bold text-[#6C1C1F]">{record.type || "—"}</span>
@@ -221,7 +221,7 @@ export function RecordView() {
               <div className="border-2 border-[#0C0C0C] bg-white p-3 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
                 <div className="text-[8px] font-bold uppercase tracking-widest text-[#3A506B] mb-1">Sub-Status</div>
                 <div className="font-mono text-base print:text-sm font-bold text-[#0A1931]">
-                  {record.subStage || "—"}
+                  {formatWorkflowLabel(record.subStage) || "—"}
                 </div>
               </div>
             </div>
@@ -236,7 +236,7 @@ export function RecordView() {
                   {workflowHistory.map((event) => (
                     <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 py-1">
                       <div className="font-mono text-sm font-bold text-[#0A1931]">
-                        {event.toSubStatus || event.toStatus}
+                        {formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus)}
                       </div>
                       <div className="font-mono text-[9px] text-[#6d6658] mt-1">
                         {formatDateShort(event.eventAt)}

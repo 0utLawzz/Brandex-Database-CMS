@@ -227,3 +227,20 @@ This file is the single source of truth for project status.
 - [x] Added unit tests in `api.test.ts` verifying MIME type validation, file size bounds, storage error handling/cleanup, and stage filtering
 - [x] Verified: `pnpm test` (18/18 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 13.45s)
 
+## 2026-09-22 — Batch 10: Replace Short Forms in User-Facing Workflow Labels
+
+- [x] Implemented canonical user-facing terminology expansion architecture (`api.ts`):
+  - `WORKFLOW_DISPLAY_LABELS`: maps `D-Note Submitted` → `Demand Note Submitted`, `D-Note Received` → `Demand Note Received`, `OPPO: Filed` → `Opposition: Filed`, `OPPO: Received` → `Opposition: Received`, `OPPO: Withdrawn` → `Opposition: Withdrawn`
+  - `formatWorkflowLabel(label)`: expands workflow labels for display without mutating underlying database values
+  - `normalizeWorkflowValue(val)`: transparently bridges full user-facing phrases back to internal database values
+  - `listTrademarkPage`: bridges user searches for "Demand Note" or "Opposition" to matching database rows
+  - `CER` status: audited repository for explicit full forms of `CER`; none found, so `CER` (`CER Dispatch`, `CER Received`, `CER Acknowledge`) is preserved unchanged and reported as a pending terminology decision
+- [x] Updated all visible user-facing workflow touchpoints:
+  - `RecordModal.tsx`: sub-stage dropdown displays full terminology (`formatWorkflowLabel`), form initialization and stage changes normalize seamlessly (`normalizeWorkflowValue`)
+  - `RecordView.tsx`: sub-stage badges, sub-status cards, and workflow history event labels display full terminology
+  - `SearchPage.tsx`: search result cards and search table rows display full terminology
+  - `DatabasePage.tsx`: database table rows and CSV export use full terminology
+  - `AssignedPage.tsx`: assigned queue table rows and assignment detail modal display full terminology
+- [x] Added unit tests in `api.test.ts` verifying label formatting, value normalization, edge cases (null/undefined/empty), and `inputToRow` integration
+- [x] Verified: `pnpm test --run` (23/23 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 18.45s)
+

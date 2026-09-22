@@ -1,4 +1,4 @@
-import { listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, CITIES } from "@/lib/api";
+import { listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, CITIES, formatWorkflowLabel } from "@/lib/api";
 import type { TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
@@ -275,7 +275,7 @@ export function AssignedPage() {
                       )}
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[110px] truncate">
-                      {r.subStage || ""}
+                      {formatWorkflowLabel(r.subStage) || ""}
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold max-w-[120px] truncate">
                       {r.agent || <span className="text-[#9d9488] font-normal italic">unassigned</span>}
@@ -357,7 +357,7 @@ export function AssignedPage() {
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">AGENT</span><strong>{assignmentRecord.agent || "—"}</strong></div>
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">CITY</span><strong>{assignmentRecord.city || "—"}</strong></div>
                 <div><span className="block text-[9px] font-bold text-[#6d6658]">STATUS</span><strong>{assignmentRecord.stage || "—"}</strong></div>
-                <div><span className="block text-[9px] font-bold text-[#6d6658]">SUB-STATUS</span><strong>{assignmentRecord.subStage || "—"}</strong></div>
+                <div><span className="block text-[9px] font-bold text-[#6d6658]">SUB-STATUS</span><strong>{formatWorkflowLabel(assignmentRecord.subStage) || "—"}</strong></div>
               </div>
               {!assignmentRecord.stage2Paid ? (
                 <>

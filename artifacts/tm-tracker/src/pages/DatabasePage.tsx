@@ -1,6 +1,6 @@
 import {
   CASE_TYPES, CITIES, listAgents, listTrademarkPage, listTrademarksForExport,
-  STAGES, TM_FORMS, VALID_TYPES,
+  STAGES, TM_FORMS, VALID_TYPES, formatWorkflowLabel,
 } from "@/lib/api";
 import type { TrademarkListParams, TrademarkPage, TrademarkRecord, TmFormKey } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
@@ -33,7 +33,7 @@ const CSV_COLUMNS: Array<[string, (record: TrademarkRecord) => string]> = [
   ["DATE", (r) => r.date], ["TYPE", (r) => r.type], ["CLIENT CODE", (r) => r.clientCode],
   ["CASE NUMBER", (r) => r.caseNumber],
   ["APPLICATION NAME", (r) => r.appName], ["TM/CPR NUMBER", (r) => r.tmCprNo],
-  ["CLASS", (r) => r.appClass], ["STATUS", (r) => r.stage], ["SUB STATUS", (r) => r.subStage],
+  ["CLASS", (r) => r.appClass], ["STATUS", (r) => r.stage], ["SUB STATUS", (r) => formatWorkflowLabel(r.subStage)],
   ["CASE TYPE", (r) => r.caseType], ["AGENT", (r) => r.agent], ["CITY", (r) => r.city],
   ["TM5", (r) => r.tm5], ["TM6", (r) => r.tm6], ["TM11", (r) => r.tm11],
   ["TM16", (r) => r.tm16], ["TM56", (r) => r.tm56],
@@ -172,7 +172,7 @@ export function DatabasePage() {
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10 uppercase">{record.appClass}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[200px] truncate font-bold uppercase">{record.appName}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10"><span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold border border-[#0C0C0C]/20 uppercase ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>{record.stage}</span></td>
-                  <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate uppercase">{record.subStage}</td>
+                  <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate uppercase">{formatWorkflowLabel(record.subStage)}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10 uppercase">{record.city}</td>
                   <td className="px-3 py-2 border-r border-[#0C0C0C]/10"><div className="flex gap-1">{activeForms.length ? activeForms.map((form) => <span key={form} className="px-1.5 py-0.5 bg-[#B0740E]/15 border border-[#B0740E] text-[#6C1C1F] text-[9px] font-bold uppercase">{form}</span>) : <span className="text-[#9d9488]">—</span>}</div></td>
                   <td className="px-3 py-2 text-[#6d6658] uppercase">{record.journalNumber || "—"}</td>
