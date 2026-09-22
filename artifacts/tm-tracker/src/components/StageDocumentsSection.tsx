@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FolderArchive, Upload, ExternalLink, X, Loader2,
@@ -53,6 +53,19 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [sectionSuccess, setSectionSuccess] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sectionSuccessTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (sectionSuccessTimerRef.current) clearTimeout(sectionSuccessTimerRef.current);
+    };
+  }, []);
 
   // 1. Staff role (Viewer vs Editor/Admin)
   const { data: staffRole } = useQuery({
@@ -74,6 +87,32 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
     enabled: Boolean(trademarkId),
   });
 
+  const resetUploadState = () => {
+    const defaultStage = currentStage || "STAGE 1";
+    const match = STAGE_DOCUMENT_WORKFLOW.find(
+      (s) => s.stage === defaultStage.toUpperCase() || s.label.toUpperCase() === defaultStage.toUpperCase(),
+    );
+    setTargetStage(match ? match.stage : "STAGE 1");
+    setTargetSubStage("");
+    setTitle("");
+    setSelectedFile(null);
+    setFormError(null);
+    setSuccessMessage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    uploadMutation.reset();
+  };
+
+  const closeModal = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setModalOpen(false);
+    resetUploadState();
+  };
+
   // 3. Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (args: { file: File; stage: string; subStage?: string; title?: string }) => {
@@ -86,10 +125,19 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
     },
     onSuccess: (newDoc) => {
       queryClient.invalidateQueries({ queryKey: ["stage-documents", trademarkId] });
-      setSuccessMessage(`Document "${newDoc.title || newDoc.fileName}" uploaded successfully.`);
-      setTimeout(() => {
+      const docName = newDoc.title || newDoc.fileName;
+      setSuccessMessage(`Document "${docName}" uploaded successfully.`);
+      setSectionSuccess(`Document "${docName}" uploaded successfully to ${newDoc.stage}.`);
+
+      if (sectionSuccessTimerRef.current) clearTimeout(sectionSuccessTimerRef.current);
+      sectionSuccessTimerRef.current = setTimeout(() => {
+        setSectionSuccess(null);
+      }, 5000);
+
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = setTimeout(() => {
         closeModal();
-      }, 1200);
+      }, 900);
     },
     onError: (err: Error) => {
       setFormError(err.message || "Failed to upload document. Please try again.");
@@ -97,6 +145,10 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
   });
 
   const openModal = (defaultStage?: string) => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
     const stageToUse = defaultStage || currentStage || "STAGE 1";
     // Normalize stage matching STAGE_DOCUMENT_WORKFLOW
     const match = STAGE_DOCUMENT_WORKFLOW.find(
@@ -108,16 +160,11 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
     setSelectedFile(null);
     setFormError(null);
     setSuccessMessage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    uploadMutation.reset();
     setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    if (uploadMutation.isPending) return;
-    setModalOpen(false);
-    setSelectedFile(null);
-    setTitle("");
-    setFormError(null);
-    setSuccessMessage(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,6 +225,24 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
           </button>
         )}
       </div>
+
+      {/* Section Success Banner */}
+      {sectionSuccess && (
+        <div className="p-2.5 border-2 border-[#0A6B52] bg-[#D8F2E8] text-[#0A6B52] font-mono text-xs flex items-center justify-between gap-2 shadow-[2px_2px_0_#0A6B52] print:hidden">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span className="font-bold">{sectionSuccess}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSectionSuccess(null)}
+            className="text-[#0A6B52] hover:text-[#0C0C0C] p-0.5"
+            aria-label="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {isLoading && (
         <div className="p-4 font-mono text-xs text-[#6d6658] animate-pulse text-center">
@@ -353,7 +418,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               </button>
             </div>
 
-            {/* Error & Success Feedback */}
+            {/* Error Feedback */}
             {formError && (
               <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -361,120 +426,141 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               </div>
             )}
 
-            {successMessage && (
-              <div className="p-2.5 border-2 border-[#0A6B52] bg-[#D8F2E8] text-[#0A6B52] font-mono text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{successMessage}</span>
-              </div>
-            )}
-
-            {/* Upload Form */}
-            <form onSubmit={handleUploadSubmit} className="space-y-3.5">
-              {/* Stage Selection */}
-              <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
-                  Workflow Stage *
-                </label>
-                <select
-                  value={targetStage}
-                  onChange={(e) => {
-                    setTargetStage(e.target.value);
-                    setTargetSubStage("");
-                  }}
-                  disabled={uploadMutation.isPending}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
-                >
-                  {STAGE_DOCUMENT_WORKFLOW.map((s) => (
-                    <option key={s.stage} value={s.stage}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sub-stage Selection */}
-              <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
-                  Sub-stage (Optional)
-                </label>
-                <select
-                  value={targetSubStage}
-                  onChange={(e) => setTargetSubStage(e.target.value)}
-                  disabled={uploadMutation.isPending}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
-                >
-                  <option value="">-- None / General Stage Document --</option>
-                  {activeStageWorkflow?.subStages.map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Document Title */}
-              <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
-                  Document Title (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Filing Receipt, Examination Report, Power of Attorney"
-                  disabled={uploadMutation.isPending}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C] placeholder:text-[#9d9488]"
-                />
-              </div>
-
-              {/* File Input */}
-              <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
-                  Select File * (PDF, Word, Excel, Plain Text, Image — Max 10MB)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.gif,.webp"
-                  onChange={handleFileChange}
-                  disabled={uploadMutation.isPending}
-                  className="w-full text-xs font-mono file:mr-3 file:py-1.5 file:px-3 file:border-2 file:border-[#0C0C0C] file:bg-white file:font-mono file:text-xs file:font-bold file:uppercase hover:file:bg-[#0C0C0C] hover:file:text-white file:transition-colors cursor-pointer"
-                />
-                {selectedFile && (
-                  <div className="mt-1 font-mono text-[10px] text-[#0A6B52]">
-                    Selected: {selectedFile.name} ({formatBytes(selectedFile.size)})
+            {/* Success State View */}
+            {successMessage ? (
+              <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-[#D8F2E8] border-2 border-[#0A6B52] flex items-center justify-center">
+                  <CheckCircle2 className="w-7 h-7 text-[#0A6B52]" />
+                </div>
+                <div className="space-y-1">
+                  <div className="font-serif text-lg font-bold text-[#0A6B52] uppercase tracking-wide">
+                    Upload Successful
                   </div>
-                )}
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#0C0C0C]/20">
+                  <div className="font-mono text-xs text-[#0C0C0C] max-w-xs break-words">
+                    {successMessage}
+                  </div>
+                </div>
+                <div className="pt-2 font-mono text-[10px] text-[#6d6658]">
+                  Closing window…
+                </div>
                 <button
                   type="button"
                   onClick={closeModal}
-                  disabled={uploadMutation.isPending}
-                  className="px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors disabled:opacity-50"
+                  className="mt-2 px-4 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!selectedFile || uploadMutation.isPending}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 active:translate-x-[1px] active:translate-y-[1px] transition-all"
-                >
-                  {uploadMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Uploading…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Upload Document</span>
-                    </>
-                  )}
+                  Done
                 </button>
               </div>
-            </form>
+            ) : (
+              /* Upload Form */
+              <form onSubmit={handleUploadSubmit} className="space-y-3.5">
+                {/* Stage Selection */}
+                <div>
+                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                    Workflow Stage *
+                  </label>
+                  <select
+                    value={targetStage}
+                    onChange={(e) => {
+                      setTargetStage(e.target.value);
+                      setTargetSubStage("");
+                    }}
+                    disabled={uploadMutation.isPending}
+                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
+                  >
+                    {STAGE_DOCUMENT_WORKFLOW.map((s) => (
+                      <option key={s.stage} value={s.stage}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sub-stage Selection */}
+                <div>
+                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                    Sub-stage (Optional)
+                  </label>
+                  <select
+                    value={targetSubStage}
+                    onChange={(e) => setTargetSubStage(e.target.value)}
+                    disabled={uploadMutation.isPending}
+                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
+                  >
+                    <option value="">-- None / General Stage Document --</option>
+                    {activeStageWorkflow?.subStages.map((sub) => (
+                      <option key={sub} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Document Title */}
+                <div>
+                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                    Document Title (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Filing Receipt, Examination Report, Power of Attorney"
+                    disabled={uploadMutation.isPending}
+                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C] placeholder:text-[#9d9488]"
+                  />
+                </div>
+
+                {/* File Input */}
+                <div>
+                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                    Select File * (PDF, Word, Excel, Plain Text, Image — Max 10MB)
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.gif,.webp"
+                    onChange={handleFileChange}
+                    disabled={uploadMutation.isPending}
+                    className="w-full text-xs font-mono file:mr-3 file:py-1.5 file:px-3 file:border-2 file:border-[#0C0C0C] file:bg-white file:font-mono file:text-xs file:font-bold file:uppercase hover:file:bg-[#0C0C0C] hover:file:text-white file:transition-colors cursor-pointer"
+                  />
+                  {selectedFile && (
+                    <div className="mt-1 font-mono text-[10px] text-[#0A6B52]">
+                      Selected: {selectedFile.name} ({formatBytes(selectedFile.size)})
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#0C0C0C]/20">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={uploadMutation.isPending}
+                    className="px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!selectedFile || uploadMutation.isPending}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                  >
+                    {uploadMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Uploading…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload Document</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

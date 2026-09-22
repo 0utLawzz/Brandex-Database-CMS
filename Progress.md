@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 22 September 2026 (V2.0.1 Batch 2 — RecordView UX corrections)**
+**Last updated: 22 September 2026 (V2.0.1 Batch 3 — Final print and upload UX polish)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -108,6 +108,24 @@ This file is the single source of truth for project status.
 - [x] All 46 tests pass; typecheck clean; production build successful (2142 modules, 31.56s)
 - [x] Committed `95660c5` and pushed to origin/main
 - [x] v2.0.0 tag unchanged
+
+## V2.0.1 Batch 3 — Final Print & Upload UX Polish (Completed 22 September 2026)
+
+- [x] **Stage Document Upload UX (`StageDocumentsSection.tsx`)**:
+  - Dedicated in-modal success view with checkmark and document title
+  - Clear section-level success notification banner (`sectionSuccess`)
+  - Auto-close cleanly with cancellation protection and "Done" dismissal
+  - Full upload form state reset: `targetStage` reset to default, `targetSubStage` reset to empty, `title` cleared, `selectedFile` cleared
+  - Native file input reset via `fileInputRef.current.value = ""`
+  - `uploadMutation.reset()` called on modal close and open
+  - All existing storage permissions, 10MB bounds, MIME validation, and Viewer/Boss read-only gates preserved
+- [x] **Print CSS Polish (`index.css`)**:
+  - Stage and status badges styled with clean light/white background, dark/black text, and 1px crisp borders
+  - Removed heavy shaded cream backgrounds (`#E8DFC7`, `#F0E8D0`, `#F8F4EC`, etc.) for ink-friendly A4 printing
+  - Stripped all offset drop shadows in print (`* { box-shadow: none !important; }`)
+  - All borders, dividers, A4 structure, and screen UI styles 100% preserved
+- [x] All 46 tests pass; typecheck clean; production build successful
+- [x] v2.0.0 tag untouched
 
 ## Required release checks
 

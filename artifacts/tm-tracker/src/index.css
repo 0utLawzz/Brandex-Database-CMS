@@ -258,15 +258,53 @@
     white-space: normal !important;
   }
 
-  /* Preserve badge backgrounds & theme styling in print */
+  /* Remove unnecessary shadows where they make printing dark/heavy */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Stage & status badges: light/white background with black/dark text & crisp border */
   .bg-\[\#0D9970\],
   .bg-\[\#B0740E\],
   .bg-\[\#6C1C1F\],
   .bg-\[\#0A6B52\],
-  .bg-\[\#CC0000\],
+  .bg-\[\#CC0000\] {
+    background-color: #FFFFFF !important;
+    color: #0C0C0C !important;
+    border: 1px solid #0C0C0C !important;
+  }
+
+  .bg-\[\#0D9970\] *,
+  .bg-\[\#B0740E\] *,
+  .bg-\[\#6C1C1F\] *,
+  .bg-\[\#0A6B52\] *,
+  .bg-\[\#CC0000\] * {
+    color: #0C0C0C !important;
+  }
+
+  /* White text becomes black/dark in print on white paper */
+  .text-white {
+    color: #0C0C0C !important;
+  }
+
+  /* Remove unnecessary heavy/shaded backgrounds from containers and cards */
   .bg-\[\#E8DFC7\],
-  .bg-\[\#F0E8D0\] {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  .bg-\[\#F0E8D0\],
+  .bg-\[\#F8F4EC\],
+  .bg-\[\#FDFBF7\],
+  .bg-\[\#FFF0D0\],
+  .bg-\[\#FFEEEE\],
+  .bg-\[\#D8F2E8\],
+  .bg-\[\#FBF9F5\] {
+    background-color: #FFFFFF !important;
+  }
+
+  /* Ensure text opacity is crisp in print */
+  .opacity-65,
+  .opacity-75 {
+    opacity: 1 !important;
   }
 }
