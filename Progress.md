@@ -197,6 +197,12 @@ This file is the single source of truth for project status.
 - [x] Agents with no name now show italic "unassigned" placeholder instead of blank cell
 - [x] Verified: `pnpm test` 13/13 passed, `pnpm typecheck` 0 errors, `pnpm build` passed (11.55s)
 
+## 2026-09-22 — Batch 7: Stage 4 Workflow Alignment
+
+- [x] Audited `STATUS_WORKFLOW["STAGE 4"]` in `api.ts` — already contains the exact required sequence: `CER Dispatch`, `CER Received`, `CER Acknowledge`
+- [x] No code change required — specification was already met
+- [x] Verified `pnpm test` (13/13 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 11.31s)
+
 ## 2026-09-22 — Batch 6: Stage 3 Workflow Alignment
 
 - [x] Audited `STATUS_WORKFLOW["STAGE 3"]` in `api.ts` — already contains the exact required sequence: `D-Note Submitted`, `D-Note Received`, `OPPO: Filed`, `OPPO: Received`, `OPPO: Withdrawn`, `Published`
