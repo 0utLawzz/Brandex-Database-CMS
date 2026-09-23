@@ -131,133 +131,132 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const availableSubStages = STATUS_WORKFLOW[targetStage] ?? [];
 
   return (
-    <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#E8DFC7] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-3">
+    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
       {/* Section Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-2.5 print:pb-1">
-        <div className="flex items-center gap-2">
-          <Workflow className="w-5 h-5 text-[#6C1C1F] print:w-4 print:h-4" />
-          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F] print:text-xs">
-            Case Workflow & Status Control
-          </div>
+      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+          <Workflow className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+          <span>Case Workflow & Status Control</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span
-            className={`px-3 py-1 print:px-2 print:py-0.5 font-mono text-xs print:text-[10px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
+            className={`px-2.5 py-0.5 font-mono text-xs print:text-[8px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
           >
             {record.stage || "STAGE 1"}
           </span>
           {record.subStage && (
-            <span className="px-2.5 py-1 print:px-1.5 print:py-0.5 font-mono text-xs print:text-[10px] font-bold uppercase border-2 border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+            <span className="px-2 py-0.5 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
               {formatWorkflowLabel(record.subStage)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Lifecycle Progression Track */}
-      <div className="border-2 border-[#0C0C0C] bg-white p-3 print:p-1.5 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
-          Workflow Progression
-        </div>
-        {isStopped ? (
-          <div className="p-2.5 print:p-1.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs print:text-[10px] font-bold flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 shrink-0" />
-            <span>CASE IS STOPPED — Workflow lifecycle halted</span>
+      <div className="p-4 print:p-2 space-y-3 print:space-y-1.5">
+        {/* Lifecycle Progression Track */}
+        <div className="border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3 print:p-1.5 shadow-[2px_2px_0_#0C0C0C] print:shadow-none">
+          <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
+            Workflow Progression
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 print:gap-1.5">
-            {STAGE_ORDER.map((stageName, idx) => {
-              const isPast = currentStageIndex > idx;
-              const isCurrent = currentStageIndex === idx;
+          {isStopped ? (
+            <div className="p-2.5 print:p-1.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs print:text-[10px] font-bold flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span>CASE IS STOPPED — Workflow lifecycle halted</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 print:gap-1.5">
+              {STAGE_ORDER.map((stageName, idx) => {
+                const isPast = currentStageIndex > idx;
+                const isCurrent = currentStageIndex === idx;
 
-              return (
-                <div
-                  key={stageName}
-                  className={`p-2 print:p-1 border-2 transition-all ${
-                    isCurrent
-                      ? "border-[#0C0C0C] bg-[#F0E8D0] shadow-[3px_3px_0_#0C0C0C] print:shadow-none"
-                      : isPast
-                        ? "border-[#0A6B52] bg-[#D8F2E8]/40"
-                        : "border-[#0C0C0C]/20 bg-[#FBF9F5] opacity-65"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-1 mb-1 print:mb-0">
-                    <span className="font-mono text-xs print:text-[10px] font-bold text-[#0C0C0C]">
-                      {stageName}
-                    </span>
-                    {isPast ? (
-                      <Check className="w-3.5 h-3.5 text-[#0A6B52]" />
-                    ) : isCurrent ? (
-                      <span className="w-2 h-2 rounded-full bg-[#6C1C1F] animate-pulse" />
-                    ) : null}
+                return (
+                  <div
+                    key={stageName}
+                    className={`p-2 print:p-1 border-2 transition-all ${
+                      isCurrent
+                        ? "border-[#0C0C0C] bg-[#F0E8D0] shadow-[2px_2px_0_#0C0C0C] print:shadow-none"
+                        : isPast
+                          ? "border-[#0A6B52] bg-[#D8F2E8]/40"
+                          : "border-[#0C0C0C]/20 bg-white opacity-65"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1 print:mb-0">
+                      <span className="font-mono text-xs print:text-[10px] font-bold text-[#0C0C0C]">
+                        {stageName}
+                      </span>
+                      {isPast ? (
+                        <Check className="w-3.5 h-3.5 text-[#0A6B52]" />
+                      ) : isCurrent ? (
+                        <span className="w-2 h-2 rounded-full bg-[#6C1C1F] animate-pulse" />
+                      ) : null}
+                    </div>
+                    <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658]">
+                      {isCurrent ? "● ACTIVE" : isPast ? "✓ COMPLETED" : "UPCOMING"}
+                    </div>
                   </div>
-                  <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658]">
-                    {isCurrent ? "● ACTIVE" : isPast ? "✓ COMPLETED" : "UPCOMING"}
-                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Control Grid: Status & Agent Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 print:gap-2">
+          {/* Status Card */}
+          <div className="border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3.5 print:p-2 shadow-[2px_2px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658]">
+                  Current Status & Sub-Status
+                </span>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={openStatusModal}
+                    className="print:hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-[1px_1px_0_#0C0C0C]"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>Update Status</span>
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1 print:space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Stage:</span>
+                  <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
+                    {record.stage || "—"}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Control Grid: Status & Agent Details */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 print:gap-2">
-        {/* Status Card */}
-        <div className="border-2 border-[#0C0C0C] bg-white p-3.5 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658]">
-                Current Status & Sub-Status
-              </span>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={openStatusModal}
-                  className="print:hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-[#F0E8D0] hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1"
-                >
-                  <Edit3 className="w-3 h-3" />
-                  <span>Update Status</span>
-                </button>
-              )}
-            </div>
-            <div className="space-y-1 print:space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Stage:</span>
-                <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
-                  {record.stage || "—"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Sub-status:</span>
-                <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
-                  {formatWorkflowLabel(record.subStage) || "—"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Sub-status:</span>
+                  <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
+                    {formatWorkflowLabel(record.subStage) || "—"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Agent Details Card */}
-        <div className="border-2 border-[#0C0C0C] bg-white p-3.5 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
-                <User className="w-3 h-3" /> Agent Details
-              </span>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={openAgentModal}
-                  className="print:hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-[#F0E8D0] hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1"
-                >
-                  <Edit3 className="w-3 h-3" />
-                  <span>{record.agent ? "Change Agent" : "Assign Agent"}</span>
-                </button>
-              )}
-            </div>
-            <div className="space-y-1 print:space-y-0.5">
-              <div className="flex items-center gap-2">
+          {/* Agent Details Card */}
+          <div className="border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3.5 print:p-2 shadow-[2px_2px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
+                  <User className="w-3 h-3" /> Agent Details
+                </span>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={openAgentModal}
+                    className="print:hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-[1px_1px_0_#0C0C0C]"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>{record.agent ? "Change Agent" : "Assign Agent"}</span>
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1 print:space-y-0.5">
+                <div className="flex items-center gap-2">
                 <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Agent:</span>
                 <span className={`font-mono text-sm print:text-xs font-bold text-[#0C0C0C] ${!record.agent ? "italic text-[#9d9488]" : ""}`}>
                   {record.agent || "Unassigned"}
@@ -275,6 +274,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
           </div>
         </div>
       </div>
+    </div>
 
       {/* Status Transition Modal */}
       {statusModalOpen && (
@@ -542,64 +542,64 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
   });
 
   return (
-    <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#F0E8D0] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-2.5 print:pb-1">
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-[#6C1C1F] print:w-4 print:h-4" />
-          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F] print:text-xs">
-            Stage Payments
-          </div>
+    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+          <CreditCard className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+          <span>Stage Payments</span>
         </div>
         <span className="font-mono text-[9px] print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-[1px_1px_0_#B0740E] print:shadow-none">
           MANUAL — NOT VERIFIED
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
-        {(
-          [
-            { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
-            { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
-            { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
-            { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
-          ] as const
-        ).map(({ label, stageNum, paid, date }) => (
-          <div
-            key={label}
-            className={`border-2 p-3 print:p-1.5 ${
-              paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C]/30 bg-white"
-            }`}
-          >
-            <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
-            <label className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
+      <div className="p-4 print:p-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
+          {(
+            [
+              { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
+              { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
+              { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
+              { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
+            ] as const
+          ).map(({ label, stageNum, paid, date }) => (
+            <div
+              key={label}
+              className={`border-2 p-3 print:p-1.5 shadow-[2px_2px_0_#0C0C0C] print:shadow-none ${
+                paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C] bg-[#FFF9F0]"
+              }`}
+            >
+              <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
+              <label className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
+                <input
+                  type="checkbox"
+                  checked={paid}
+                  disabled={!canEdit || paymentMutation.isPending}
+                  onChange={() =>
+                    paymentMutation.mutate({
+                      stage: stageNum,
+                      paid: !paid,
+                      date: paid ? "" : (date || new Date().toISOString().slice(0, 10)),
+                    })
+                  }
+                  className="w-4 h-4 print:w-3 print:h-3 accent-[#0A6B52]"
+                />
+                <span className={`font-mono text-xs print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
+                  {paid ? "PAID" : "UNPAID"}
+                </span>
+              </label>
               <input
-                type="checkbox"
-                checked={paid}
-                disabled={!canEdit || paymentMutation.isPending}
-                onChange={() =>
-                  paymentMutation.mutate({
-                    stage: stageNum,
-                    paid: !paid,
-                    date: paid ? "" : (date || new Date().toISOString().slice(0, 10)),
-                  })
+                type="date"
+                value={date}
+                disabled={!canEdit || !paid || paymentMutation.isPending}
+                onChange={(e) =>
+                  paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
                 }
-                className="w-4 h-4 print:w-3 print:h-3 accent-[#0A6B52]"
+                className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-xs print:text-[8px] bg-white disabled:opacity-40"
               />
-              <span className={`font-mono text-xs print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
-                {paid ? "PAID" : "UNPAID"}
-              </span>
-            </label>
-            <input
-              type="date"
-              value={date}
-              disabled={!canEdit || !paid || paymentMutation.isPending}
-              onChange={(e) =>
-                paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
-              }
-              className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-xs print:text-[8px] bg-white disabled:opacity-40"
-            />
-          </div>
-        ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -613,41 +613,43 @@ interface WorkflowHistorySectionProps {
 
 export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySectionProps) {
   return (
-    <div className="border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none space-y-3 print:space-y-1.5">
-      <div className="flex items-center justify-between gap-2 border-b border-[#0C0C0C]/20 pb-2 print:pb-1">
-        <div className="flex items-center gap-1.5 font-mono text-[10px] print:text-[9px] font-bold uppercase tracking-widest text-[#6d6658]">
-          <Clock className="w-3.5 h-3.5 print:w-3 print:h-3" />
+    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+          <Clock className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
           <span>Workflow History</span>
         </div>
-        <span className="font-mono text-[9px] print:text-[8px] text-[#6d6658]">
-          ({workflowHistory.length} {workflowHistory.length === 1 ? "event" : "events"})
+        <span className="font-mono text-[10px] print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20">
+          {workflowHistory.length} {workflowHistory.length === 1 ? "EVENT" : "EVENTS"}
         </span>
       </div>
 
-      {workflowHistory.length === 0 ? (
-        <div className="p-3 print:p-1.5 border border-dashed border-[#0C0C0C]/30 bg-[#F0E8D0]/40 font-mono text-xs print:text-[9px] text-[#6d6658] italic text-center">
-          No workflow history recorded.
-        </div>
-      ) : (
-        <div className="space-y-2.5 print:space-y-1 max-h-60 print:max-h-none overflow-y-auto print:overflow-visible pr-1">
-          {workflowHistory.map((event) => {
-            const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
-            const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
+      <div className="p-4 print:p-2 space-y-2.5 print:space-y-1">
+        {workflowHistory.length === 0 ? (
+          <div className="p-3 print:p-1.5 border border-dashed border-[#0C0C0C]/30 bg-[#FFF9F0] font-mono text-xs print:text-[9px] text-[#6d6658] italic text-center">
+            No workflow history recorded.
+          </div>
+        ) : (
+          <div className="space-y-2.5 print:space-y-1 max-h-60 print:max-h-none overflow-y-auto print:overflow-visible pr-1">
+            {workflowHistory.map((event) => {
+              const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
+              const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
 
-            return (
-              <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 print:pl-2 py-1 print:py-0.5">
-                <div className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
-                  {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
+              return (
+                <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 print:pl-2 py-1 print:py-0.5 bg-[#FFF9F0]/60">
+                  <div className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
+                    {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
+                  </div>
+                  <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                    <span>{formatDateShort(event.eventAt)}</span>
+                    <span>Changed by: <strong className="text-[#0C0C0C]">{event.changedByName}</strong></span>
+                  </div>
                 </div>
-                <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                  <span>{formatDateShort(event.eventAt)}</span>
-                  <span>Changed by: <strong className="text-[#0C0C0C]">{event.changedByName}</strong></span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

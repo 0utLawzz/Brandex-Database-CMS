@@ -140,8 +140,8 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
   const hasDryRun = kind === "trademark" ? Boolean(tmDryRun) : Boolean(dryRun);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col border-2 border-[#0C0C0C] bg-[#FFF9F0] shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col border-2 border-[#0C0C0C] bg-white shadow-[8px_8px_0_#0C0C0C]">
         {/* Header */}
         <div className="flex items-center gap-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] px-4 py-3">
           <FileSpreadsheet className="h-5 w-5 text-[#6C1C1F]" />
@@ -154,7 +154,7 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="p-1 hover:bg-[#0C0C0C]/10"
+            className="p-1 border border-transparent hover:border-[#0C0C0C] hover:bg-white transition-colors"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -162,7 +162,7 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
         </div>
 
         {/* Kind toggle */}
-        <div className="flex flex-wrap gap-2 border-b border-[#0C0C0C]/15 px-4 py-3">
+        <div className="flex flex-wrap gap-2 border-b-2 border-[#0C0C0C] bg-[#F0E8D0] px-4 py-3">
           {(["form", "journal", "trademark"] as Kind[]).map((k) => (
             <button
               key={k}
@@ -171,8 +171,8 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
                 setKind(k);
                 resetState();
               }}
-              className={`h-9 px-4 font-mono text-xs font-bold uppercase tracking-wider border-2 border-[#0C0C0C] ${
-                kind === k ? "bg-[#0C0C0C] text-[#F0E8D0]" : "bg-white text-[#0C0C0C]"
+              className={`h-9 px-4 font-mono text-xs font-bold uppercase tracking-wider border-2 border-[#0C0C0C] transition-all ${
+                kind === k ? "bg-[#6C1C1F] text-white shadow-[2px_2px_0_#0C0C0C]" : "bg-white text-[#0C0C0C] hover:bg-[#E8DFC7]"
               }`}
             >
               {k === "form"
@@ -273,7 +273,7 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
                 ].map(([label, value]) => (
                   <div
                     key={String(label)}
-                    className="border-2 border-[#0C0C0C] bg-white px-3 py-2 text-center"
+                    className="border-2 border-[#0C0C0C] bg-white px-3 py-2 text-center shadow-[2px_2px_0_#0C0C0C]"
                   >
                     <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6d6658]">
                       {label}
@@ -296,7 +296,7 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
 
               <div className="max-h-56 overflow-auto border-2 border-[#0C0C0C] bg-white">
                 <table className="w-full font-mono text-[10px]">
-                  <thead className="sticky top-0 bg-[#0C0C0C] text-[#F0E8D0]">
+                  <thead className="sticky top-0 bg-[#1A1A1A] text-[#F0E8D0]">
                     <tr>
                       <th className="px-2 py-1.5 text-left">Row</th>
                       <th className="px-2 py-1.5 text-left">Action</th>
@@ -355,7 +355,7 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
                 ].map(([label, value]) => (
                   <div
                     key={String(label)}
-                    className="border-2 border-[#0C0C0C] bg-white px-3 py-2 text-center"
+                    className="border-2 border-[#0C0C0C] bg-white px-3 py-2 text-center shadow-[2px_2px_0_#0C0C0C]"
                   >
                     <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6d6658]">
                       {label}
@@ -378,7 +378,7 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
 
               <div className="max-h-56 overflow-auto border-2 border-[#0C0C0C] bg-white">
                 <table className="w-full font-mono text-[10px]">
-                  <thead className="sticky top-0 bg-[#0C0C0C] text-[#F0E8D0]">
+                  <thead className="sticky top-0 bg-[#1A1A1A] text-[#F0E8D0]">
                     <tr>
                       <th className="px-2 py-1.5 text-left">Action</th>
                       <th className="px-2 py-1.5 text-left">Detail</th>

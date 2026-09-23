@@ -1,4 +1,4 @@
-import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole, getWorkflowReminders } from "@/lib/api";
+import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole } from "@/lib/api";
 import type { TrademarkRecord, TmMatches } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort, formatDate } from "@/lib/utils";
@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft, Edit2, Printer, CheckCircle2, MinusCircle,
-  Image as ImageIcon, FileText, Bell,
+  Image as ImageIcon, FileText,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RecordModal } from "@/components/RecordModal";
@@ -28,7 +28,7 @@ const STAGE_BADGE: Record<string, string> = {
 function Field({ label, value, wide }: { label: string; value?: string | null; wide?: boolean }) {
   if (!value) return null;
   return (
-    <div className={`${wide ? "col-span-2" : ""} border-2 border-[#0C0C0C] bg-[#F0E8D0] p-3 print:p-1.5 shadow-[3px_3px_0_#0C0C0C] print:shadow-none`}>
+    <div className={`${wide ? "col-span-2" : ""} border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3 print:p-1.5 shadow-[2px_2px_0_#0C0C0C] print:shadow-none`}>
       <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-1 print:mb-0.5">{label}</div>
       <div className="font-sans text-base sm:text-lg print:text-xs font-bold text-[#0C0C0C] break-words">{value}</div>
     </div>
@@ -38,10 +38,10 @@ function Field({ label, value, wide }: { label: string; value?: string | null; w
 function TmFormBadge({ label, active }: { label: string; active: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 print:px-1.5 print:py-0.5 font-mono text-[10px] print:text-[8px] font-bold border-2 ${
+      className={`inline-flex items-center gap-1 px-2.5 py-1.5 print:px-1.5 print:py-0.5 font-mono text-[10px] print:text-[8px] font-bold border-2 ${
         active
-          ? "border-[#0A6B52] text-[#0A6B52] bg-[#D8F2E8] shadow-[3px_3px_0_#0A6B52] print:shadow-none"
-          : "border-[#0C0C0C]/35 text-[#6d6658] bg-[#E8DFC7]"
+          ? "border-[#0A6B52] text-[#0A6B52] bg-[#D8F2E8] shadow-[2px_2px_0_#0A6B52] print:shadow-none"
+          : "border-[#0C0C0C]/35 text-[#6d6658] bg-[#FFF9F0]"
       }`}
     >
       {active ? <CheckCircle2 className="w-4 h-4 print:w-3 print:h-3" /> : <MinusCircle className="w-4 h-4 print:w-3 print:h-3" />}
@@ -109,12 +109,6 @@ export function RecordView() {
   const matches: TmMatches = record.tmMatches ?? {
     TM5: false, TM6: false, TM11: false, TM16: false, TM56: false,
   };
-
-  const reminders = getWorkflowReminders(record.stage, record.subStage, {
-    filingDate: record.date || undefined,
-    publicationDate: record.publicationDate || undefined,
-    oppositionDeadline: record.oppositionDeadline || undefined,
-  });
 
   return (
     <AppShell>
@@ -299,11 +293,14 @@ export function RecordView() {
             </div>
 
             {/* Application Details */}
-            <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#E8DFC7] text-[#0C0C0C] shadow-[5px_5px_0_#0C0C0C] p-4 print:p-2 print:shadow-none">
-              <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-1">
-                Application Details
+            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+              <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+                  <FileText className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+                  <span>Application Details</span>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:gap-1.5">
+              <div className="p-4 print:p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:gap-1.5">
                 <Field label="Client Code" value={record.clientCode} />
                 <Field label="Case Number" value={record.caseNumber} />
                 <Field label="Filing Date" value={record.date ? formatDateShort(record.date) : undefined} />
@@ -340,11 +337,17 @@ export function RecordView() {
             />
 
             {/* 5. Document Status / TM Forms */}
-            <div className="print-avoid-break border-3 border-[#0C0C0C] bg-[#F0E8D0] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none">
-              <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-1.5">
-                Document Status (TM Forms)
+            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+              <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+                  <CheckCircle2 className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+                  <span>Document Status (TM Forms)</span>
+                </div>
+                <span className="font-mono text-[10px] print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20 hidden sm:inline">
+                  Statutory Registry Matches
+                </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 print:gap-1.5">
+              <div className="p-4 print:p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 print:gap-1.5">
                 <TmFormBadge label="TM5" active={matches.TM5} />
                 <TmFormBadge label="TM6" active={matches.TM6} />
                 <TmFormBadge label="TM11" active={matches.TM11} />
@@ -354,51 +357,28 @@ export function RecordView() {
             </div>
 
             {/* 6. Office Notes & Manual Proceeding Remarks */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1 flex items-center gap-1.5">
-                <FileText className="w-3 h-3" /> Office Notes & Manual Proceeding Remarks
+            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+              <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+                  <FileText className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+                  <span>Office Notes & Manual Proceeding Remarks</span>
+                </div>
               </div>
-              <div className="font-mono text-sm print:text-xs text-[#0C0C0C] whitespace-pre-wrap min-h-[36px] print:min-h-[24px]">
+              <div className="p-4 print:p-2 font-mono text-sm print:text-xs text-[#0C0C0C] whitespace-pre-wrap min-h-[48px] print:min-h-[24px]">
                 {record.notes || "—"}
-              </div>
-            </div>
-
-            {/* Workflow Reminders (informational only) */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-1.5 flex items-center gap-1.5">
-                <Bell className="w-3 h-3" /> Workflow Reminders (Informational Only)
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 print:gap-1.5">
-                {reminders.map((r) => (
-                  <div
-                    key={r.number}
-                    className={`border-2 p-3 print:p-1.5 ${
-                      r.active
-                        ? "border-[#6C1C1F] bg-[#6C1C1F]/5"
-                        : "border-[#0C0C0C]/20 bg-[#F0E8D0]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1 print:mb-0.5">
-                      <span className={`inline-block px-1.5 py-0.5 font-mono text-[9px] print:text-[8px] font-bold uppercase border ${
-                        r.active ? "border-[#6C1C1F] text-[#6C1C1F] bg-[#6C1C1F]/10" : "border-[#0C0C0C]/30 text-[#6d6658]"
-                      }`}>
-                        REMINDER {r.number}
-                      </span>
-                      <span className="font-mono text-[10px] print:text-[9px] font-bold uppercase text-[#0C0C0C]">{r.title}</span>
-                    </div>
-                    <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658] leading-snug">
-                      {r.description}
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
 
             {/* Journal */}
             {record.journal && (
-              <div className="print-avoid-break border-2 border-[#0A6B52] bg-[#0D9970]/5 p-4 print:p-2">
-                <div className="text-[8px] font-bold uppercase tracking-widest text-[#0A6B52] mb-2 print:mb-1">Journal Record</div>
-                <div className="font-mono text-xs print:text-[9px] space-y-1 print:space-y-0.5 text-[#0C0C0C]">
+              <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+                <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                  <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+                    <FileText className="w-4 h-4 text-[#0A6B52] print:w-3.5 print:h-3.5" />
+                    <span>Journal Record</span>
+                  </div>
+                </div>
+                <div className="p-4 print:p-2 font-mono text-xs print:text-[9px] space-y-1.5 print:space-y-0.5 text-[#0C0C0C]">
                   <div>Journal No: <strong>{String(record.journal["Journal No"] || "")}</strong></div>
                   <div>Date: <strong>{record.journal["Journal Date"] ? formatDateShort(String(record.journal["Journal Date"])) : ""}</strong></div>
                   {record.journal["Application No"] && (
@@ -430,11 +410,13 @@ export function RecordView() {
             )}
 
             {/* CEO Signature / Stamp Block — professional block, no fake signature */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white p-4 print:p-2 shadow-[3px_3px_0_#0C0C0C] print:shadow-none">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-3 print:mb-1.5">
-                CEO BRANDEX — SIGNATURE / STAMP
+            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+              <div className="px-4 py-2 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
+                  CEO BRANDEX — SIGNATURE / STAMP
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-6 print:gap-4 items-end">
+              <div className="p-4 print:p-2 flex flex-col sm:flex-row gap-6 print:gap-4 items-end">
                 <div className="flex-1 w-full">
                   <div className="border-2 border-dashed border-[#0C0C0C]/30 p-4 print:p-2 text-center min-h-[56px] print:min-h-[42px] flex items-center justify-center">
                     <span className="font-mono text-[9px] print:text-[8px] text-[#9d9488] uppercase tracking-wider">

@@ -201,11 +201,11 @@
     display: none !important;
   }
 
-  /* Reset body with clean black ink on white background */
+  /* Reset body with clean dark gray / black ink on white background */
   body {
     background: #FFFFFF !important;
-    color: #0C0C0C !important;
-    font-size: 9pt;
+    color: #1A1A1A !important;
+    font-size: 8.5pt;
     line-height: 1.35;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -232,12 +232,13 @@
   }
 
   /* Max width */
+  .max-w-4xl,
   .max-w-5xl {
     max-width: 100% !important;
     padding: 0 !important;
   }
 
-  /* Prevent awkward page breaks */
+  /* Prevent awkward page breaks on atomic units */
   table, .print-avoid-break {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
@@ -258,7 +259,7 @@
     white-space: normal !important;
   }
 
-  /* Remove unnecessary shadows where they make printing dark/heavy */
+  /* Remove all drop shadows in print */
   *,
   *::before,
   *::after {
@@ -266,15 +267,36 @@
     text-shadow: none !important;
   }
 
-  /* Stage & status badges: light/white background with black/dark text & crisp border */
+  /* Ensure crisp 1px borders in print instead of heavy thick lines */
+  .border-2,
+  .border-3 {
+    border-width: 1px !important;
+  }
+
+  /* Black/Dark Usage Rule: convert dark/black headers and blocks to light in print */
+  .bg-\[\#0C0C0C\],
+  .bg-\[\#1A1A1A\],
+  .bg-black {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+    border-color: #333333 !important;
+  }
+
+  .bg-\[\#0C0C0C\] *,
+  .bg-\[\#1A1A1A\] *,
+  .bg-black * {
+    color: #1A1A1A !important;
+  }
+
+  /* Stage & status badges: light/white background with dark text & crisp 1px border */
   .bg-\[\#0D9970\],
   .bg-\[\#B0740E\],
   .bg-\[\#6C1C1F\],
   .bg-\[\#0A6B52\],
   .bg-\[\#CC0000\] {
     background-color: #FFFFFF !important;
-    color: #0C0C0C !important;
-    border: 1px solid #0C0C0C !important;
+    color: #1A1A1A !important;
+    border: 1px solid #333333 !important;
   }
 
   .bg-\[\#0D9970\] *,
@@ -282,19 +304,20 @@
   .bg-\[\#6C1C1F\] *,
   .bg-\[\#0A6B52\] *,
   .bg-\[\#CC0000\] * {
-    color: #0C0C0C !important;
+    color: #1A1A1A !important;
   }
 
-  /* White text becomes black/dark in print on white paper */
+  /* White text becomes dark in print on white paper */
   .text-white {
-    color: #0C0C0C !important;
+    color: #1A1A1A !important;
   }
 
-  /* Remove unnecessary heavy/shaded backgrounds from containers and cards */
+  /* Remove heavy/shaded backgrounds from containers and cards in print */
   .bg-\[\#E8DFC7\],
   .bg-\[\#F0E8D0\],
   .bg-\[\#F8F4EC\],
   .bg-\[\#FDFBF7\],
+  .bg-\[\#FFF9F0\],
   .bg-\[\#FFF0D0\],
   .bg-\[\#FFEEEE\],
   .bg-\[\#D8F2E8\],
@@ -304,7 +327,8 @@
 
   /* Ensure text opacity is crisp in print */
   .opacity-65,
-  .opacity-75 {
+  .opacity-75,
+  .opacity-80 {
     opacity: 1 !important;
   }
 }

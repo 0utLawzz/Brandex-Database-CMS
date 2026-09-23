@@ -663,6 +663,29 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
   - `pnpm typecheck` → 0 errors.
   - `pnpm build` → production bundle built cleanly in 19.88s.
 
+## Post-V2.0.1 Batch 3 — Design & Display QA and Visual Unification (Completed 23 September 2026)
+
+- [x] **Visual Unification across RecordView**:
+  - Unified all RecordView cards (`Application Details`, `Case Workflow & Status Control`, `Stage Payments`, `Workflow History`, `Stage Documents`, `Document Status (TM Forms)`, `Office Notes`, `Journal Record`, `CEO Signature / Stamp`) to the clean Neo-Brutalism design language (`border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C]` with `px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7]` header strips).
+  - Replaced crude `border-3`, oversized shadows (`shadow-[5px_5px_0_#0C0C0C]`), and nested dark/cream backgrounds with clean, information-dense `#FFF9F0` content cards and crisp 2px borders.
+- [x] **Removed Workflow Reminders Panel**:
+  - Completely removed the obsolete `"Workflow Reminders (Informational Only)"` panel from `RecordView.tsx`.
+  - Kept underlying reminder API intact for safety and testing.
+- [x] **Print / PDF View Optimization**:
+  - Enforced the Black/Dark usage rule: eliminated dominant black areas (no black headers, black backgrounds, or dark fills).
+  - Lightened dark headers and containers to white background in print with dark gray / black text and crisp 1px borders.
+  - Retained clean A4 margins (`10mm 12mm`), `break-inside: avoid` on atomic units, and zero drop shadows.
+- [x] **Database Page & Registry Import Modal Consistency**:
+  - Softened table headers to dark charcoal (`#1A1A1A`) with clean borders.
+  - Ensured consistent `—` fallback representation for empty fields.
+  - Added tooltip titles for truncated long values.
+  - Unified modal styling and tab buttons in `RegistryImportModal.tsx`.
+- [x] **Verification**:
+  - `pnpm test` → 93/93 tests passed across 3 test suites.
+  - `pnpm typecheck` → 0 errors.
+  - `pnpm build` → production bundle compiled cleanly in 25.33s.
+
+
 
 
 

@@ -201,15 +201,13 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
   const activeStageWorkflow = STAGE_DOCUMENT_WORKFLOW.find((s) => s.stage === targetStage);
 
   return (
-    <div className="border-3 border-[#0C0C0C] bg-[#E8DFC7] p-4 print:p-2 shadow-[5px_5px_0_#0C0C0C] print:shadow-none space-y-4 print:space-y-2">
+    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
       {/* Section Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b-2 border-[#0C0C0C] pb-3 print:pb-1.5">
-        <div className="flex items-center gap-2">
-          <FolderArchive className="w-5 h-5 text-[#6C1C1F] print:w-4 print:h-4" />
-          <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-[#6C1C1F] print:text-xs">
-            Stage Documents
-          </div>
-          <span className="font-mono text-[10px] print:text-[8px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+          <FolderArchive className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+          <span>Stage Documents</span>
+          <span className="font-mono text-[10px] print:text-[8px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C] ml-1">
             {documents.length} {documents.length === 1 ? "FILE" : "FILES"}
           </span>
         </div>
@@ -225,6 +223,8 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
           </button>
         )}
       </div>
+
+      <div className="p-4 print:p-2 space-y-4 print:space-y-2">
 
       {/* Section Success Banner */}
       {sectionSuccess && (
@@ -395,6 +395,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
           );
         })}
       </div>
+    </div>
 
       {/* Upload Document Modal */}
       {modalOpen && (
