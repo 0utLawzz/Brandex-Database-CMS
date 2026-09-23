@@ -643,6 +643,26 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
 - [x] **Automated Tests (`api.test.ts`)**: Added unit tests for `getStats()` (unfiltered, agent-filtered, class-filtered).
 - [x] **Verification**: All 49 tests passed (47 in `api.test.ts`, 2 in `registryImport.test.ts`), typecheck clean (0 errors), production build passed.
 
+## Post-V2.0.1 Batch 2 — Main Trademark Database Bulk CSV Import (Completed 23 September 2026)
+
+- [x] **Dedicated Bulk Import Engine (`trademarkImport.ts`)**:
+  - Implemented standalone parsing, validation, dry-run, and batch insert engine for main trademark records.
+  - **Payment Safety**: Explicitly sets `stage1_paid = false` and `stage1_paid_date = null` on imported historical records (never falsely attests payment like default new record creation).
+  - **Deduplication Engine**: In-CSV and database-level duplicate detection matching on `(tm_cpr_number, type, client_code, case_number)`.
+  - **Flexible CSV Schema**: Robust case-insensitive header mapping supporting standard column aliases (`TM #`, `Class`, `Mark Name`, `Client`, `Agent`, `City`, `Filing Date`, TM Form flags `TM5`..`TM56`).
+  - **Two-Phase Commit**: Safe dry-run analysis with validation breakdown (valid, duplicate, invalid) followed by explicit admin commit in chunked batches.
+- [x] **Registry Import Modal Integration (`RegistryImportModal.tsx`)**:
+  - Added 3rd tab: **"Trademark Database"** alongside "Form Registry" and "Journal Registry".
+  - Distinct brand styling with file upload, dry-run summary card, row-by-row validation table, and admin commit button.
+  - Role-gated for Admin access.
+- [x] **Unit & Integration Tests (`trademarkImport.test.ts`)**:
+  - 35 automated tests covering CSV parsing, header mapping, duplicate detection, batch insertion, payment history safety, and error handling.
+- [x] **Verification**:
+  - `pnpm test --run` → 84/84 tests passed across 3 test suites (`trademarkImport.test.ts`, `api.test.ts`, `registryImport.test.ts`).
+  - `pnpm typecheck` → 0 errors.
+  - `pnpm build` → production bundle built cleanly in 12.41s.
+
+
 
 
 
