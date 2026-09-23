@@ -47,6 +47,7 @@ import {
   listPublicationPipeline,
   getWorkflowReminders,
   listAuditLogs,
+  getStats,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -997,6 +998,46 @@ describe("Batch 13: Publication Workflow Integration", () => {
       );
     });
   });
+
+  describe("Dashboard getStats() API", () => {
+    it("A. Executes exact count queries for total, recent, stages, cities, and TM forms", async () => {
+      const mockQuery = createQuery({ count: 42, data: null, error: null });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      const stats = await getStats();
+
+      expect(supabaseMock.from).toHaveBeenCalledWith("trademarks");
+      expect(mockQuery.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+      expect(stats.total).toBe(42);
+      expect(stats.recentlyModified).toBe(42);
+      expect(Array.isArray(stats.byStage)).toBe(true);
+      expect(Array.isArray(stats.byCity)).toBe(true);
+      expect(Array.isArray(stats.byNumericStage)).toBe(true);
+      expect(Array.isArray(stats.byTmForm)).toBe(true);
+      expect(stats.byTmForm).toHaveLength(5);
+    });
+
+    it("B. Applies agent filter when provided in DashboardStatsFilters", async () => {
+      const mockQuery = createQuery({ count: 15, data: null, error: null });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      const stats = await getStats({ agent: "Legal Associates" });
+
+      expect(mockQuery.eq).toHaveBeenCalledWith("agent", "Legal Associates");
+      expect(stats.total).toBe(15);
+    });
+
+    it("C. Applies nice_class filter when appClass is provided in DashboardStatsFilters", async () => {
+      const mockQuery = createQuery({ count: 8, data: null, error: null });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      const stats = await getStats({ appClass: "35" });
+
+      expect(mockQuery.eq).toHaveBeenCalledWith("nice_class", "35");
+      expect(stats.total).toBe(8);
+    });
+  });
 });
+
 
 

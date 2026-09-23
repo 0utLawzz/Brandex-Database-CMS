@@ -133,6 +133,11 @@ export interface TrademarkWorkflowEvent {
   changedByName: string;
 }
 
+export interface DashboardStatsFilters {
+  agent?: string;
+  appClass?: string;
+}
+
 export interface TrademarkStats {
   total: number;
   recentlyModified: number;
@@ -1030,12 +1035,16 @@ export async function updateStagePayment(
   throwIfError(error);
 }
 
-export async function getStats(): Promise<TrademarkStats> {
+export async function getStats(filters?: DashboardStatsFilters): Promise<TrademarkStats> {
   ensureConfigured();
   const exactCount = async (column?: string, value?: string | boolean, gte?: string) => {
     let query = supabase.from("trademarks").select("id", { count: "exact", head: true });
     if (column && gte) query = query.gte(column, gte);
     else if (column && value !== undefined) query = query.eq(column, value);
+
+    if (filters?.agent) query = query.eq("agent", filters.agent);
+    if (filters?.appClass) query = query.eq("nice_class", filters.appClass);
+
     const { count, error } = await query;
     throwIfError(error);
     return count ?? 0;

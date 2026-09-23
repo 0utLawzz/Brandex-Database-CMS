@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 23 September 2026 (V2.0.1 OFFICIAL RELEASE)**
+**Last updated: 23 September 2026 (Post-V2.0.1 Dashboard Redesign)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -627,6 +627,22 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
 - Production build passed
 - Production migration 202609220006 applied
 - Working tree clean
+
+---
+
+## Post-V2.0.1 Batch 1 — Dashboard Redesign (Completed 23 September 2026)
+
+- [x] **7 Primary Metric Cards**: Total Records, Stage 1 (`#0D9970`), Stage 2 (`#B0740E`), Stage 3 (`#6C1C1F`), Stage 4 (`#0A6B52`), STOPPED (`#CC0000`), and Modified (7D) using verified live database queries.
+- [x] **First-Class STOPPED Metric**: Added real count of records in `status = 'STOPPED'` alongside stages 1–4.
+- [x] **Agent & Class Dashboard Filters**: Added responsive filter bar for Agent (from `listAgents()`) and Nice Class (1–45) with active filter indicators and reset/clear controls.
+- [x] **Workflow Progression & Distribution Overview**: Replaced duplicate status section with horizontal progress bars showing stage distribution, case count, and percentage of active total.
+- [x] **Enhanced TM Document Control**: Modernized 5-box grid for TM5, TM6, TM11, TM16, TM56 with descriptive statutory form titles, matched counts, and direct links to datasheet filter views.
+- [x] **Preserved Regional Distribution**: Kept clean city breakdown below TM Document Control.
+- [x] **Preserved Quick Actions & Recent Activity**: Maintained 5-button quick action launcher and 10-entry audit log feed with direct record links.
+- [x] **API Filter Support (`api.ts`)**: Extended `getStats()` to accept optional `agent` and `appClass` parameters.
+- [x] **Automated Tests (`api.test.ts`)**: Added unit tests for `getStats()` (unfiltered, agent-filtered, class-filtered).
+- [x] **Verification**: All 49 tests passed (47 in `api.test.ts`, 2 in `registryImport.test.ts`), typecheck clean (0 errors), production build passed.
+
 
 
 
