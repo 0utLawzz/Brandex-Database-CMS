@@ -19,7 +19,7 @@ import {
   Layers,
 } from "lucide-react";
 import { getStats, listAuditLogs, listAgents, STAGES } from "@/lib/api";
-import type { TrademarkStats, AuditLogEntry, TmFormKey } from "@/lib/api";
+import type { TrademarkStats, AuditLogEntry } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDate } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ const STAGE_CONFIG: Record<
 > = {
   "STAGE 1": {
     label: "STAGE 1",
-    subLabel: "Filing & Examination",
+    subLabel: "Filing → Acknowledgment → Examination",
     bg: "bg-[#0D9970] text-white",
     text: "text-[#0D9970]",
     barBg: "bg-[#0D9970]",
@@ -37,7 +37,7 @@ const STAGE_CONFIG: Record<
   },
   "STAGE 2": {
     label: "STAGE 2",
-    subLabel: "Assignment & Hearing",
+    subLabel: "Assigned → Accepted → Hearing",
     bg: "bg-[#B0740E] text-white",
     text: "text-[#B0740E]",
     barBg: "bg-[#B0740E]",
@@ -45,7 +45,7 @@ const STAGE_CONFIG: Record<
   },
   "STAGE 3": {
     label: "STAGE 3",
-    subLabel: "Publication & Opposition",
+    subLabel: "Demand Note → Opposition → Published",
     bg: "bg-[#6C1C1F] text-white",
     text: "text-[#6C1C1F]",
     barBg: "bg-[#6C1C1F]",
@@ -53,7 +53,7 @@ const STAGE_CONFIG: Record<
   },
   "STAGE 4": {
     label: "STAGE 4",
-    subLabel: "Registration & Certificate",
+    subLabel: "CER Dispatch / Received / Acknowledge",
     bg: "bg-[#0A6B52] text-white",
     text: "text-[#0A6B52]",
     barBg: "bg-[#0A6B52]",
@@ -61,7 +61,7 @@ const STAGE_CONFIG: Record<
   },
   STOPPED: {
     label: "STOPPED",
-    subLabel: "Suspended / Inactive",
+    subLabel: "Case Stopped",
     bg: "bg-[#CC0000] text-white",
     text: "text-[#CC0000]",
     barBg: "bg-[#CC0000]",
@@ -70,14 +70,6 @@ const STAGE_CONFIG: Record<
 };
 
 const WORKFLOW_ORDER = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4", "STOPPED"] as const;
-
-const TM_FORM_INFO: Record<TmFormKey, { name: string; title: string; desc: string }> = {
-  TM5: { name: "TM-5", title: "Notice of Opposition", desc: "Opposition against published mark" },
-  TM6: { name: "TM-6", title: "Counter-Statement", desc: "Applicant reply to opposition" },
-  TM11: { name: "TM-11", title: "Certificate Renewal", desc: "10-year registration renewal" },
-  TM16: { name: "TM-16", title: "Assignment / Transfer", desc: "Change of proprietary interest" },
-  TM56: { name: "TM-56", title: "Request for Hearing", desc: "Formal hearing before Registrar" },
-};
 
 const NICE_CLASSES = Array.from({ length: 45 }, (_, i) => String(i + 1));
 
@@ -349,7 +341,7 @@ export function Dashboard() {
                   <MetricCard
                     label="STAGE 1"
                     value={getStageCount("STAGE 1")}
-                    subLabel="Filing & Exam"
+                    subLabel="Filing / Exam"
                     colorClass={STAGE_CONFIG["STAGE 1"].bg}
                   />
 
@@ -357,7 +349,7 @@ export function Dashboard() {
                   <MetricCard
                     label="STAGE 2"
                     value={getStageCount("STAGE 2")}
-                    subLabel="Assign & Hearing"
+                    subLabel="Assign / Hearing"
                     colorClass={STAGE_CONFIG["STAGE 2"].bg}
                   />
 
@@ -365,7 +357,7 @@ export function Dashboard() {
                   <MetricCard
                     label="STAGE 3"
                     value={getStageCount("STAGE 3")}
-                    subLabel="Pub & Opposition"
+                    subLabel="Pub / Opposition"
                     colorClass={STAGE_CONFIG["STAGE 3"].bg}
                   />
 
@@ -373,7 +365,7 @@ export function Dashboard() {
                   <MetricCard
                     label="STAGE 4"
                     value={getStageCount("STAGE 4")}
-                    subLabel="Registration"
+                    subLabel="CER Dispatch"
                     colorClass={STAGE_CONFIG["STAGE 4"].bg}
                   />
 
@@ -381,7 +373,7 @@ export function Dashboard() {
                   <MetricCard
                     label="STOPPED"
                     value={getStageCount("STOPPED")}
-                    subLabel="Suspended"
+                    subLabel="Case Stopped"
                     colorClass={STAGE_CONFIG["STOPPED"].bg}
                   />
 
@@ -480,7 +472,6 @@ export function Dashboard() {
                     <div className="p-4 sm:p-5">
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         {stats.byTmForm.map(({ form, count }) => {
-                          const info = TM_FORM_INFO[form];
                           const filterParams = new URLSearchParams();
                           filterParams.set("tmForm", form);
                           if (selectedAgent) filterParams.set("agent", selectedAgent);
@@ -490,27 +481,19 @@ export function Dashboard() {
                             <Link
                               key={form}
                               href={`/database?${filterParams.toString()}`}
-                              className="group p-3 border-2 border-[#0C0C0C] bg-[#FFF9F0] hover:bg-[#B0740E]/10 transition-all flex flex-col justify-between shadow-[2px_2px_0_#0C0C0C] hover:-translate-y-0.5"
+                              className="group p-3 sm:p-3.5 border-2 border-[#0C0C0C] bg-[#FFF9F0] hover:bg-[#B0740E]/10 transition-all flex flex-col justify-between shadow-[2px_2px_0_#0C0C0C] hover:-translate-y-0.5"
                             >
-                              <div>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-mono font-bold text-xs text-[#6C1C1F] group-hover:underline">
-                                    {info.name}
-                                  </span>
-                                  <ExternalLink className="w-3 h-3 text-[#6d6658] opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                                <div className="font-mono text-[9px] font-bold text-[#0C0C0C] uppercase mt-1 leading-tight line-clamp-1">
-                                  {info.title}
-                                </div>
-                                <div className="font-mono text-[8px] text-[#6d6658] mt-0.5 line-clamp-2 leading-tight">
-                                  {info.desc}
-                                </div>
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono font-bold text-sm text-[#6C1C1F] group-hover:underline">
+                                  {form}
+                                </span>
+                                <ExternalLink className="w-3.5 h-3.5 text-[#6d6658] opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
                               <div className="mt-3 pt-2 border-t border-[#0C0C0C]/10 flex items-baseline justify-between">
-                                <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#6d6658]">
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#6d6658]">
                                   MATCHED
                                 </span>
-                                <span className="font-serif text-2xl text-[#0C0C0C] leading-none">
+                                <span className="font-serif text-3xl text-[#0C0C0C] leading-none">
                                   {count}
                                 </span>
                               </div>
