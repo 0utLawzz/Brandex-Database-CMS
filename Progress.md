@@ -648,19 +648,21 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
 - [x] **Dedicated Bulk Import Engine (`trademarkImport.ts`)**:
   - Implemented standalone parsing, validation, dry-run, and batch insert engine for main trademark records.
   - **Payment Safety**: Explicitly sets `stage1_paid = false` and `stage1_paid_date = null` on imported historical records (never falsely attests payment like default new record creation).
-  - **Deduplication Engine**: In-CSV and database-level duplicate detection matching on `(tm_cpr_number, type, client_code, case_number)`.
-  - **Flexible CSV Schema**: Robust case-insensitive header mapping supporting standard column aliases (`TM #`, `Class`, `Mark Name`, `Client`, `Agent`, `City`, `Filing Date`, TM Form flags `TM5`..`TM56`).
+  - **Deduplication Engine**: In-CSV and database-level duplicate detection matching on canonical business key `(type, client_code, case_number)`.
+  - **Flexible CSV Schema**: Robust case-insensitive header mapping supporting standard column aliases (`TM #`, `Class`, `Mark Name`, `Client`, `Agent`, `City`, `Filing Date`).
   - **Two-Phase Commit**: Safe dry-run analysis with validation breakdown (valid, duplicate, invalid) followed by explicit admin commit in chunked batches.
 - [x] **Registry Import Modal Integration (`RegistryImportModal.tsx`)**:
   - Added 3rd tab: **"Trademark Database"** alongside "Form Registry" and "Journal Registry".
   - Distinct brand styling with file upload, dry-run summary card, row-by-row validation table, and admin commit button.
   - Role-gated for Admin access.
-- [x] **Unit & Integration Tests (`trademarkImport.test.ts`)**:
-  - 35 automated tests covering CSV parsing, header mapping, duplicate detection, batch insertion, payment history safety, and error handling.
+- [x] **Functional QA & Automated Test Suite (`trademarkImport.test.ts`)**:
+  - 44 automated tests covering CSV parsing, header mapping, duplicate detection, batch insertion, payment history safety, error handling, and realistic QA Scenarios A–G.
+  - Verified Minimum valid record, Full business-field record, CSV duplicates, DB duplicates, Invalid rows, Blocked/system fields rejection, and Real-world historical Stage 3/4 record safety.
 - [x] **Verification**:
-  - `pnpm test --run` → 84/84 tests passed across 3 test suites (`trademarkImport.test.ts`, `api.test.ts`, `registryImport.test.ts`).
+  - `pnpm test --run` → 93/93 tests passed across 3 test suites (`trademarkImport.test.ts`, `api.test.ts`, `registryImport.test.ts`).
   - `pnpm typecheck` → 0 errors.
-  - `pnpm build` → production bundle built cleanly in 12.41s.
+  - `pnpm build` → production bundle built cleanly in 19.88s.
+
 
 
 

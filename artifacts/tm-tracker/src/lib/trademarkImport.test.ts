@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Supabase mock (same pattern as api.test.ts)
@@ -605,3 +605,232 @@ describe("commitTmImport", () => {
     expect(result.inserted).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Functional QA - Specific Scenarios A through F and Real-World Safety
+// ---------------------------------------------------------------------------
+
+describe("Functional QA — Realistic CSV Scenarios A through F", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    supabaseMock.auth.getUser.mockResolvedValue({
+      data: { user: { id: "admin-user-456" } },
+    });
+  });
+
+  it("Scenario A: Minimum valid record", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
+    const csvContent =
+      "type,client_code,case_number,application_name,city\n" +
+      "X,CL-001,CS-100,MINIMAL TRADEMARK,Lahore";
+
+    // 1. Dry run check
+    const dryRun = await dryRunTmImport(csvContent);
+    expect(dryRun.valid).toBe(1);
+    expect(dryRun.invalid).toBe(0);
+    expect(dryRun.wouldInsert).toBe(1);
+    expect(dryRun.csvDuplicates).toBe(0);
+    expect(dryRun.dbDuplicates).toBe(0);
+    expect(dryRun.errors).toHaveLength(0);
+    expect(dryRun.items[0].action).toBe("insert");
+
+    // 2. Commit payload verification (no payment history invented)
+    let capturedPayload: unknown[] = [];
+    const insertQuery = {
+      insert: vi.fn((data: unknown[]) => {
+        capturedPayload = data;
+        return insertQuery;
+      }),
+      select: vi.fn(() => Promise.resolve({ data: [{ id: "rec-1" }], error: null })),
+    };
+    supabaseMock.from.mockReturnValue(insertQuery);
+
+    const validRows = dryRun.items.filter((i) => i.action === "insert").map((i) => i.row);
+    const commit = await commitTmImport(validRows);
+    expect(commit.inserted).toBe(1);
+    expect(commit.skipped).toBe(0);
+    expect(commit.errors).toHaveLength(0);
+
+    const row = capturedPayload[0] as Record<string, unknown>;
+    expect(row.type).toBe("X");
+    expect(row.client_code).toBe("CL-001");
+    expect(row.case_number).toBe("CS-100");
+    expect(row.application_name).toBe("MINIMAL TRADEMARK");
+    expect(row.city).toBe("LAHORE");
+    expect(row.status).toBe("STAGE 1");
+    expect(row.sub_status).toBe("Filing");
+    expect(row.stage1_paid).toBe(false);
+    expect(row.stage1_paid_date).toBeNull();
+  });
+
+  it("Scenario B: Full business-field record with uppercase normalization and original notes case", async () => {
+    const csvContent =
+      "type,client_code,case_number,application_name,city,filing_date,client_name,tm_cpr_number,nice_class,case_type,agent,notes\n" +
+      "a,acme-client,case-99,Falcon Brand,Islamabad,2024-08-15,acme corporation,TM-98765,9,standard trademark,syed advocate,Keep This Note Mixed Case (Do Not Uppercase!)";
+
+    const { rows, errors } = parseTmImportCsv(csvContent);
+    expect(errors).toHaveLength(0);
+    expect(rows).toHaveLength(1);
+
+    const r = rows[0];
+    // Business fields normalized to UPPERCASE
+    expect(r.type).toBe("A");
+    expect(r.clientCode).toBe("ACME-CLIENT");
+    expect(r.caseNumber).toBe("CASE-99");
+    expect(r.applicationName).toBe("FALCON BRAND");
+    expect(r.city).toBe("ISLAMABAD");
+    expect(r.filingDate).toBe("2024-08-15");
+    expect(r.clientName).toBe("ACME CORPORATION");
+    expect(r.tmCprNumber).toBe("TM-98765");
+    expect(r.niceClass).toBe("9");
+    expect(r.caseType).toBe("STANDARD TRADEMARK");
+    expect(r.agent).toBe("SYED ADVOCATE");
+    // Free-form notes preserve original case
+    expect(r.notes).toBe("Keep This Note Mixed Case (Do Not Uppercase!)");
+  });
+
+  it("Scenario C: CSV duplicate rows with same (type, client_code, case_number)", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
+    const csvContent =
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "N,CL-50,CASE-01,First Application,Islamabad,TM-1111\n" +
+      "N,CL-50,CASE-01,Different Application,Islamabad,TM-2222";
+
+    const dryRun = await dryRunTmImport(csvContent);
+    expect(dryRun.valid).toBe(2);
+    expect(dryRun.csvDuplicates).toBe(1);
+    expect(dryRun.dbDuplicates).toBe(0);
+    expect(dryRun.wouldInsert).toBe(1);
+
+    expect(dryRun.items[0].action).toBe("insert");
+    expect(dryRun.items[0].row.applicationName).toBe("FIRST APPLICATION");
+
+    expect(dryRun.items[1].action).toBe("skip_csv_dup");
+    expect(dryRun.items[1].message).toMatch(/duplicate within csv/i);
+  });
+
+  it("Scenario D: Existing database duplicate skipped with no update or upsert", async () => {
+    supabaseMock.from.mockReturnValue(
+      makeQuery({
+        data: [{ type: "X", client_code: "EXISTING-CLIENT", case_number: "CASE-EX" }],
+        error: null,
+      }),
+    );
+    const csvContent =
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "X,EXISTING-CLIENT,CASE-EX,Brand From CSV,Karachi,TM-DIFFERENT";
+
+    const dryRun = await dryRunTmImport(csvContent);
+    expect(dryRun.valid).toBe(1);
+    expect(dryRun.dbDuplicates).toBe(1);
+    expect(dryRun.wouldInsert).toBe(0);
+
+    const item = dryRun.items[0];
+    expect(item.action).toBe("skip_db_dup");
+    expect(item.message).toMatch(/already in database/i);
+  });
+
+  it("Scenario E: Invalid rows flagged while valid rows continue processing", () => {
+    const csvContent =
+      "type,client_code,case_number,application_name,city,filing_date,nice_class\n" +
+      "X,CL-1,C-1,Valid App,Islamabad,2025-01-01,5\n" +
+      ",CL-2,C-2,Missing Type,Islamabad,2025-01-01,5\n" +
+      "INVALID_TYPE,CL-3,C-3,Bad Type,Islamabad,2025-01-01,5\n" +
+      "X,CL-4,C-4,Bad Date,Islamabad,invalid-date,5\n" +
+      "X,CL-5,C-5,Bad Class,Islamabad,2025-01-01,99\n" +
+      "A,CL-6,C-6,Another Valid App,Karachi,2025-02-01,10";
+
+    const { rows, errors } = parseTmImportCsv(csvContent);
+    // Valid rows: row 1 (CL-1) and row 6 (CL-6)
+    expect(rows).toHaveLength(2);
+    expect(rows[0].clientCode).toBe("CL-1");
+    expect(rows[1].clientCode).toBe("CL-6");
+
+    // Invalid rows flagged
+    expect(errors).toHaveLength(4);
+    expect(errors.some((e) => e.includes("'type' is required"))).toBe(true);
+    expect(errors.some((e) => e.includes('invalid type "INVALID_TYPE"'))).toBe(true);
+    expect(errors.some((e) => e.includes('invalid filing_date "invalid-date"'))).toBe(true);
+    expect(errors.some((e) => e.includes('invalid nice_class "99"'))).toBe(true);
+  });
+
+  it("Scenario F: Blocked fields cannot alter record or inject payment/workflow data", async () => {
+    const csvContent =
+      "type,client_code,case_number,application_name,city," +
+      "id,created_at,updated_at,stage1_paid,stage1_paid_date,stage2_paid,stage3_paid,stage4_paid," +
+      "payment_reference,journal_data,tm5,tm6,tm11,tm16,tm56,publication_date,journal_number,journal_date,status,sub_status\n" +
+      "X,ATTACK-CO,C-001,Target Brand,Islamabad," +
+      "fake-id-uuid,2020-01-01,2020-01-01,true,2020-01-01,true,true,true," +
+      "REF-9999,{\"fake\":true},true,true,true,true,true,2020-01-01,J-100,2020-01-01,STAGE 4,CER Received";
+
+    const { rows, errors } = parseTmImportCsv(csvContent);
+    expect(errors).toHaveLength(0);
+    expect(rows).toHaveLength(1);
+
+    // Parsed row must strictly default to STAGE 1 / Filing
+    expect(rows[0].status).toBe("STAGE 1");
+    expect(rows[0].subStatus).toBe("Filing");
+
+    // Commit payload must NOT have any blocked field
+    let capturedPayload: unknown[] = [];
+    const insertQuery = {
+      insert: vi.fn((data: unknown[]) => {
+        capturedPayload = data;
+        return insertQuery;
+      }),
+      select: vi.fn(() => Promise.resolve({ data: [{ id: "safe-1" }], error: null })),
+    };
+    supabaseMock.from.mockReturnValue(insertQuery);
+
+    await commitTmImport(rows);
+    const payloadRow = capturedPayload[0] as Record<string, unknown>;
+
+    // Payment safety
+    expect(payloadRow.stage1_paid).toBe(false);
+    expect(payloadRow.stage1_paid_date).toBeNull();
+    expect(payloadRow.status).toBe("STAGE 1");
+    expect(payloadRow.sub_status).toBe("Filing");
+
+    // Blocked fields must be omitted
+    const blocked = Array.from(BLOCKED_IMPORT_FIELDS);
+    for (const b of blocked) {
+      if (b === "stage1_paid" || b === "stage1_paid_date" || b === "created_by" || b === "updated_by") {
+        continue; // Handled explicitly with safe values
+      }
+      expect(payloadRow).not.toHaveProperty(b);
+    }
+  });
+
+  it("Scenario G (Real-World Safety Check): Historical record claiming Stage 3/4 safely enters STAGE 1 / Filing with no fake history", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
+    const csvContent =
+      "type,client_code,case_number,application_name,city,status,sub_status,stage1_paid,stage2_paid\n" +
+      "X,OLD-CLIENT,CASE-777,Historical Registered Mark,Karachi,STAGE 4,CER Dispatch,true,true";
+
+    const dryRun = await dryRunTmImport(csvContent);
+    expect(dryRun.valid).toBe(1);
+    expect(dryRun.wouldInsert).toBe(1);
+    expect(dryRun.items[0].row.status).toBe("STAGE 1");
+    expect(dryRun.items[0].row.subStatus).toBe("Filing");
+
+    let capturedPayload: unknown[] = [];
+    const insertQuery = {
+      insert: vi.fn((data: unknown[]) => {
+        capturedPayload = data;
+        return insertQuery;
+      }),
+      select: vi.fn(() => Promise.resolve({ data: [{ id: "hist-1" }], error: null })),
+    };
+    supabaseMock.from.mockReturnValue(insertQuery);
+
+    await commitTmImport(dryRun.items.map((i) => i.row));
+    const committedRow = capturedPayload[0] as Record<string, unknown>;
+
+    expect(committedRow.status).toBe("STAGE 1");
+    expect(committedRow.sub_status).toBe("Filing");
+    expect(committedRow.stage1_paid).toBe(false);
+    expect(committedRow.stage1_paid_date).toBeNull();
+    expect(committedRow).not.toHaveProperty("stage2_paid");
+  });
+});
+
