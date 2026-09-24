@@ -22,6 +22,7 @@ import { getStats, listAuditLogs, listAgents, STAGES } from "@/lib/api";
 import type { TrademarkStats, AuditLogEntry } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDate } from "@/lib/utils";
+import { useBranding } from "@/hooks/useBranding";
 
 const STAGE_CONFIG: Record<
   string,
@@ -138,6 +139,7 @@ function shortUser(id: string) {
 }
 
 export function Dashboard() {
+  const { branding } = useBranding();
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("");
 
@@ -198,9 +200,12 @@ export function Dashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
                 <img
-                  src="/brandex-wordmark.svg"
+                  src={branding.logoUrl || "/brandex-wordmark.svg"}
                   alt="Brandex Law Associates"
                   className="w-40 sm:w-48 h-12 sm:h-14 object-contain object-left"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/brandex-wordmark.svg";
+                  }}
                 />
                 <div className="border-l-2 border-[#0C0C0C]/20 pl-3">
                   <h1 className="font-serif text-2xl sm:text-3xl text-[#0C0C0C] uppercase tracking-wide leading-none">

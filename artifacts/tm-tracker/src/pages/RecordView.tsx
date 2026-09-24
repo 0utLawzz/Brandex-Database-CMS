@@ -16,6 +16,7 @@ import {
   StagePaymentsSection,
   WorkflowHistorySection,
 } from "@/components/CaseWorkflowSection";
+import { useBranding } from "@/hooks/useBranding";
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
@@ -71,6 +72,7 @@ export function RecordView() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const { branding } = useBranding();
 
   const { data: staffRole } = useQuery({
     queryKey: ["staff-role"],
@@ -164,19 +166,41 @@ export function RecordView() {
         {/* Scrollable / printable body */}
         <div
           id="record-view-body"
-          className="flex-1 overflow-auto p-4 sm:p-6 print:p-0 print:overflow-visible print:bg-white"
+          className="flex-1 overflow-auto p-4 sm:p-6 print:p-0 print:overflow-visible print:bg-white relative"
         >
+          {/* Full-Page Print Watermark (10% opacity, centered behind content, print-only) */}
+          <div className="print-watermark-container" aria-hidden="true">
+            <img
+              src={branding.watermarkUrl || branding.logoUrl || "/brandex-wordmark.svg"}
+              alt=""
+              className="print-watermark-image"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/brandex-wordmark.svg";
+              }}
+            />
+          </div>
+
           <div className="max-w-4xl mx-auto space-y-4 print:max-w-none print:space-y-2">
 
             {/* Print-only header — Brandex letterhead banner */}
             <div className="hidden print:block border-b-2 border-[#6C1C1F] pb-2 mb-1.5">
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-serif text-xl uppercase tracking-widest text-[#0C0C0C] font-bold">
-                    Brandex Law Associates — Trademark Record
-                  </div>
-                  <div className="font-mono text-[9px] text-[#6d6658] mt-0.5">
-                    {record.caseNumber} · {record.clientCode} · {record.type} · Printed {new Date().toLocaleDateString()}
+                <div className="flex items-center gap-3">
+                  <img
+                    src={branding.logoUrl || "/brandex-wordmark.svg"}
+                    alt="Brandex Law Associates"
+                    className="h-9 max-w-[160px] object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/brandex-wordmark.svg";
+                    }}
+                  />
+                  <div>
+                    <div className="font-serif text-lg uppercase tracking-widest text-[#0C0C0C] font-bold leading-none">
+                      Brandex Law Associates — Trademark Record
+                    </div>
+                    <div className="font-mono text-[9px] text-[#6d6658] mt-0.5">
+                      {record.caseNumber} · {record.clientCode} · {record.type} · Printed {new Date().toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
                 <div className="text-right font-mono text-[8px] text-[#6d6658] font-bold uppercase tracking-wider">

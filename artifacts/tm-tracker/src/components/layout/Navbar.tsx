@@ -15,6 +15,11 @@ import {
   BookOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useBranding } from "@/hooks/useBranding";
+import { getStaffRole } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { BrandingSettingsModal } from "@/components/BrandingSettingsModal";
+import { Sparkles } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/",           label: "DASHBOARD",    icon: LayoutDashboard },
@@ -30,7 +35,16 @@ export function Navbar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [brandingModalOpen, setBrandingModalOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { branding } = useBranding();
+
+  const { data: staffRole } = useQuery({
+    queryKey: ["staff-role"],
+    queryFn: getStaffRole,
+    staleTime: 5 * 60_000,
+  });
+  const isAdmin = staffRole === "admin";
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -48,12 +62,12 @@ export function Navbar() {
           {/* Logo & Brand */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
             <img
-              src="/brandex-mark.svg"
+              src={branding.markUrl || "/brandex-mark.svg"}
               alt="Brandex Law Associates Logo"
               className="w-10 h-10 object-contain"
               onError={(e) => {
-                // Fallback icon if logo not loaded
-                (e.target as HTMLImageElement).style.display = "none";
+                // Fallback icon if custom logo fails to load
+                (e.target as HTMLImageElement).src = "/brandex-mark.svg";
               }}
             />
             <div className="hidden sm:block">
@@ -88,7 +102,18 @@ export function Navbar() {
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center justify-end gap-2 w-52 shrink-0">
+          <div className="flex items-center justify-end gap-2 shrink-0">
+            {isAdmin && (
+              <button
+                onClick={() => setBrandingModalOpen(true)}
+                title="Branding & Logo Settings (Admin)"
+                className="hidden sm:flex items-center justify-center gap-1.5 bg-[#6C1C1F] text-white border-2 border-[#B0740E] px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:brightness-95 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#D6A64B]" />
+                BRANDING
+              </button>
+            )}
+
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -117,6 +142,12 @@ export function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* Admin Branding Modal */}
+      <BrandingSettingsModal
+        isOpen={brandingModalOpen}
+        onClose={() => setBrandingModalOpen(false)}
+      />
 
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 top-16 z-30 bg-[#0C0C0C] border-t-2 border-[#1A1A1A] flex flex-col p-4 print:hidden">

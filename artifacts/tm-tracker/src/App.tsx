@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch, Router as WouterRouter } from "wouter";
 
 import { AuthGate } from "@/components/AuthGate";
+import { BrandingProvider } from "@/hooks/useBranding";
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
 const SearchPage = lazy(() => import("./pages/SearchPage").then((module) => ({ default: module.SearchPage })));
@@ -42,18 +43,19 @@ function Router() {
     </Suspense>
   );
 }
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthGate>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-        </AuthGate>
-        <Toaster />
-      </TooltipProvider>
+      <BrandingProvider>
+        <TooltipProvider>
+          <AuthGate>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+          </AuthGate>
+          <Toaster />
+        </TooltipProvider>
+      </BrandingProvider>
     </QueryClientProvider>
   );
 }

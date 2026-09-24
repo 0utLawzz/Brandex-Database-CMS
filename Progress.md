@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 24 September 2026 (Batch 6A: TM Form Document Status Indicator)**
+**Last updated: 24 September 2026 (Batch 6B: Branding + Logo System)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -541,6 +541,65 @@ This file is the single source of truth for project status.
 - No database schema changes required
 - Print output remains compact and professional
 - Responsive layout maintained across desktop/tablet/mobile
+
+## 2026-09-24 — Batch 6B: Branding + Logo System
+
+### Scope
+- Implement a configurable Brandex logo system across the CMS
+- Single reusable branding configuration across Dashboard, Top Header, Browser Favicon, Shared-Link Preview, Print Preview, and Print Watermark
+- Support PNG, JPG/JPEG, and sanitized SVG upload formats (max 5MB)
+- Admin-controlled branding management with Viewer read-only protection
+- 10% subtle print-only watermark behind document content on A4 print
+- High-resolution Open Graph / social preview metadata and dynamic browser favicon updater
+
+### Files Changed
+- `supabase/migrations/202609240001_branding_settings.sql` — Additive migration creating `public.app_settings` with staff read / admin write RLS policies
+- `artifacts/tm-tracker/src/lib/branding.ts` — Central branding module with file validation (PNG/JPG/SVG <=5MB), SVG security sanitization, storage upload, role gates, and dynamic favicon helper
+- `artifacts/tm-tracker/src/lib/branding.test.ts` — 20 comprehensive unit tests for file validation, SVG sanitization, defaults, role gating, and reset behavior
+- `artifacts/tm-tracker/src/hooks/useBranding.tsx` — Global React context and `useBranding()` hook providing reactive branding state and mutations
+- `artifacts/tm-tracker/src/components/BrandingSettingsModal.tsx` — Admin branding management modal with 1-click preset selector, custom file upload & live preview, and reset controls
+- `artifacts/tm-tracker/src/components/layout/Navbar.tsx` — Updated to use configured mark logo with fallback and added Admin BRANDING settings launcher
+- `artifacts/tm-tracker/src/pages/Dashboard.tsx` — Updated to use configured primary logo with responsive scaling and fallback
+- `artifacts/tm-tracker/src/pages/RecordView.tsx` — Updated print header to render configured logo and added print-only full-page watermark container
+- `artifacts/tm-tracker/src/index.css` — Added `@media print` fixed-position subtle 10% watermark styling
+- `artifacts/tm-tracker/index.html` — Updated Open Graph, Twitter card, and favicon links to canonical production-accessible Brandex assets
+- `artifacts/tm-tracker/src/App.tsx` — Wrapped application with `BrandingProvider`
+- `artifacts/tm-tracker/public/branding/` — Added organized canonical Brandex logo variants
+
+### Implementation Summary
+
+**1. Central Branding Configuration (`branding.ts` + `useBranding.tsx`)**:
+- Manages `logoUrl`, `markUrl`, `bannerUrl`, `faviconUrl`, and `watermarkUrl` with fallback to official Brandex defaults (`/brandex-wordmark.svg`, `/brandex-mark.svg`, `/brandex-banner.png`).
+- Persists to `public.app_settings` via Supabase with automatic `localStorage` caching for instant load.
+- Strictly role-gated: only users with `admin` role can update or upload branding assets (`getStaffRole() === 'admin'`).
+
+**2. Asset Allocation & Variants**:
+- **Dashboard Logo**: Primary Brandex horizontal banner / wordmark (`brandex-wordmark.svg` or configured banner) for prominent, crisp display.
+- **Top Header Logo**: Compact Brandex BR mark (`brandex-mark.svg`) preserving header compactness and responsiveness on mobile/desktop.
+- **Browser Favicon**: Vector square mark (`brandex-mark.svg` / `/favicon.svg`) dynamically synced to document head.
+- **Shared-Link / Social Preview**: High-resolution Open Graph image (`https://brandexsheet.vercel.app/brandex-banner.png`) and Twitter summary_large_image card.
+- **Print Preview**: Configured Brandex logo rendered cleanly in the print letterhead banner.
+- **Print Watermark**: Full-page, fixed-position subtle 10% opacity watermark centered behind document content in `@media print`.
+
+**3. Upload & Security Validation**:
+- Accepts PNG, JPG, JPEG, and SVG files up to 5MB.
+- Strictly rejects unsupported types (PDF, GIF, EXE, etc.) and oversized files with clear error messages.
+- SVG security sanitization scans for `<script>`, `javascript:`, `<foreignObject>`, and event handlers (`onload`, `onerror`), rejecting dangerous payloads.
+
+**4. Admin Modal & UI**:
+- `BrandingSettingsModal` accessible to Admin via the Navbar `BRANDING` button.
+- 1-Click presets for supplied styles (Classic SVG Wordmark, Cream Banner, Capsule, Square Maroon, Square Gold).
+- Live preview for Dashboard, Header, and Print Watermark before and after saving.
+
+### Tests
+- Added 20 new tests in `branding.test.ts` covering file validation, SVG sanitization, default branding, and Admin/Viewer role permissions.
+- Total passed: 169 tests across 4 passing test files.
+- Known pre-existing failures: 5 Stage Document API mock tests (untouched).
+- New failures: 0.
+
+### Typecheck & Build
+- `pnpm typecheck` → 0 errors.
+- `pnpm build` → production bundle built cleanly in 44.43s (Vite v7.3.6, 2146 modules).
 
 ## 2026-09-22 — Batch 9: Stage-wise Documents - DB + API Foundation
 
