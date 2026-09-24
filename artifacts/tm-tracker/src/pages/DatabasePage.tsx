@@ -131,9 +131,9 @@ export function DatabasePage() {
           <button onClick={() => setShowFilters((value) => !value)} className={`flex items-center gap-2 px-3 h-10 border-2 border-[#0C0C0C] font-mono font-bold text-xs uppercase tracking-wider ${showFilters || hasFilters ? "bg-[#0C0C0C] text-[#F0E8D0]" : "bg-white"}`}><Filter className="w-4 h-4" /> FILTERS{hasFilters ? " ●" : ""}</button>
           <button onClick={handleExport} disabled={exporting || total === 0} className="flex items-center gap-2 px-3 h-10 bg-white border-2 border-[#6C1C1F] text-[#6C1C1F] font-mono font-bold text-xs uppercase tracking-wider disabled:opacity-40"><Download className="w-4 h-4" /> {exporting ? "EXPORTING…" : "EXPORT"}</button>
           {staffRole === "admin" ? (
-            <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 h-10 bg-white border-2 border-[#0A6B52] text-[#0A6B52] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#0A6B52] hover:text-white"><Upload className="w-4 h-4" /> IMPORT</button>
+            <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 h-10 bg-white border-2 border-[#0A6B52] text-[#0A6B52] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#0A6B52] hover:text-white"><Upload className="w-4 h-4" /> DATABASE IMPORT</button>
           ) : (
-            <button onClick={() => alert("CSV Import is admin-only.")} className="flex items-center gap-2 px-3 h-10 bg-white border-2 border-[#0A6B52] text-[#0A6B52] font-mono font-bold text-xs uppercase tracking-wider opacity-60" title="Admin only">IMPORT</button>
+            <button onClick={() => alert("CSV Import is admin-only.")} className="flex items-center gap-2 px-3 h-10 bg-white border-2 border-[#0A6B52] text-[#0A6B52] font-mono font-bold text-xs uppercase tracking-wider opacity-60" title="Admin only">DATABASE IMPORT</button>
           )}
           {staffRole !== "viewer" ? (
             <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-4 h-10 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110"><Plus className="w-4 h-4" /> ADD RECORD</button>
@@ -239,6 +239,8 @@ export function DatabasePage() {
           onCommitted={() => {
             queryClient.invalidateQueries({ queryKey: ["trademark-page"] });
           }}
+          defaultKind="trademark"
+          showOnly={null}
         />
       )}
     </AppShell>

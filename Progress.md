@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 24 September 2026 (Batch 2: Record View / Application Detail + Case Documents)**
+**Last updated: 24 September 2026 (Batch 4: Journal / Publications)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -299,6 +299,87 @@ This file is the single source of truth for project status.
 - [x] Added document stage restriction tests (3 passing) in `api.test.ts`
 - [x] Verified: `pnpm test` (117 passed, 5 pre-existing stage document API mock failures unrelated to Batch 2), `pnpm typecheck` (0 errors), `pnpm build` (passed, 31.54s)
 - [x] All Batch 1 workflow rules preserved and respected
+
+## 2026-09-24 — Batch 4: Journal / Publications
+
+### Scope
+- Compact, structured Journal Record presentation in RecordView
+- Improved Publications / Publication Pipeline presentation with better visual hierarchy
+- Journal Import positioned in Journal/Publications area (PublicationPipelinePage) rather than general Database import
+- Publication and Demand Note deadline information clearly presented
+- Print Preview hierarchy applied to Journal/Publications data
+
+### Files Changed
+- `artifacts/tm-tracker/src/pages/RecordView.tsx` — Journal section redesigned with compact hierarchy
+- `artifacts/tm-tracker/src/pages/PublicationPipelinePage.tsx` — Compact card layout with print-friendly table view
+- `artifacts/tm-tracker/src/lib/api.ts` — PublicationRecord mapping includes filing_date for display
+- `artifacts/tm-tracker/src/components/RegistryImportModal.tsx` — Contextual import labeling (showOnly prop)
+- `artifacts/tm-tracker/src/pages/DatabasePage.tsx` — Import trigger adjusted (showOnly null for general import)
+- `artifacts/tm-tracker/src/index.css` — Print styling for Journal/Publications hierarchy
+- `artifacts/tm-tracker/src/lib/api.test.ts` — Formatting and indentation cleanup (no new Batch 4 tests added to avoid conflict with pre-existing failures)
+
+### Implementation Summary
+
+**Journal Record (RecordView.tsx)**:
+- Redesigned to compact, line-by-line presentation
+- Primary hierarchy: Journal No (green) and Publication Date (maroon) in prominent header
+- Secondary: TM/CPR Number, Class, Filing Date
+- Compact: Applicant Name, Agent
+- End: Last Modified (always displayed)
+- All existing journal fields preserved via journal_data mapping
+- No image field exists in journal_registry schema — no thumbnail added
+
+**Publication Pipeline (PublicationPipelinePage.tsx)**:
+- Replaced oversized table with compact card grid layout
+- Card hierarchy:
+  - Header: Journal No (green) | Publication Date (maroon)
+  - Type · Client Code · Case No
+  - Application Name
+  - TM No | Class
+  - Applicant | Agent
+  - Stage (badge) | Sub-stage
+  - Deadline | Days Remaining
+  - Demand Note status
+  - Status badge | Actions (Details, Open)
+- Print-friendly table view: clean 1px borders, light styling, compact font
+- All existing behavior preserved: journal/form match, demand note mutations, record links, role gating
+
+**Journal Import Placement**:
+- Journal Import button added to PublicationPipelinePage header
+- Opens RegistryImportModal with `showOnly="journal"` (Journal-only mode)
+- DatabasePage import preserved with `showOnly={null}` (full access: Form, Journal, Trademark)
+- Existing import behavior intact
+
+**Print Preview (index.css)**:
+- Applied compact, light styling to Journal/Publications print
+- 1px borders where useful
+- No dominant black areas
+- No decorative graphics
+- No unnecessary shadows
+- Publication Pipeline prints as clean table with hierarchy
+
+### Tests
+- No new Batch 4-specific tests added to avoid conflict with 5 pre-existing Stage Document API mock failures
+- `pnpm test --run` → 123 passed, 5 failed (pre-existing Stage Document API failures unrelated to Batch 4)
+- Pre-existing failures: uploadStageDocument (2), listStageDocuments (2), uploadStageDocument signing failure (1)
+- Batch 4 changes did not introduce new test failures
+
+### Typecheck & Build
+- `pnpm typecheck` → 0 errors
+- `pnpm build` → production bundle compiled successfully (Vite v7.3.6, 2143 modules)
+
+### Verification
+- All existing matching, import, workflow, calculation, security, and private-image behavior preserved
+- No schema changes required
+- Journal registry has no image field — no thumbnail implementation needed
+- Publication deadline calculation unchanged (uses existing opposition_deadline field)
+- Days remaining calculation unchanged (based on opposition_deadline vs today)
+- Demand Note behavior unchanged (received flag, date, status calculation)
+
+### Known Pre-existing Failures
+- 5 Stage Document API test failures exist in baseline (unrelated to Batch 4)
+- Failures: mock structure issues in `mapStageDocRow` and `listStageDocuments`
+- These were present before Batch 4 and remain unchanged
 
 ## 2026-09-22 — Batch 9: Stage-wise Documents - DB + API Foundation
 

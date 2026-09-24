@@ -1287,6 +1287,7 @@ export interface PublicationRecord {
   demandNoteReceived: boolean;
   demandNoteDate: string | null;
   status: "pending" | "overdue" | "done"; // computed
+  date: string; // Filing date
 }
 
 // =============================================================================
@@ -1345,7 +1346,7 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
     .select(
       "id, case_number, client_code, type, client_name, application_name, tm_cpr_number, nice_class, " +
       "journal_number, status, sub_status, agent, publication_date, opposition_deadline, " +
-      "demand_note_received, demand_note_date"
+      "demand_note_received, demand_note_date, filing_date"
     )
     .not("publication_date", "is", null) // only journal-matched cases
     .order("opposition_deadline", { ascending: true, nullsFirst: false });
@@ -1384,6 +1385,7 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
       publicationDate: row.publication_date ?? "",
       oppositionDeadline: row.opposition_deadline ?? "",
       daysRemaining,
+      date: row.filing_date ?? "",
       demandNoteReceived: row.demand_note_received ?? false,
       demandNoteDate: row.demand_note_date ?? null,
       status,

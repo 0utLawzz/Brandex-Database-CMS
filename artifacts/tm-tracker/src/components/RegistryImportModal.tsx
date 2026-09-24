@@ -21,10 +21,12 @@ type Kind = "form" | "journal" | "trademark";
 interface Props {
   onClose: () => void;
   onCommitted?: () => void;
+  defaultKind?: Kind;
+  showOnly?: Kind | null | undefined;
 }
 
-export function RegistryImportModal({ onClose, onCommitted }: Props) {
-  const [kind, setKind] = useState<Kind>("form");
+export function RegistryImportModal({ onClose, onCommitted, defaultKind = "form", showOnly }: Props) {
+  const [kind, setKind] = useState<Kind>(defaultKind);
   const [fileName, setFileName] = useState("");
   const [csvText, setCsvText] = useState("");
   // Registry dry-run state
@@ -163,25 +165,28 @@ export function RegistryImportModal({ onClose, onCommitted }: Props) {
 
         {/* Kind toggle */}
         <div className="flex flex-wrap gap-2 border-b-2 border-[#0C0C0C] bg-[#F0E8D0] px-4 py-3">
-          {(["form", "journal", "trademark"] as Kind[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => {
-                setKind(k);
-                resetState();
-              }}
-              className={`h-9 px-4 font-mono text-xs font-bold uppercase tracking-wider border-2 border-[#0C0C0C] transition-all ${
-                kind === k ? "bg-[#6C1C1F] text-white shadow-[2px_2px_0_#0C0C0C]" : "bg-white text-[#0C0C0C] hover:bg-[#E8DFC7]"
-              }`}
-            >
-              {k === "form"
-                ? "Form registry (TM5–56)"
-                : k === "journal"
-                  ? "Journal registry"
-                  : "Trademark database"}
-            </button>
-          ))}
+          {(() => {
+            const kinds: Kind[] = showOnly ? [showOnly] : ["form", "journal", "trademark"];
+            return kinds.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => {
+                  setKind(k);
+                  resetState();
+                }}
+                className={`h-9 px-4 font-mono text-xs font-bold uppercase tracking-wider border-2 border-[#0C0C0C] transition-all ${
+                  kind === k ? "bg-[#6C1C1F] text-white shadow-[2px_2px_0_#0C0C0C]" : "bg-white text-[#0C0C0C] hover:bg-[#E8DFC7]"
+                }`}
+              >
+                {k === "form"
+                  ? "Form registry (TM5–56)"
+                  : k === "journal"
+                    ? "Journal registry"
+                    : "Trademark database"}
+              </button>
+            ));
+          })()}
         </div>
 
         {/* File + actions */}

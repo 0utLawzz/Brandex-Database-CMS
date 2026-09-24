@@ -384,33 +384,82 @@ export function RecordView() {
                     <span>Journal Record</span>
                   </div>
                 </div>
-                <div className="p-4 print:p-2 font-mono text-xs print:text-[9px] space-y-1.5 print:space-y-0.5 text-[#0C0C0C]">
-                  <div>Journal No: <strong>{String(record.journal["Journal No"] || "")}</strong></div>
-                  <div>Date: <strong>{record.journal["Journal Date"] ? formatDateShort(String(record.journal["Journal Date"])) : ""}</strong></div>
-                  {record.journal["Application No"] && (
-                    <div>Application No: <strong>{String(record.journal["Application No"])}</strong></div>
-                  )}
+                <div className="p-4 print:p-2 font-mono text-xs print:text-[9px] text-[#0C0C0C]">
+                  {/* Primary hierarchy - Journal No and Publication Date */}
+                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 mb-3 print:mb-2">
+                    <div className="flex-1">
+                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">JOURNAL NO</div>
+                      <div className="font-serif text-lg sm:text-xl print:text-sm font-bold text-[#0A6B52] leading-none">
+                        {String(record.journal["Journal No"] || "—")}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">PUBLICATION DATE</div>
+                      <div className="font-serif text-lg sm:text-xl print:text-sm font-bold text-[#6C1C1F] leading-none">
+                        {record.journal["Journal Date"] ? formatDateShort(String(record.journal["Journal Date"])) : "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Secondary information - TM/CPR, Class, Filing Date */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 print:mb-2 border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
+                    {record.journal["Application No"] && (
+                      <div>
+                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">TM / CPR NO</div>
+                        <div className="font-bold text-sm print:text-[10px]">{String(record.journal["Application No"])}</div>
+                      </div>
+                    )}
+                    {record.journal.Class && (
+                      <div>
+                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">CLASS</div>
+                        <div className="font-bold text-sm print:text-[10px]">{String(record.journal.Class)}</div>
+                      </div>
+                    )}
+                    {record.journal["Date of Filing"] && (
+                      <div>
+                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">FILING DATE</div>
+                        <div className="font-bold text-sm print:text-[10px]">{formatDateShort(String(record.journal["Date of Filing"]))}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Compact information - Applicant and Agent */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 print:mb-2 border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
+                    {record.journal["Applicant Name and Address"] && (
+                      <div>
+                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">APPLICANT</div>
+                        <div className="text-[10px] print:text-[8px] text-[#0C0C0C] leading-tight">
+                          {String(record.journal["Applicant Name and Address"])}
+                        </div>
+                      </div>
+                    )}
+                    {record.journal["Agent Name and Address"] && (
+                      <div>
+                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">AGENT</div>
+                        <div className="text-[10px] print:text-[8px] text-[#0C0C0C] leading-tight">
+                          {String(record.journal["Agent Name and Address"])}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Additional details */}
                   {record.journal.Title && (
-                    <div>Title: <strong>{String(record.journal.Title)}</strong></div>
-                  )}
-                  {record.journal.Class && (
-                    <div>Class: <strong>{String(record.journal.Class)}</strong></div>
-                  )}
-                  {record.journal["Applicant Name and Address"] && (
-                    <div className="pt-1 print:pt-0.5">
-                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">Applicant</div>
-                      <div className="whitespace-pre-wrap leading-tight">{String(record.journal["Applicant Name and Address"])}</div>
+                    <div className="border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
+                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">TITLE</div>
+                      <div className="text-[10px] print:text-[8px] text-[#0C0C0C] leading-tight">
+                        {String(record.journal.Title)}
+                      </div>
                     </div>
                   )}
-                  {record.journal["Agent Name and Address"] && (
-                    <div className="pt-1 print:pt-0.5">
-                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">Agent</div>
-                      <div className="whitespace-pre-wrap leading-tight">{String(record.journal["Agent Name and Address"])}</div>
+
+                  {/* End of record - Modified and Created */}
+                  <div className="border-t border-[#0C0C0C]/20 pt-3 print:pt-2 mt-3 print:mt-2 text-[9px] print:text-[8px] text-[#6d6658]">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                      <div>Last Modified: <span className="text-[#0C0C0C]">{record.updatedAt ? formatDate(record.updatedAt) : "—"}</span></div>
+                      <div>Date Created: <span className="text-[#0C0C0C]">{record.date ? formatDate(record.date) : "—"}</span></div>
                     </div>
-                  )}
-                  {record.journal["Date of Filing"] && (
-                    <div>Date of Filing: <strong>{formatDateShort(String(record.journal["Date of Filing"]))}</strong></div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}

@@ -331,4 +331,19 @@
   .opacity-80 {
     opacity: 1 !important;
   }
+
+  /* Journal/Publications print hierarchy - compact and light */
+  /* Journal section hierarchy is already handled by existing print classes */
+  /* Publication Pipeline cards should print with clean borders */
+  .border-2 {
+    border-width: 1px !important;
+  }
+
+  /* Ensure consistent border styling in print */
+  .border-\[\#0C0C0C\],
+  .border-\[\#0C0C0C\]\/10,
+  .border-\[\#0C0C0C\]\/20 {
+    border-color: #333333 !important;
+    border-width: 1px !important;
+  }
 }

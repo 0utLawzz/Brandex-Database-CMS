@@ -1296,81 +1296,81 @@ describe("Batch 13: Publication Workflow Integration", () => {
       expect(stats.byCity.length).toBeGreaterThan(0);
     });
   });
+});
 
-  describe("Database Table Sorting and Pagination", () => {
-    it("A. Default sorting is by filing_date descending, then updated_at descending", async () => {
-      const mockQuery = createQuery({ 
-        data: [
-          { id: "1", filing_date: "2026-09-24", updated_at: "2026-09-24T10:00:00Z" },
-          { id: "2", filing_date: "2026-09-24", updated_at: "2026-09-24T09:00:00Z" },
-        ], 
-        count: 2, 
-        error: null 
-      });
-      supabaseMock.from.mockReturnValue(mockQuery);
-
-      await listTrademarkPage({ page: 1, pageSize: 50 });
-
-      expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
-      expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+describe("Database Table Sorting and Pagination", () => {
+  it("A. Default sorting is by filing_date descending, then updated_at descending", async () => {
+    const mockQuery = createQuery({ 
+      data: [
+        { id: "1", filing_date: "2026-09-24", updated_at: "2026-09-24T10:00:00Z" },
+        { id: "2", filing_date: "2026-09-24", updated_at: "2026-09-24T09:00:00Z" },
+      ], 
+      count: 2, 
+      error: null 
     });
+    supabaseMock.from.mockReturnValue(mockQuery);
 
-    it("B. Deterministic ordering with Type, Client Code, and Case Number as tiebreakers", async () => {
-      const mockQuery = createQuery({ 
-        data: [], 
-        count: 0, 
-        error: null 
-      });
-      supabaseMock.from.mockReturnValue(mockQuery);
+    await listTrademarkPage({ page: 1, pageSize: 50 });
 
-      await listTrademarkPage({ page: 1, pageSize: 50 });
+    expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
+    expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+  });
 
-      expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
-      expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
-      expect(mockQuery.order).toHaveBeenCalledWith("type", { ascending: true });
-      expect(mockQuery.order).toHaveBeenCalledWith("client_code", { ascending: true });
-      expect(mockQuery.order).toHaveBeenCalledWith("case_number", { ascending: true });
+  it("B. Deterministic ordering with Type, Client Code, and Case Number as tiebreakers", async () => {
+    const mockQuery = createQuery({ 
+      data: [], 
+      count: 0, 
+      error: null 
     });
+    supabaseMock.from.mockReturnValue(mockQuery);
 
-    it("C. Pagination returns correct page boundaries", async () => {
-      const mockQuery = createQuery({ 
-        data: Array.from({ length: 50 }, (_, i) => ({ id: String(i) })), 
-        count: 150, 
-        error: null 
-      });
-      supabaseMock.from.mockReturnValue(mockQuery);
+    await listTrademarkPage({ page: 1, pageSize: 50 });
 
-      const page1 = await listTrademarkPage({ page: 1, pageSize: 50 });
-      expect(page1.page).toBe(1);
-      expect(page1.total).toBe(150);
-      expect(page1.records).toHaveLength(50);
+    expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
+    expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+    expect(mockQuery.order).toHaveBeenCalledWith("type", { ascending: true });
+    expect(mockQuery.order).toHaveBeenCalledWith("client_code", { ascending: true });
+    expect(mockQuery.order).toHaveBeenCalledWith("case_number", { ascending: true });
+  });
 
-      const page2 = await listTrademarkPage({ page: 2, pageSize: 50 });
-      expect(page2.page).toBe(2);
-      expect(page2.total).toBe(150);
+  it("C. Pagination returns correct page boundaries", async () => {
+    const mockQuery = createQuery({ 
+      data: Array.from({ length: 50 }, (_, i) => ({ id: String(i) })), 
+      count: 150, 
+      error: null 
     });
+    supabaseMock.from.mockReturnValue(mockQuery);
 
-    it("D. Changing page size affects pagination correctly", async () => {
-      const mockQuery25 = createQuery({ 
-        data: Array.from({ length: 25 }, (_, i) => ({ id: String(i) })), 
-        count: 100, 
-        error: null 
-      });
-      const mockQuery100 = createQuery({ 
-        data: Array.from({ length: 100 }, (_, i) => ({ id: String(i) })), 
-        count: 100, 
-        error: null 
-      });
-      
-      supabaseMock.from.mockReturnValue(mockQuery25);
-      const page25 = await listTrademarkPage({ page: 1, pageSize: 25 });
-      expect(page25.pageSize).toBe(25);
-      expect(page25.records).toHaveLength(25);
+    const page1 = await listTrademarkPage({ page: 1, pageSize: 50 });
+    expect(page1.page).toBe(1);
+    expect(page1.total).toBe(150);
+    expect(page1.records).toHaveLength(50);
 
-      supabaseMock.from.mockReturnValue(mockQuery100);
-      const page100 = await listTrademarkPage({ page: 1, pageSize: 100 });
-      expect(page100.pageSize).toBe(100);
-      expect(page100.records).toHaveLength(100);
+    const page2 = await listTrademarkPage({ page: 2, pageSize: 50 });
+    expect(page2.page).toBe(2);
+    expect(page2.total).toBe(150);
+  });
+
+  it("D. Changing page size affects pagination correctly", async () => {
+    const mockQuery25 = createQuery({ 
+      data: Array.from({ length: 25 }, (_, i) => ({ id: String(i) })), 
+      count: 100, 
+      error: null 
     });
+    const mockQuery100 = createQuery({ 
+      data: Array.from({ length: 100 }, (_, i) => ({ id: String(i) })), 
+      count: 100, 
+      error: null 
+    });
+    
+    supabaseMock.from.mockReturnValue(mockQuery25);
+    const page25 = await listTrademarkPage({ page: 1, pageSize: 25 });
+    expect(page25.pageSize).toBe(25);
+    expect(page25.records).toHaveLength(25);
+
+    supabaseMock.from.mockReturnValue(mockQuery100);
+    const page100 = await listTrademarkPage({ page: 1, pageSize: 100 });
+    expect(page100.pageSize).toBe(100);
+    expect(page100.records).toHaveLength(100);
   });
 });
