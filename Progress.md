@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 24 September 2026 (Batch 4: Journal / Publications)**
+**Last updated: 24 September 2026 (Batch 5: Search Page + Search Results)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -380,6 +380,99 @@ This file is the single source of truth for project status.
 - 5 Stage Document API test failures exist in baseline (unrelated to Batch 4)
 - Failures: mock structure issues in `mapStageDocRow` and `listStageDocuments`
 - These were present before Batch 4 and remain unchanged
+
+## 2026-09-24 — Batch 5: Search Page + Search Results
+
+### Scope
+- Search result cards/rows redesigned from table to compact card layout
+- Search result image thumbnails using existing secure storage
+- Status + Sub Status hierarchy as primary visual prominence
+- TM Forms indication in search results
+- Journal indication in search results
+- Search pagination consistency preserved
+- Responsive Search presentation for desktop/tablet/mobile
+
+### Files Changed
+- `artifacts/tm-tracker/src/pages/SearchPage.tsx` — General search results redesigned as card grid
+- `artifacts/tm-tracker/src/lib/api.test.ts` — Added Batch 5 tests for search field verification
+
+### Implementation Summary
+
+**Search Result Cards (SearchPage.tsx)**:
+- Replaced oversized table with compact card grid layout (1/2/3 columns responsive)
+- Card hierarchy following Brandex visual guidelines:
+  - **Primary Header**: Status badge (large, colored) + Sub-stage badge (smaller, cream background)
+  - **Image + Identity**: Thumbnail (64px) + Application Name + Type/Client Code/Case No + TM/Class
+  - **Supporting Info**: City + Agent
+  - **TM Forms**: Compact chip indicators showing only forms that exist (TM5/TM6/TM11/TM16/TM56)
+  - **Journal**: Green-bordered box with Journal No and Date (only when journal exists)
+  - **Filing Date**: At bottom of card
+- All existing behavior preserved: search query, filters, pagination, record navigation
+
+**Image Handling**:
+- Uses existing `image` field from TrademarkRecord (already includes signed URL from private storage)
+- Shows "No Img" placeholder when no image exists
+- Thumbnail is secondary to record information
+- No new storage logic added — reuses existing secure/private storage mechanism
+
+**TM Forms Indicator**:
+- Uses existing `tm5`, `tm6`, `tm11`, `tm16`, `tm56` string fields ("YES"/"")
+- Shows only forms that exist as green chips with checkmarks
+- Shows "No forms found" italic text when no forms exist
+- Does not interpret as workflow events — purely display of boolean match flags
+
+**Journal Indicator**:
+- Uses existing `journalNumber` and `journalDate` fields
+- Shows only when journal exists (no empty Journal section)
+- Journal No is more prominent than Date
+- Green-bordered box with checkmark to distinguish from missing journal
+
+**Pagination**:
+- Preserved exactly as implemented in Batch 3
+- First/Previous/Next/Last buttons functional
+- Page count and result count preserved
+- Pagination resets on search/filter changes (existing `useEffect` on `debouncedQuery`)
+
+**Responsive Design**:
+- Card grid: 1 column on mobile, 2 on tablet, 3 on desktop
+- Thumbnail remains small (64px) on all screens
+- Status/Sub-Status remain easy to identify (large badges in header)
+- Secondary fields wrap/compact appropriately
+- No horizontal overflow
+
+**Search Query/Filter Behavior**:
+- Preserved without changes:
+  - Keyword search (client_name, client_code, case_number, application_name, tm_cpr_number, nice_class, agent, city)
+  - Type filter
+  - Stage filter
+  - Agent filter
+  - City filter
+  - Case Type filter
+- No search engine redesign — only visual presentation improved
+
+### Tests
+- Added 3 tests in `api.test.ts` for Batch 5:
+  - A. listTrademarkPage includes logo_path and legacy_image_url for image thumbnails
+  - B. listTrademarkPage includes TM Forms fields (tm5, tm6, tm11, tm16, tm56)
+  - C. listTrademarkPage includes Journal fields (journal_number, journal_date)
+- Tests verify API field selection, not UI rendering (UI testing would require browser/component tests)
+- All 3 new tests passing
+
+### Typecheck & Build
+- `pnpm typecheck` → 0 errors
+- `pnpm build` → production bundle compiled successfully (Vite v7.3.6, 2143 modules)
+
+### Verification
+- 5 pre-existing Stage Document API test failures (unrelated to Batch 5)
+- Batch 5 did not introduce new test failures
+- All existing search behavior preserved
+- Pagination functional
+- Responsive layout verified via Tailwind grid classes
+
+### Known Pre-existing Failures
+- 5 Stage Document API test failures exist in baseline (unrelated to Batch 5)
+- Failures: mock structure issues in `mapStageDocRow` and `listStageDocuments`
+- These were present before Batch 5 and remain unchanged
 
 ## 2026-09-22 — Batch 9: Stage-wise Documents - DB + API Foundation
 

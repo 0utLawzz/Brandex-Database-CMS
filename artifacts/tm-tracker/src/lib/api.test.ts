@@ -1298,6 +1298,105 @@ describe("Batch 13: Publication Workflow Integration", () => {
   });
 });
 
+describe("Batch 5: Search Page + Search Results", () => {
+  it("A. listTrademarkPage — includes logo_path and legacy_image_url for image thumbnails", async () => {
+    const mockQuery = createQuery({
+      data: [
+        {
+          id: "BX-1",
+          logo_path: "pending/user/logo.png",
+          legacy_image_url: null,
+          filing_date: "2026-09-24",
+          type: "X",
+          client_code: "CC-001",
+          case_number: "CASE-001",
+          tm5: true,
+          tm6: false,
+          tm11: true,
+          tm16: false,
+          tm56: false,
+          journal_number: "J-100",
+          journal_date: "2026-09-20",
+          status: "STAGE 1",
+          sub_status: "Filing",
+          updated_at: "2026-09-24T10:00:00Z",
+        },
+      ],
+      count: 1,
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(mockQuery);
+
+    const page = await listTrademarkPage({ page: 1, pageSize: 50 });
+
+    expect(page.records).toHaveLength(1);
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("logo_path"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("legacy_image_url"), { count: "exact" });
+  });
+
+  it("B. listTrademarkPage — includes TM Forms fields (tm5, tm6, tm11, tm16, tm56)", async () => {
+    const mockQuery = createQuery({
+      data: [
+        {
+          id: "BX-2",
+          tm5: true,
+          tm6: true,
+          tm11: false,
+          tm16: false,
+          tm56: true,
+          filing_date: "2026-09-24",
+          type: "A",
+          client_code: "CC-002",
+          case_number: "CASE-002",
+          status: "STAGE 2",
+          sub_status: "Assigned",
+          updated_at: "2026-09-24T10:00:00Z",
+        },
+      ],
+      count: 1,
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(mockQuery);
+
+    const page = await listTrademarkPage({ page: 1, pageSize: 50 });
+
+    expect(page.records).toHaveLength(1);
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm5"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm6"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm11"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm16"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm56"), { count: "exact" });
+  });
+
+  it("C. listTrademarkPage — includes Journal fields (journal_number, journal_date)", async () => {
+    const mockQuery = createQuery({
+      data: [
+        {
+          id: "BX-3",
+          journal_number: "J-200",
+          journal_date: "2026-09-15",
+          filing_date: "2026-09-24",
+          type: "N",
+          client_code: "CC-003",
+          case_number: "CASE-003",
+          status: "STAGE 3",
+          sub_status: "Published",
+          updated_at: "2026-09-24T10:00:00Z",
+        },
+      ],
+      count: 1,
+      error: null,
+    });
+    supabaseMock.from.mockReturnValue(mockQuery);
+
+    const page = await listTrademarkPage({ page: 1, pageSize: 50 });
+
+    expect(page.records).toHaveLength(1);
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("journal_number"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("journal_date"), { count: "exact" });
+  });
+});
+
 describe("Database Table Sorting and Pagination", () => {
   it("A. Default sorting is by filing_date descending, then updated_at descending", async () => {
     const mockQuery = createQuery({ 

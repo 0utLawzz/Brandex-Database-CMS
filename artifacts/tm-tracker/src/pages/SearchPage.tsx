@@ -384,7 +384,7 @@ export function SearchPage() {
 
           {/* General search results */}
           {hasGenSearch ? (
-            <div className="bg-white">
+            <div className="bg-white p-4">
               {genLoading || genFetching ? (
                 <div className="px-6 py-12 text-center font-bold font-mono text-[#6d6658] animate-pulse">
                   SEARCHING…
@@ -397,45 +397,111 @@ export function SearchPage() {
                   </div>
                 </div>
               ) : (
-                <table className="w-full text-left font-mono text-xs whitespace-nowrap border-collapse">
-                  <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10">
-                    <tr>
-                      {["TYPE", "CLIENT CODE", "CLIENT NAME", "CASE NUMBER", "APPLICATION NAME", "STATUS", "SUB-STATUS", "TM / CPR NO", "CLASS", "AGENT", "CITY", "LAST MODIFIED"].map((h) => (
-                        <th key={h} className="px-4 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-[10px] last:border-r-0">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generalResults.map((tm, i) => (
-                      <tr
-                        key={tm.id}
-                        onClick={() => goToRecord(tm.id)}
-                        className={`cursor-pointer border-b border-[#0C0C0C]/10 hover:bg-[#D9D0B7] transition-colors ${i % 2 === 0 ? "bg-[#F0E8D0]" : "bg-white"}`}
-                      >
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold font-serif text-[#6C1C1F]">{tm.type || "—"}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold">{tm.clientCode || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[150px] truncate">{tm.clientName || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold text-[#0A6B52]">{tm.caseNumber || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[200px] truncate font-bold">{tm.appName || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {generalResults.map((tm) => (
+                    <div
+                      key={tm.id}
+                      onClick={() => goToRecord(tm.id)}
+                      className="border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] hover:shadow-[5px_5px_0_#0C0C0C] transition-shadow cursor-pointer"
+                    >
+                      {/* Primary: Status / Sub-Status */}
+                      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7]">
+                        <div className="flex items-center gap-2">
                           {tm.stage && (
-                            <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase border border-[#0C0C0C]/20 ${STAGE_BADGE[tm.stage] ?? "bg-[#E8DFC7]"}`}>
+                            <span className={`inline-block px-3 py-1.5 font-mono text-sm font-bold uppercase tracking-wider border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] ${STAGE_BADGE[tm.stage] ?? "bg-[#E8DFC7]"}`}>
                               {tm.stage}
                             </span>
                           )}
-                        </td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[120px] truncate">{formatWorkflowLabel(tm.subStage) || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 font-bold">{tm.tmCprNo || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10">{tm.appClass || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10 max-w-[100px] truncate">{tm.agent || ""}</td>
-                        <td className="px-4 py-3 border-r border-[#0C0C0C]/10">{tm.city || ""}</td>
-                        <td className="px-4 py-3 text-[#6d6658]">{formatDateShort(tm.updatedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          {tm.subStage && (
+                            <span className="inline-block px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider border border-[#0C0C0C]/40 text-[#0C0C0C] bg-[#F0E8D0]">
+                              {formatWorkflowLabel(tm.subStage)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Image + Identity */}
+                      <div className="flex gap-3 p-4">
+                        {/* Thumbnail */}
+                        <div className="w-16 h-16 shrink-0 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
+                          {tm.image ? (
+                            <img src={tm.image} alt={tm.appName || ""} className="w-full h-full object-contain" />
+                          ) : (
+                            <span className="font-mono text-[9px] text-[#9d9658] uppercase">No Img</span>
+                          )}
+                        </div>
+
+                        {/* Main content */}
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          <div className="font-serif text-lg uppercase tracking-wide leading-tight text-[#0C0C0C] font-bold truncate">
+                            {tm.appName || "—"}
+                          </div>
+                          <div className="font-mono text-[10px] text-[#6d6658] flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="font-bold text-[#6C1C1F]">{tm.type || "—"}</span>
+                            <span>·</span>
+                            <span>CLIENT: <strong className="text-[#0C0C0C]">{tm.clientCode || "—"}</strong></span>
+                            <span>·</span>
+                            <span>CASE: <strong className="text-[#0A6B52]">{tm.caseNumber || "—"}</strong></span>
+                          </div>
+                          <div className="font-mono text-[10px] text-[#6d6658] flex flex-wrap gap-x-2">
+                            <span>TM: <strong className="text-[#0C0C0C]">{tm.tmCprNo || "—"}</strong></span>
+                            <span>·</span>
+                            <span>CLASS: <strong className="text-[#0C0C0C]">{tm.appClass || "—"}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Supporting info */}
+                      <div className="px-4 pb-4 space-y-2 border-t border-[#0C0C0C]/10 pt-3">
+                        <div className="font-mono text-[10px] text-[#6d6658] flex flex-wrap gap-x-3">
+                          <span>CITY: <strong className="text-[#0C0C0C]">{tm.city || "—"}</strong></span>
+                          <span>AGENT: <strong className="text-[#0C0C0C]">{tm.agent || <span className="italic">unassigned</span>}</strong></span>
+                        </div>
+
+                        {/* TM Forms */}
+                        <div>
+                          <div className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#6d6658] mb-1">
+                            TM FORMS
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
+                              const hasForm = tm[s.toLowerCase() as keyof typeof tm] === "YES";
+                              return hasForm ? (
+                                <span
+                                  key={s}
+                                  className="flex items-center gap-1 px-2 py-0.5 font-mono text-[9px] font-bold border-2 border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
+                                >
+                                  <CheckCircle2 className="w-2.5 h-2.5" /> {s}
+                                </span>
+                              ) : null;
+                            })}
+                            {![tm.tm5, tm.tm6, tm.tm11, tm.tm16, tm.tm56].some(v => v === "YES") && (
+                              <span className="font-mono text-[9px] text-[#9d9488] italic">No forms found</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Journal */}
+                        {tm.journalNumber ? (
+                          <div className="border-2 border-[#0A6B52] bg-[#0D9970]/5 px-3 py-2">
+                            <div className="flex items-center gap-2 font-mono text-[9px] font-bold text-[#0A6B52] mb-1">
+                              <CheckCircle2 className="w-3 h-3" /> JOURNAL
+                            </div>
+                            <div className="font-mono text-[10px] text-[#0C0C0C] space-x-3">
+                              <span>NO: <strong>{tm.journalNumber}</strong></span>
+                              <span>DATE: <strong>{tm.journalDate ? formatDateShort(tm.journalDate) : "—"}</strong></span>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* Filing Date */}
+                        <div className="font-mono text-[9px] text-[#6d6658]">
+                          FILED: <strong className="text-[#0C0C0C]">{tm.date || "—"}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           ) : !isTmSearch ? (
