@@ -173,9 +173,11 @@ describe("Brandex Supabase access patterns", () => {
     expect(supabaseMock.from).toHaveBeenCalledWith("trademarks");
     expect(query.select).toHaveBeenCalledWith(expect.not.stringContaining("notes"), { count: "exact" });
     expect(query.select).toHaveBeenCalledWith(expect.stringContaining("logo_path"), { count: "exact" });
-    expect(query.order).toHaveBeenNthCalledWith(1, "type", { ascending: true });
-    expect(query.order).toHaveBeenNthCalledWith(2, "client_code", { ascending: true });
-    expect(query.order).toHaveBeenNthCalledWith(3, "case_number", { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(1, "filing_date", { ascending: false });
+    expect(query.order).toHaveBeenNthCalledWith(2, "updated_at", { ascending: false });
+    expect(query.order).toHaveBeenNthCalledWith(3, "type", { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(4, "client_code", { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(5, "case_number", { ascending: true });
     expect(query.range).toHaveBeenCalledWith(50, 99);
     expect(query.or).toHaveBeenCalledWith(expect.stringContaining("case_number.ilike.%CASE 9%"));
     expect(supabaseMock.storage.from).toHaveBeenCalledWith("trademark-files");
@@ -1251,8 +1253,124 @@ describe("Batch 13: Publication Workflow Integration", () => {
       expect(mockQuery.eq).toHaveBeenCalledWith("nice_class", "35");
       expect(stats.total).toBe(8);
     });
+
+    it("D. Regional Distribution uses actual database cities (not just predefined array)", async () => {
+      const mockQuery = createQuery({ 
+        data: [
+          { city: "Islamabad" },
+          { city: "Lahore" },
+          { city: "Karachi" },
+          { city: "Peshawar" },
+          { city: "Islamabad" }, // Duplicate to test counting
+          { city: "Rawalpindi" }, // City not in predefined CITIES array
+        ], 
+        error: null 
+      });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      const stats = await getStats();
+
+      expect(stats.byCity).toHaveLength(5); // 5 unique cities
+      expect(stats.byCity.find((c) => c.city === "Islamabad")?.count).toBe(2);
+      expect(stats.byCity.find((c) => c.city === "Rawalpindi")?.count).toBe(1);
+      expect(stats.byCity.every((c) => c.count > 0)).toBe(true);
+    });
+
+    it("E. Dashboard filters affect Regional Distribution consistently", async () => {
+      const mockQuery = createQuery({ 
+        data: [
+          { city: "Islamabad", agent: "Agent A" },
+          { city: "Lahore", agent: "Agent B" },
+          { city: "Karachi", agent: "Agent A" },
+        ], 
+        error: null 
+      });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      // Test with agent filter
+      const stats = await getStats({ agent: "Agent A" });
+      
+      expect(mockQuery.eq).toHaveBeenCalledWith("agent", "Agent A");
+      // The mock returns all 3 cities but with filter applied, should only count Agent A records
+      // Since the mock doesn't actually filter, we just verify the filter was applied
+      expect(stats.byCity.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Database Table Sorting and Pagination", () => {
+    it("A. Default sorting is by filing_date descending, then updated_at descending", async () => {
+      const mockQuery = createQuery({ 
+        data: [
+          { id: "1", filing_date: "2026-09-24", updated_at: "2026-09-24T10:00:00Z" },
+          { id: "2", filing_date: "2026-09-24", updated_at: "2026-09-24T09:00:00Z" },
+        ], 
+        count: 2, 
+        error: null 
+      });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      await listTrademarkPage({ page: 1, pageSize: 50 });
+
+      expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+    });
+
+    it("B. Deterministic ordering with Type, Client Code, and Case Number as tiebreakers", async () => {
+      const mockQuery = createQuery({ 
+        data: [], 
+        count: 0, 
+        error: null 
+      });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      await listTrademarkPage({ page: 1, pageSize: 50 });
+
+      expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith("type", { ascending: true });
+      expect(mockQuery.order).toHaveBeenCalledWith("client_code", { ascending: true });
+      expect(mockQuery.order).toHaveBeenCalledWith("case_number", { ascending: true });
+    });
+
+    it("C. Pagination returns correct page boundaries", async () => {
+      const mockQuery = createQuery({ 
+        data: Array.from({ length: 50 }, (_, i) => ({ id: String(i) })), 
+        count: 150, 
+        error: null 
+      });
+      supabaseMock.from.mockReturnValue(mockQuery);
+
+      const page1 = await listTrademarkPage({ page: 1, pageSize: 50 });
+      expect(page1.page).toBe(1);
+      expect(page1.total).toBe(150);
+      expect(page1.records).toHaveLength(50);
+
+      const page2 = await listTrademarkPage({ page: 2, pageSize: 50 });
+      expect(page2.page).toBe(2);
+      expect(page2.total).toBe(150);
+    });
+
+    it("D. Changing page size affects pagination correctly", async () => {
+      const mockQuery25 = createQuery({ 
+        data: Array.from({ length: 25 }, (_, i) => ({ id: String(i) })), 
+        count: 100, 
+        error: null 
+      });
+      const mockQuery100 = createQuery({ 
+        data: Array.from({ length: 100 }, (_, i) => ({ id: String(i) })), 
+        count: 100, 
+        error: null 
+      });
+      
+      supabaseMock.from.mockReturnValue(mockQuery25);
+      const page25 = await listTrademarkPage({ page: 1, pageSize: 25 });
+      expect(page25.pageSize).toBe(25);
+      expect(page25.records).toHaveLength(25);
+
+      supabaseMock.from.mockReturnValue(mockQuery100);
+      const page100 = await listTrademarkPage({ page: 1, pageSize: 100 });
+      expect(page100.pageSize).toBe(100);
+      expect(page100.records).toHaveLength(100);
+    });
   });
 });
-
-
-

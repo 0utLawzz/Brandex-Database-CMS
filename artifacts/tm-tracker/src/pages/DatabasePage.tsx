@@ -13,7 +13,8 @@ import { useLocation } from "wouter";
 import { ChevronLeft, ChevronRight, Database as DatabaseIcon, Download, Filter, Plus, Search, Upload, X } from "lucide-react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const DEFAULT_PAGE_SIZE = 50;
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white", "STAGE 2": "bg-[#B0740E] text-white",
   "STAGE 3": "bg-[#6C1C1F] text-white", "STAGE 4": "bg-[#0A6B52] text-white", STOPPED: "bg-[#CC0000] text-white",
@@ -62,6 +63,7 @@ export function DatabasePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -99,15 +101,16 @@ export function DatabasePage() {
   }), [debouncedSearch, filters]);
 
   const { data, isLoading, isFetching, error } = useQuery<TrademarkPage>({
-    queryKey: ["trademark-page", page, apiFilters], queryFn: () => listTrademarkPage({ ...apiFilters, page, pageSize: PAGE_SIZE }),
+    queryKey: ["trademark-page", page, pageSize, apiFilters], queryFn: () => listTrademarkPage({ ...apiFilters, page, pageSize }),
     placeholderData: keepPreviousData, staleTime: 60_000,
   });
   const { data: agents = [] } = useQuery<string[]>({ queryKey: ["agents"], queryFn: listAgents, staleTime: 5 * 60_000 });
   const records = data?.records ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasFilters = Object.entries(filters).some(([key, value]) => key !== "search" && Boolean(value));
   const setFilter = (key: keyof Filters, value: string) => { setFilters((current) => ({ ...current, [key]: value })); setPage(1); };
+  const handlePageSizeChange = (newSize: number) => { setPageSize(newSize); setPage(1); };
   const clearFilters = () => { setFilters(EMPTY_FILTERS); setDebouncedSearch(""); setPage(1); };
   const closeModal = () => { setModalOpen(false); navigate("/database"); };
   const handleSaved = async () => { await queryClient.invalidateQueries({ queryKey: ["trademark-page"] }); await queryClient.invalidateQueries({ queryKey: ["stats"] }); closeModal(); };
@@ -207,7 +210,26 @@ export function DatabasePage() {
         </div>
         <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-[#E8DFC7] border-t-2 border-[#0C0C0C]">
           <span className="font-mono text-[10px] text-[#6d6658] font-bold uppercase tracking-widest">PAGE {page} OF {totalPages} · {total} RECORDS · SORTED BY DATE (NEWEST FIRST)</span>
-          <div className="flex gap-2"><button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1 || isFetching} className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40"><ChevronLeft className="w-3.5 h-3.5" /> PREV</button><button onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || isFetching} className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40">NEXT <ChevronRight className="w-3.5 h-3.5" /></button></div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label className="font-mono text-[10px] text-[#6d6658] font-bold uppercase">SHOW:</label>
+              <select 
+                value={pageSize} 
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="h-8 px-2 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F]"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setPage(1)} disabled={page === 1 || isFetching} className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40">FIRST</button>
+              <button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1 || isFetching} className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40"><ChevronLeft className="w-3.5 h-3.5" /> PREV</button>
+              <button onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || isFetching} className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40">NEXT <ChevronRight className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setPage(totalPages)} disabled={page >= totalPages || isFetching} className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40">LAST</button>
+            </div>
+          </div>
         </div>
       </div>
       {modalOpen && <RecordModal isNew onClose={closeModal} onSaved={handleSaved} />}

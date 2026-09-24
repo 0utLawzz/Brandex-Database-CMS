@@ -612,6 +612,8 @@ export async function listTrademarkPage(params: TrademarkListParams = {}): Promi
   let query = supabase
     .from("trademarks")
     .select(params.includeDetails ? "*" : TRADEMARK_LIST_COLUMNS, { count: "exact" })
+    .order("filing_date", { ascending: false })
+    .order("updated_at", { ascending: false })
     .order("type", { ascending: true })
     .order("client_code", { ascending: true })
     .order("case_number", { ascending: true })
@@ -1059,12 +1061,34 @@ export async function getStats(filters?: DashboardStatsFilters): Promise<Tradema
     return count ?? 0;
   };
 
+  // Get all actual cities from database (not just predefined CITIES array)
+  const getCitiesFromDb = async (): Promise<Array<{ city: string; count: number }>> => {
+    let query = supabase.from("trademarks").select("city");
+    if (filters?.agent) query = query.eq("agent", filters.agent);
+    if (filters?.appClass) query = query.eq("nice_class", filters.appClass);
+    
+    const { data, error } = await query;
+    throwIfError(error);
+    
+    // Count occurrences of each city from actual data
+    const cityCounts = new Map<string, number>();
+    (data ?? []).forEach((row) => {
+      const city = row.city || "UNSPECIFIED";
+      cityCounts.set(city, (cityCounts.get(city) || 0) + 1);
+    });
+    
+    // Convert to array and sort by count descending
+    return Array.from(cityCounts.entries())
+      .map(([city, count]) => ({ city, count }))
+      .sort((a, b) => b.count - a.count);
+  };
+
   const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const [total, recentlyModified, stageCounts, cityCounts, tmCounts] = await Promise.all([
     exactCount(),
     exactCount("updated_at", undefined, recentCutoff),
     Promise.all(STAGES.map(async (stage) => ({ stage, count: await exactCount("status", stage) }))),
-    Promise.all(CITIES.map(async (city) => ({ city, count: await exactCount("city", city) }))),
+    getCitiesFromDb(),
     Promise.all(TM_FORMS.map(async (form) => ({ form, count: await exactCount(TM_FORM_COLUMNS[form], true) }))),
   ]);
 

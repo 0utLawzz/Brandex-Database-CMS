@@ -1,14 +1,14 @@
-import { listTrademarks, searchTm, STAGES, CITIES, VALID_TYPES, listAgents, formatWorkflowLabel } from "@/lib/api";
-import type { TrademarkRecord, TmSearchResult } from "@/lib/api";
+import { listTrademarkPage, searchTm, STAGES, CITIES, VALID_TYPES, listAgents, formatWorkflowLabel } from "@/lib/api";
+import type { TrademarkRecord, TmSearchResult, TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   SearchIcon, X, Filter, CheckCircle2, MinusCircle,
-  ArrowRight, AlertCircle,
+  ArrowRight, AlertCircle, ChevronLeft, ChevronRight,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
@@ -204,6 +204,7 @@ export function SearchPage() {
   const [caseTypeFilter, setCaseTypeFilter] = useState("");
   const [agentFilter,    setAgentFilter]    = useState("");
   const [showFilters,    setShowFilters]    = useState(false);
+  const [page,           setPage]           = useState(1);
 
   const hasFilters  = Boolean(typeFilter || stageFilter || cityFilter || caseTypeFilter || agentFilter);
   const hasGenSearch = debouncedQuery.trim().length > 0 || hasFilters;
@@ -223,11 +224,13 @@ export function SearchPage() {
     staleTime: 5 * 60_000,
   });
 
-  // General search query
-  const { data: generalResults = [], isLoading: genLoading, isFetching: genFetching } = useQuery<TrademarkRecord[]>({
-    queryKey: ["trademarks-search", debouncedQuery, typeFilter, stageFilter, cityFilter, caseTypeFilter, agentFilter],
+  // General search query with pagination
+  const { data: generalPage, isLoading: genLoading, isFetching: genFetching } = useQuery<TrademarkPage>({
+    queryKey: ["trademarks-search", page, debouncedQuery, typeFilter, stageFilter, cityFilter, caseTypeFilter, agentFilter],
     queryFn: () =>
-      listTrademarks({
+      listTrademarkPage({
+        page,
+        pageSize: 50,
         search:    debouncedQuery.trim() || undefined,
         type:      typeFilter     || undefined,
         stage:     stageFilter    || undefined,
@@ -236,14 +239,24 @@ export function SearchPage() {
         agent:     agentFilter    || undefined,
       }),
     enabled: hasGenSearch,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
+  const generalResults = generalPage?.records ?? [];
+  const totalResults = generalPage?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalResults / 50));
+
   const goToRecord = (id: string) => navigate(`/record/${id}`);
   const clearAll   = () => {
-    setQuery(""); setTypeFilter(""); setStageFilter(""); setCityFilter(""); setCaseTypeFilter(""); setAgentFilter("");
+    setQuery(""); setTypeFilter(""); setStageFilter(""); setCityFilter(""); setCaseTypeFilter(""); setAgentFilter(""); setPage(1);
   };
   const clearTm = () => setTmQuery("");
+  
+  // Reset page when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery]);
 
   const CASE_TYPES = ["Trademark", "Copyright", "Design", "Patent", "Renewal", "Opposition", "Other"];
 
@@ -333,7 +346,7 @@ export function SearchPage() {
                     <label className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6d6658]">{label}</label>
                     <select
                       value={value}
-                      onChange={(e) => set(e.target.value)}
+                      onChange={(e) => { set(e.target.value); setPage(1); }}
                       className="h-9 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-xs focus:outline-2 focus:outline-[#6C1C1F] min-w-[140px]"
                     >
                       <option value="">ALL</option>
@@ -436,10 +449,43 @@ export function SearchPage() {
           ) : null}
         </div>
 
-        {hasGenSearch && generalResults.length > 0 && (
-          <div className="shrink-0 px-6 py-2 bg-[#E8DFC7] border-t-2 border-[#0C0C0C] font-mono text-[10px] font-bold text-[#6d6658] uppercase tracking-widest flex justify-between">
-            <span>{generalResults.length} RESULT{generalResults.length !== 1 ? "S" : ""}</span>
-            <span>CLICK ROW TO VIEW RECORD</span>
+        {hasGenSearch && (
+          <div className="shrink-0 px-6 py-3 bg-[#E8DFC7] border-t-2 border-[#0C0C0C]">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-[#6d6658] font-bold uppercase tracking-widest">
+                PAGE {page} OF {totalPages} · {totalResults} RESULT{totalResults !== 1 ? "S" : ""}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(1)}
+                  disabled={page === 1 || genFetching}
+                  className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40"
+                >
+                  FIRST
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || genFetching}
+                  className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> PREV
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || genFetching}
+                  className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40"
+                >
+                  NEXT <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setPage(totalPages)}
+                  disabled={page >= totalPages || genFetching}
+                  className="flex items-center gap-1 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-[10px] font-bold uppercase disabled:opacity-40"
+                >
+                  LAST
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
