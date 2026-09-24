@@ -6,7 +6,7 @@ import type { TrademarkListParams, TrademarkPage, TrademarkRecord, TmFormKey } f
 import { AppShell } from "@/components/layout/AppShell";
 import { RecordModal } from "@/components/RecordModal";
 import { RegistryImportModal } from "@/components/RegistryImportModal";
-import { formatDateShort } from "@/lib/utils";
+import { formatDateShort, formatDateLong, getRelativeAge, getFormDate } from "@/lib/utils";
 import { getStaffRole } from "@/lib/registryImport";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -199,7 +199,30 @@ export function DatabasePage() {
                       <td className="px-3 py-2 border-r border-[#0C0C0C]/10 text-[#6d6658] max-w-[130px] truncate uppercase" title={formatWorkflowLabel(record.subStage)}>{formatWorkflowLabel(record.subStage) || "—"}</td>
                       <td className="px-3 py-2 border-r border-[#0C0C0C]/10 max-w-[120px] truncate uppercase text-[#0C0C0C]" title={record.agent || undefined}>{record.agent || "—"}</td>
                       <td className="px-3 py-2 border-r border-[#0C0C0C]/10 uppercase">{record.city || "—"}</td>
-                      <td className="px-3 py-2 border-r border-[#0C0C0C]/10"><div className="flex gap-1">{activeForms.length ? activeForms.map((form) => <span key={form} className="px-1.5 py-0.5 bg-[#B0740E]/15 border border-[#B0740E] text-[#6C1C1F] text-[9px] font-bold uppercase">{form}</span>) : <span className="text-[#9d9488]">—</span>}</div></td>
+                      <td className="px-3 py-2 border-r border-[#0C0C0C]/10">
+                        <div className="flex flex-col gap-1">
+                          {activeForms.length ? activeForms.map((form) => {
+                            const formDate = getFormDate(record.tmMatches, form);
+                            const formattedDate = formDate ? formatDateLong(formDate) : null;
+                            const relativeAge = formDate ? getRelativeAge(formDate) : null;
+                            return (
+                              <div key={form} className="flex flex-col gap-0.5">
+                                <span className="px-1.5 py-0.5 bg-[#B0740E]/15 border border-[#B0740E] text-[#6C1C1F] text-[9px] font-bold uppercase inline-block w-fit">{form}</span>
+                                {formattedDate && (
+                                  <div className="font-mono text-[8px] text-[#6d6658]">
+                                    {formattedDate} · {relativeAge}
+                                  </div>
+                                )}
+                                {!formattedDate && (
+                                  <div className="font-mono text-[8px] text-[#6d6658]">
+                                    Date not available
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }) : <span className="text-[#9d9488]">—</span>}
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-[#6d6658] uppercase">{record.journalNumber || "—"}</td>
                     </tr>
                   );

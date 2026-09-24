@@ -1,7 +1,7 @@
 import { listTrademarkPage, searchTm, STAGES, CITIES, VALID_TYPES, listAgents, formatWorkflowLabel } from "@/lib/api";
 import type { TrademarkRecord, TmSearchResult, TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
-import { formatDateShort } from "@/lib/utils";
+import { formatDateShort, formatDateLong, getRelativeAge, getFormDate } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
@@ -47,19 +47,36 @@ function TmCard({ result, onViewRecord }: {
         </div>
         {/* Still show TM sheet matches */}
         <div className="mt-2 flex flex-wrap gap-2 justify-center">
-          {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => (
-            <span
-              key={s}
-              className={`flex items-center gap-1 px-2 py-1 font-mono text-[10px] font-bold border-2 ${
-                tmMatches[s]
-                  ? "border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
-                  : "border-[#0C0C0C]/20 text-[#9d9488] bg-white"
-              }`}
-            >
-              {tmMatches[s] ? <CheckCircle2 className="w-3 h-3" /> : <MinusCircle className="w-3 h-3" />}
-              {s}
-            </span>
-          ))}
+          {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
+            const hasForm = tmMatches[s];
+            const formDate = getFormDate(tmMatches, s);
+            const formattedDate = formDate ? formatDateLong(formDate) : null;
+            const relativeAge = formDate ? getRelativeAge(formDate) : null;
+            return (
+              <div key={s} className="flex flex-col gap-0.5">
+                <span
+                  className={`flex items-center gap-1 px-2 py-1 font-mono text-[10px] font-bold border-2 ${
+                    hasForm
+                      ? "border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
+                      : "border-[#0C0C0C]/20 text-[#9d9488] bg-white"
+                  }`}
+                >
+                  {hasForm ? <CheckCircle2 className="w-3 h-3" /> : <MinusCircle className="w-3 h-3" />}
+                  {s}
+                </span>
+                {hasForm && formattedDate && (
+                  <div className="font-mono text-[8px] text-[#6d6658]">
+                    {formattedDate} · {relativeAge}
+                  </div>
+                )}
+                {hasForm && !formattedDate && (
+                  <div className="font-mono text-[8px] text-[#6d6658]">
+                    Date not available
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -134,19 +151,36 @@ function TmCard({ result, onViewRecord }: {
                 Document Status (TM Forms)
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => (
-                  <span
-                    key={s}
-                    className={`flex items-center gap-1 px-2.5 py-1 font-mono text-[10px] font-bold border-2 ${
-                      tmMatches[s]
-                        ? "border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
-                        : "border-[#0C0C0C]/20 text-[#9d9488] bg-[#F0E8D0]"
-                    }`}
-                  >
-                    {tmMatches[s] ? <CheckCircle2 className="w-3 h-3" /> : <MinusCircle className="w-3 h-3" />}
-                    {s}
-                  </span>
-                ))}
+                {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
+                  const hasForm = tmMatches[s];
+                  const formDate = getFormDate(tmMatches, s);
+                  const formattedDate = formDate ? formatDateLong(formDate) : null;
+                  const relativeAge = formDate ? getRelativeAge(formDate) : null;
+                  return (
+                    <div key={s} className="flex flex-col gap-0.5">
+                      <span
+                        className={`flex items-center gap-1 px-2.5 py-1 font-mono text-[10px] font-bold border-2 ${
+                          hasForm
+                            ? "border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
+                            : "border-[#0C0C0C]/20 text-[#9d9488] bg-[#F0E8D0]"
+                        }`}
+                      >
+                        {hasForm ? <CheckCircle2 className="w-3 h-3" /> : <MinusCircle className="w-3 h-3" />}
+                        {s}
+                      </span>
+                      {hasForm && formattedDate && (
+                        <div className="font-mono text-[8px] text-[#6d6658]">
+                          {formattedDate} · {relativeAge}
+                        </div>
+                      )}
+                      {hasForm && !formattedDate && (
+                        <div className="font-mono text-[8px] text-[#6d6658]">
+                          Date not available
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -463,16 +497,28 @@ export function SearchPage() {
                           <div className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#6d6658] mb-1">
                             TM FORMS
                           </div>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1.5">
                             {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
                               const hasForm = tm[s.toLowerCase() as keyof typeof tm] === "YES";
+                              const formDate = getFormDate(tm.tmMatches, s);
+                              const formattedDate = formDate ? formatDateLong(formDate) : null;
+                              const relativeAge = formDate ? getRelativeAge(formDate) : null;
                               return hasForm ? (
-                                <span
-                                  key={s}
-                                  className="flex items-center gap-1 px-2 py-0.5 font-mono text-[9px] font-bold border-2 border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
-                                >
-                                  <CheckCircle2 className="w-2.5 h-2.5" /> {s}
-                                </span>
+                                <div key={s} className="flex flex-col gap-0.5">
+                                  <span className="flex items-center gap-1 px-2 py-0.5 font-mono text-[9px] font-bold border-2 border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10">
+                                    <CheckCircle2 className="w-2.5 h-2.5" /> {s}
+                                  </span>
+                                  {formattedDate && (
+                                    <div className="font-mono text-[8px] text-[#6d6658]">
+                                      {formattedDate} · {relativeAge}
+                                    </div>
+                                  )}
+                                  {!formattedDate && (
+                                    <div className="font-mono text-[8px] text-[#6d6658]">
+                                      Date not available
+                                    </div>
+                                  )}
+                                </div>
                               ) : null;
                             })}
                             {![tm.tm5, tm.tm6, tm.tm11, tm.tm16, tm.tm56].some(v => v === "YES") && (

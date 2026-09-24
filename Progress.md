@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 24 September 2026 (Batch 5: Search Page + Search Results)**
+**Last updated: 24 September 2026 (Batch 6A: TM Form Document Status Indicator)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -473,6 +473,74 @@ This file is the single source of truth for project status.
 - 5 Stage Document API test failures exist in baseline (unrelated to Batch 5)
 - Failures: mock structure issues in `mapStageDocRow` and `listStageDocuments`
 - These were present before Batch 5 and remain unchanged
+
+## 2026-09-24 — Batch 6A: TM Form Document Status Indicator
+
+### Scope
+- Add document date and relative age display to TM Form status indicators
+- Improve visual information for TM5, TM6, TM11, TM16, TM56 form matches
+- Compact UI fitting existing BrandEx / Neo-Brutalism visual language
+- No database schema changes, no workflow business rule changes
+
+### Files Changed
+- `artifacts/tm-tracker/src/lib/api.ts` — Extended `TmMatches` interface to include form dates; updated `mergeRegistryMatches` to fetch `form_date` from `form_registry`
+- `artifacts/tm-tracker/src/lib/utils.ts` — Added `formatDateLong` (DD-MMM-YYYY), `getRelativeAge` (calendar-based calculation), and `getFormDate` helper
+- `artifacts/tm-tracker/src/lib/utils.test.ts` — Added 23 tests for date formatting and relative age calculation
+- `artifacts/tm-tracker/src/pages/RecordView.tsx` — Updated `TmFormBadge` component to show date and relative age
+- `artifacts/tm-tracker/src/pages/SearchPage.tsx` — Updated TM form display in search results and TM number search with date/age
+- `artifacts/tm-tracker/src/pages/DatabasePage.tsx` — Updated TM form columns in database table with date/age
+
+### Implementation Summary
+
+**API Changes**:
+- Extended `TmMatches` interface with optional date fields: `TM5_date`, `TM6_date`, `TM11_date`, `TM16_date`, `TM56_date`
+- Updated `mergeRegistryMatches` to fetch `form_date` from `form_registry` table in addition to `form_type`
+- Dates are only populated when a matching form registry record exists with a valid date
+- Updated `searchTm` to apply `mergeRegistryMatches` for consistent date availability
+
+**Date Utilities**:
+- `formatDateLong`: Formats dates to DD-MMM-YYYY (e.g., "03-Jan-2026")
+- `getRelativeAge`: Calculates calendar-based relative age (e.g., "3 days ago", "1 month ago", "1 year 2 months ago")
+  - Handles today, future dates safely
+  - Avoids awkward formats like "0 months X days ago" or "X months 0 days ago"
+  - Uses proper singular/plural for day/month/year
+- `getFormDate`: Helper to extract form date from TmMatches object
+
+**UI Updates**:
+- **RecordView**: `TmFormBadge` component shows form name with checkmark, followed by formatted date and relative age on next line. Shows "Date not available" when form exists but no date.
+- **SearchPage**: Both general search results and TM number search cards show form indicators with date/age below the form badge.
+- **DatabasePage**: TM form column shows each form with date/age below the form name in compact vertical layout.
+
+**Print Compatibility**:
+- Existing print styles in `index.css` handle the new date/age display appropriately
+- Compact font sizes (8px-9px) for date/age text in print
+- No new heavy styling, shadows, or black-heavy elements added
+
+**Data Integrity**:
+- No database schema changes
+- No modification to TM form meaning, import behavior, or workflow rules
+- Only uses existing `form_date` from `form_registry` table
+- Never fabricates dates or uses today's date as substitute
+- Preserves existing null/empty behavior when no date exists
+
+### Tests
+- Added 23 new tests in `utils.test.ts` covering:
+  - Date formatting (valid dates, ISO strings, Date objects, null/undefined handling)
+  - Relative age calculation (today, future dates, 3 days, 1 month, 2 months, 1 month + days, 1 year, 2 years, 1 year 2 months)
+  - Singular/plural correctness and avoidance of awkward formats
+  - `getFormDate` helper function
+- All 23 new tests passing
+- 5 pre-existing Stage Document API test failures remain (unrelated to Batch 6A)
+
+### Typecheck & Build
+- `pnpm typecheck` → 0 errors
+- `pnpm build` → production bundle compiled successfully (Vite v7.3.6, 2143 modules, 45.94s)
+
+### Verification
+- All existing TM Form behavior preserved
+- No database schema changes required
+- Print output remains compact and professional
+- Responsive layout maintained across desktop/tablet/mobile
 
 ## 2026-09-22 — Batch 9: Stage-wise Documents - DB + API Foundation
 

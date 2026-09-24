@@ -88,6 +88,11 @@ export interface TmMatches {
   TM11: boolean;
   TM16: boolean;
   TM56: boolean;
+  TM5_date?: string;
+  TM6_date?: string;
+  TM11_date?: string;
+  TM16_date?: string;
+  TM56_date?: string;
 }
 
 export interface JournalRecord {
@@ -414,6 +419,11 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     TM11: row.tm11,
     TM16: row.tm16,
     TM56: row.tm56,
+    TM5_date: undefined,
+    TM6_date: undefined,
+    TM11_date: undefined,
+    TM16_date: undefined,
+    TM56_date: undefined,
   };
   return {
     id: row.id,
@@ -486,16 +496,19 @@ async function mergeRegistryMatches(records: TrademarkRecord[]): Promise<Tradema
 
   const { data, error } = await supabase
     .from("form_registry")
-    .select("tm_number_norm, form_type")
+    .select("tm_number_norm, form_type, form_date")
     .in("tm_number_norm", numbers);
   if (error) return records;
 
-  const byNumber = new Map<string, Set<string>>();
+  const byNumber = new Map<string, Map<string, string>>();
   const rows = Array.isArray(data) ? data : [];
   for (const row of rows) {
     const key = String(row.tm_number_norm ?? "");
-    if (!byNumber.has(key)) byNumber.set(key, new Set());
-    byNumber.get(key)?.add(String(row.form_type ?? "").toUpperCase());
+    const formType = String(row.form_type ?? "").toUpperCase();
+    if (!byNumber.has(key)) byNumber.set(key, new Map());
+    if (row.form_date) {
+      byNumber.get(key)?.set(formType, String(row.form_date));
+    }
   }
 
   return records.map((record) => {
@@ -507,6 +520,11 @@ async function mergeRegistryMatches(records: TrademarkRecord[]): Promise<Tradema
       TM11: Boolean(record.tmMatches?.TM11 || found.has("TM11")),
       TM16: Boolean(record.tmMatches?.TM16 || found.has("TM16")),
       TM56: Boolean(record.tmMatches?.TM56 || found.has("TM56")),
+      TM5_date: found.get("TM5"),
+      TM6_date: found.get("TM6"),
+      TM11_date: found.get("TM11"),
+      TM16_date: found.get("TM16"),
+      TM56_date: found.get("TM56"),
     };
     return {
       ...record,
@@ -703,9 +721,10 @@ export async function searchTm(tmNo: string): Promise<TmSearchResult> {
     .order("updated_at", { ascending: false });
   throwIfError(error);
   const records = await mapRows((data ?? []) as SupabaseTrademarkRow[]);
-  const first = records[0];
+  const recordsWithDates = await mergeRegistryMatches(records);
+  const first = recordsWithDates[0];
   return {
-    records,
+    records: recordsWithDates,
     tmMatches: first?.tmMatches ?? { TM5: false, TM6: false, TM11: false, TM16: false, TM56: false },
     journal: first?.journal ?? null,
   };

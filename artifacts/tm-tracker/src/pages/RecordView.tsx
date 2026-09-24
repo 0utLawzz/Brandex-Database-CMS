@@ -1,7 +1,7 @@
 import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole } from "@/lib/api";
 import type { TrademarkRecord, TmMatches } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
-import { formatDateShort, formatDate } from "@/lib/utils";
+import { formatDateShort, formatDate, formatDateLong, getRelativeAge, getFormDate } from "@/lib/utils";
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import {
@@ -35,18 +35,34 @@ function Field({ label, value, wide }: { label: string; value?: string | null; w
   );
 }
 
-function TmFormBadge({ label, active }: { label: string; active: boolean }) {
+function TmFormBadge({ label, active, tmMatches }: { label: string; active: boolean; tmMatches?: Record<string, any> }) {
+  const formDate = getFormDate(tmMatches, label);
+  const formattedDate = formDate ? formatDateLong(formDate) : null;
+  const relativeAge = formDate ? getRelativeAge(formDate) : null;
+
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2.5 py-1.5 print:px-1.5 print:py-0.5 font-mono text-[10px] print:text-[8px] font-bold border-2 ${
-        active
-          ? "border-[#0A6B52] text-[#0A6B52] bg-[#D8F2E8] shadow-[2px_2px_0_#0A6B52] print:shadow-none"
-          : "border-[#0C0C0C]/35 text-[#6d6658] bg-[#FFF9F0]"
-      }`}
-    >
-      {active ? <CheckCircle2 className="w-4 h-4 print:w-3 print:h-3" /> : <MinusCircle className="w-4 h-4 print:w-3 print:h-3" />}
-      {label}
-    </span>
+    <div className="flex flex-col gap-0.5">
+      <span
+        className={`inline-flex items-center gap-1 px-2.5 py-1.5 print:px-1.5 print:py-0.5 font-mono text-[10px] print:text-[8px] font-bold border-2 ${
+          active
+            ? "border-[#0A6B52] text-[#0A6B52] bg-[#D8F2E8] shadow-[2px_2px_0_#0A6B52] print:shadow-none"
+            : "border-[#0C0C0C]/35 text-[#6d6658] bg-[#FFF9F0]"
+        }`}
+      >
+        {active ? <CheckCircle2 className="w-4 h-4 print:w-3 print:h-3" /> : <MinusCircle className="w-4 h-4 print:w-3 print:h-3" />}
+        {label}
+      </span>
+      {active && formattedDate && (
+        <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658] pl-1">
+          {formattedDate} · {relativeAge}
+        </div>
+      )}
+      {active && !formattedDate && (
+        <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658] pl-1">
+          Date not available
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -354,11 +370,11 @@ export function RecordView() {
                 </span>
               </div>
               <div className="p-4 print:p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 print:gap-1.5">
-                <TmFormBadge label="TM5" active={matches.TM5} />
-                <TmFormBadge label="TM6" active={matches.TM6} />
-                <TmFormBadge label="TM11" active={matches.TM11} />
-                <TmFormBadge label="TM16" active={matches.TM16} />
-                <TmFormBadge label="TM56" active={matches.TM56} />
+                <TmFormBadge label="TM5" active={matches.TM5} tmMatches={matches} />
+                <TmFormBadge label="TM6" active={matches.TM6} tmMatches={matches} />
+                <TmFormBadge label="TM11" active={matches.TM11} tmMatches={matches} />
+                <TmFormBadge label="TM16" active={matches.TM16} tmMatches={matches} />
+                <TmFormBadge label="TM56" active={matches.TM56} tmMatches={matches} />
               </div>
             </div>
 
