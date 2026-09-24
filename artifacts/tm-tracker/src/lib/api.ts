@@ -553,25 +553,24 @@ export function normalizeBusinessUpperRequired(val: string | null | undefined, f
 /**
  * Stage document section visibility rule:
  * Show if:
- * A. The stage is the current stage or an earlier stage
+ * A. The stage is the current stage
  * OR
- * B. That stage already contains existing documents (docCount > 0)
+ * B. That stage already contains existing documents (docCount > 0) - preserves historical documents
+ * Earlier stages without documents are hidden to reduce clutter
  */
 export function isStageDocumentSectionVisible(
   sectionStage: string,
   currentStage?: string,
   docCount = 0
 ): boolean {
+  // Always show if it has documents (historical preservation)
   if (docCount > 0) return true;
-  const stageOrder: Record<string, number> = {
-    "STAGE 1": 1,
-    "STAGE 2": 2,
-    "STAGE 3": 3,
-    "STAGE 4": 4,
-  };
-  const currentNum = stageOrder[(currentStage || "STAGE 1").toUpperCase()] ?? 1;
-  const sectionNum = stageOrder[sectionStage.toUpperCase()] ?? 1;
-  return sectionNum <= currentNum;
+  
+  // Always show current stage
+  if (sectionStage.toUpperCase() === currentStage?.toUpperCase()) return true;
+  
+  // Hide empty future or earlier stages
+  return false;
 }
 
 export function inputToRow(input: TrademarkInput) {
@@ -1672,6 +1671,32 @@ export async function uploadStageDocument(
   if (!STAGE_DOC_ALLOWED_MIME.has(file.type)) {
     throw new Error(
       `File type "${file.type}" is not allowed. Permitted types: PDF, Word, Excel, plain text, PNG, JPEG, GIF, WebP.`,
+    );
+  }
+
+  // Validate stage restriction - can only upload to current stage
+  const { data: trademark } = await supabase
+    .from("trademarks")
+    .select("status")
+    .eq("id", input.trademarkId)
+    .single();
+  
+  if (!trademark) {
+    throw new Error("Trademark record not found.");
+  }
+
+  const currentStage = trademark.status;
+  const requestedStage = input.stage.toUpperCase();
+
+  // STOPPED is terminal - no document uploads allowed
+  if (currentStage === "STOPPED") {
+    throw new Error("Document uploads are not allowed for STOPPED cases.");
+  }
+
+  // Validate that requested stage matches current stage
+  if (requestedStage !== currentStage.toUpperCase()) {
+    throw new Error(
+      `You can only upload documents for the current workflow stage (${currentStage}). Cannot upload to ${input.stage}.`
     );
   }
 

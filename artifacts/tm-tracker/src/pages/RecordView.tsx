@@ -208,37 +208,41 @@ export function RecordView() {
                   <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
                     Client Information
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 print:gap-x-2 print:gap-y-0.5">
-                    {record.clientName && (
-                      <div className="col-span-2">
-                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Name</div>
-                        <div className="font-sans font-bold text-sm print:text-[10px] text-[#0C0C0C] break-words">{record.clientName}</div>
-                      </div>
-                    )}
-                    {record.clientCode && (
-                      <div>
-                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Code</div>
-                        <div className="font-mono font-bold text-xs print:text-[9px] text-[#6C1C1F]">{record.clientCode}</div>
-                      </div>
-                    )}
-                    {record.caseNumber && (
-                      <div>
-                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case No</div>
-                        <div className="font-mono font-bold text-xs print:text-[9px] text-[#0A6B52]">{record.caseNumber}</div>
-                      </div>
-                    )}
+                  <div className="space-y-1.5 print:space-y-1">
+                    {/* Type as prominent H1-level identifier */}
                     {record.type && (
                       <div>
-                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Type</div>
-                        <div className="font-serif font-bold text-base print:text-xs text-[#6C1C1F]">{record.type}</div>
+                        <div className="font-serif text-2xl sm:text-3xl print:text-base font-bold uppercase tracking-wide text-[#6C1C1F] leading-none">
+                          {record.type}
+                        </div>
                       </div>
                     )}
-                    {record.caseType && (
-                      <div>
-                        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case Type</div>
-                        <div className="font-mono font-bold text-[10px] print:text-[8px] text-[#0C0C0C]">{record.caseType}</div>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 print:gap-x-2 print:gap-y-0.5">
+                      {record.clientCode && (
+                        <div>
+                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Code</div>
+                          <div className="font-mono font-bold text-sm print:text-[9px] text-[#0C0C0C]">{record.clientCode}</div>
+                        </div>
+                      )}
+                      {record.caseNumber && (
+                        <div>
+                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case No</div>
+                          <div className="font-mono font-bold text-sm print:text-[9px] text-[#0A6B52]">{record.caseNumber}</div>
+                        </div>
+                      )}
+                      {record.caseType && (
+                        <div className="col-span-2">
+                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case Type</div>
+                          <div className="font-mono font-bold text-xs print:text-[8px] text-[#0C0C0C]">{record.caseType}</div>
+                        </div>
+                      )}
+                      {record.clientName && (
+                        <div className="col-span-2">
+                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Name</div>
+                          <div className="font-sans font-bold text-sm print:text-[10px] text-[#0C0C0C] break-words">{record.clientName}</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -301,15 +305,17 @@ export function RecordView() {
                 </div>
               </div>
               <div className="p-4 print:p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:gap-1.5">
-                <Field label="Client Code" value={record.clientCode} />
-                <Field label="Case Number" value={record.caseNumber} />
+                {/* IMPORTANT / PRIMARY fields */}
                 <Field label="Filing Date" value={record.date ? formatDateShort(record.date) : undefined} />
-                <Field label="Case Type" value={record.caseType} />
                 <Field label="TM / CPR Number" value={record.tmCprNo} />
                 <Field label="Class" value={record.appClass} />
-                <Field label="Client Name" value={record.clientName} wide />
-                {record.city && <Field label="City / Agent City" value={record.city} />}
-                {record.agent && <Field label="Assigned Agent" value={record.agent} />}
+                <Field label="City / Agent City" value={record.city} />
+                <Field label="Assigned Agent" value={record.agent} />
+                <Field label="Applicant Name" value={record.clientName} wide />
+                {record.caseType && <Field label="Case Type" value={record.caseType} />}
+                {/* Secondary fields - compact */}
+                <Field label="Client Code" value={record.clientCode} />
+                <Field label="Case Number" value={record.caseNumber} />
               </div>
             </div>
 
@@ -330,7 +336,7 @@ export function RecordView() {
               workflowHistory={workflowHistory}
             />
 
-            {/* 4. Stage Documents */}
+            {/* 4. Case Documents */}
             <StageDocumentsSection
               trademarkId={record.id}
               currentStage={record.stage}

@@ -1,6 +1,6 @@
 # Brandex Datasheet Progress
 
-**Last updated: 23 September 2026 (Post-V2.0.1 Dashboard Redesign)**
+**Last updated: 24 September 2026 (Batch 2: Record View / Application Detail + Case Documents)**
 
 This file is the single source of truth for project status.  
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
@@ -258,6 +258,47 @@ This file is the single source of truth for project status.
 - [x] Updated `AgentsPage.tsx` detail modal: added "CASE ASSIGNMENT" section with Assigned/Accepted/Total case tiles; renamed "TOTAL PAID" to "TOTAL RECEIVED"; relabelled "BALANCE DUE" to "BALANCE"; added section headers distinguishing trademark-sourced stats from fee-sourced stats
 - [x] Counts load on-demand when agent modal opens — not prefetched for every table row
 - [x] Verified: `pnpm test` 13/13 passed, `pnpm typecheck` 0 errors, `pnpm build` passed (11.47s)
+
+## 2026-09-24 — Batch 1: Workflow Rules Audit & Business Foundation
+
+- [x] Created canonical `docs/WORKFLOW_BUSINESS_RULES.md` as authoritative source of truth for workflow implementation
+- [x] Created `docs/WORKFLOW_GAP_MATRIX.md` documenting current implementation gaps
+- [x] Updated workflow rules in `api.ts`:
+  - Stage 1: Examination is optional (Filing → Acknowledgement OR Filing → Examination → Acknowledgement)
+  - Stage 2: Agent assignment no longer requires Stage 2 payment
+  - Stage 4: Corrected sequence to CER Acknowledge → CER Received → CER Dispatch
+  - STOPPED: Added mandatory reason requirement, stored in notes with timestamp
+  - General forward-only workflow enforced for all roles including admin
+- [x] Updated UI components to remove Stage 2 payment blocks from agent assignment:
+  - `CaseWorkflowSection.tsx`: Removed agent assignment payment gate, added STOPPED reason handling
+  - `RecordModal.tsx`: Removed Stage 2 payment block from general updates
+  - `AssignedPage.tsx`: Removed agent assignment payment gate, updated messaging
+- [x] Added workflow validation tests (27 passing) covering all stage transitions, payment gates, and STOPPED behavior
+- [x] Verified: `pnpm test` (117 passed, 2 pre-existing failures unrelated to workflow), `pnpm typecheck` (0 errors), `pnpm build` (passed)
+- [x] Committed `b7b21fc` and pushed to origin/main
+
+## 2026-09-24 — Batch 2: Record View / Application Detail + Case Documents
+
+- [x] Renamed "Stage Documents" to "Case Documents" throughout the application
+- [x] Removed unnecessary "Available Sub-stages" display from document section
+- [x] Enforced document stage rules at API level:
+  - Records can only upload documents for their current workflow stage
+  - STOPPED records cannot upload documents
+  - Direct API calls cannot bypass the stage restriction
+- [x] Updated `isStageDocumentSectionVisible()` to show only current stage and stages with existing documents (historical preservation)
+- [x] Updated upload modal to use read-only stage display (current stage only) instead of dropdown
+- [x] Restricted upload button to current stage only in stage cards
+- [x] Added image preview functionality with click-to-enlarge modal
+- [x] PDF files continue to use existing "View" action (open in new tab)
+- [x] Improved Record View header hierarchy:
+  - Type displayed as prominent H1-level identifier in Client Information section
+  - Client Code and Case No remain visible with proper visual weight
+- [x] Reorganized Application Details with better visual hierarchy:
+  - IMPORTANT/PRIMARY fields: Filing Date, TM/CPR Number, Class, City/Agent City, Assigned Agent, Applicant Name
+  - Secondary fields: Client Code, Case Number, Case Type
+- [x] Added document stage restriction tests (3 passing) in `api.test.ts`
+- [x] Verified: `pnpm test` (117 passed, 5 pre-existing stage document API mock failures unrelated to Batch 2), `pnpm typecheck` (0 errors), `pnpm build` (passed, 31.54s)
+- [x] All Batch 1 workflow rules preserved and respected
 
 ## 2026-09-22 — Batch 9: Stage-wise Documents - DB + API Foundation
 

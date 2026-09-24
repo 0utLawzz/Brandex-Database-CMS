@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FolderArchive, Upload, ExternalLink, X, Loader2,
-  CheckCircle2, AlertCircle, Plus,
+  CheckCircle2, AlertCircle, Plus, ZoomIn,
 } from "lucide-react";
 import {
   listStageDocuments,
@@ -54,6 +54,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [sectionSuccess, setSectionSuccess] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,7 +150,8 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-    const stageToUse = defaultStage || currentStage || "STAGE 1";
+    // Only allow uploading to current stage
+    const stageToUse = currentStage || "STAGE 1";
     // Normalize stage matching STAGE_DOCUMENT_WORKFLOW
     const match = STAGE_DOCUMENT_WORKFLOW.find(
       (s) => s.stage === stageToUse.toUpperCase() || s.label.toUpperCase() === stageToUse.toUpperCase(),
@@ -206,7 +208,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
       <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
         <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
           <FolderArchive className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
-          <span>Stage Documents</span>
+          <span>Case Documents</span>
           <span className="font-mono text-[10px] print:text-[8px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C] ml-1">
             {documents.length} {documents.length === 1 ? "FILE" : "FILES"}
           </span>
@@ -246,20 +248,20 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
 
       {isLoading && (
         <div className="p-4 font-mono text-xs text-[#6d6658] animate-pulse text-center">
-          LOADING STAGE DOCUMENTS…
+          LOADING CASE DOCUMENTS…
         </div>
       )}
 
       {loadError && (
         <div className="p-3 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs">
-          Failed to load stage documents.
+          Failed to load case documents.
         </div>
       )}
 
       {/* Print-only fallback when no documents attached across any stage */}
       {documents.length === 0 && (
         <div className="hidden print:block p-2 border border-dashed border-[#0C0C0C]/30 bg-white font-mono text-[9px] text-[#6d6658] italic text-center">
-          No stage documents attached to this record.
+          No case documents attached to this record.
         </div>
       )}
 
@@ -302,33 +304,16 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                   </span>
                 </div>
 
-                {canUpload && (
+                {canUpload && stageDef.stage === currentStage && (
                   <button
                     type="button"
                     onClick={() => openModal(stageDef.stage)}
                     className="print:hidden flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-2 py-1 border border-[#0C0C0C] bg-[#F0E8D0] hover:bg-[#0C0C0C] hover:text-white transition-colors"
                   >
                     <Plus className="w-3 h-3" />
-                    <span>Upload to {stageDef.label}</span>
+                    <span>Upload Document</span>
                   </button>
                 )}
-              </div>
-
-              {/* Available Sub-stages listing — hidden on print */}
-              <div className="print:hidden">
-                <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#6d6658] mb-1.5">
-                  Available Sub-stages:
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {stageDef.subStages.map((sub) => (
-                    <span
-                      key={sub}
-                      className="px-2 py-0.5 font-mono text-[10px] font-bold border border-[#0C0C0C]/30 bg-[#F0E8D0] text-[#0C0C0C]"
-                    >
-                      {sub}
-                    </span>
-                  ))}
-                </div>
               </div>
 
               {/* Documents List */}
@@ -372,15 +357,27 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
 
                       <div className="shrink-0 flex items-center gap-2 print:hidden">
                         {doc.signedUrl ? (
-                          <a
-                            href={doc.signedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase text-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:bg-[#0C0C0C] hover:text-white transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            <span>View</span>
-                          </a>
+                          <>
+                            {doc.mimeType.startsWith("image/") && (
+                              <button
+                                type="button"
+                                onClick={() => setImagePreview({ url: doc.signedUrl!, title: doc.title || doc.fileName })}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase text-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                              >
+                                <ZoomIn className="w-3.5 h-3.5" />
+                                <span>Preview</span>
+                              </button>
+                            )}
+                            <a
+                              href={doc.signedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase text-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </a>
+                          </>
                         ) : (
                           <span className="font-mono text-[10px] text-[#9d9488] border border-dashed border-[#9d9488] px-2 py-1">
                             URL Unavailable
@@ -406,7 +403,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               <div className="flex items-center gap-2">
                 <Upload className="w-4 h-4 text-[#6C1C1F]" />
                 <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C]">
-                  Upload Stage Document
+                  Upload Case Document
                 </div>
               </div>
               <button
@@ -455,26 +452,17 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
             ) : (
               /* Upload Form */
               <form onSubmit={handleUploadSubmit} className="space-y-3.5">
-                {/* Stage Selection */}
+                {/* Stage Display (read-only - current stage only) */}
                 <div>
                   <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
-                    Workflow Stage *
+                    Workflow Stage
                   </label>
-                  <select
-                    value={targetStage}
-                    onChange={(e) => {
-                      setTargetStage(e.target.value);
-                      setTargetSubStage("");
-                    }}
-                    disabled={uploadMutation.isPending}
-                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
-                  >
-                    {STAGE_DOCUMENT_WORKFLOW.map((s) => (
-                      <option key={s.stage} value={s.stage}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-[#F0E8D0] font-mono text-xs font-bold text-[#0C0C0C] flex items-center">
+                    {activeStageWorkflow?.label || targetStage}
+                  </div>
+                  <div className="mt-1 font-mono text-[9px] text-[#6d6658]">
+                    Documents can only be uploaded to the current workflow stage.
+                  </div>
                 </div>
 
                 {/* Sub-stage Selection */}
@@ -562,6 +550,33 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {imagePreview && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setImagePreview(null)}>
+          <div className="max-w-4xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between bg-[#F0E8D0] border-2 border-[#0C0C0C] p-3">
+              <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C] truncate flex-1 mr-4">
+                {imagePreview.title}
+              </div>
+              <button
+                type="button"
+                onClick={() => setImagePreview(null)}
+                className="p-1 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 bg-white overflow-auto flex items-center justify-center p-4">
+              <img
+                src={imagePreview.url}
+                alt={imagePreview.title}
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
           </div>
         </div>
       )}
