@@ -48,6 +48,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const [targetStage, setTargetStage] = useState<string>(record.stage || "STAGE 1");
   const [targetSubStage, setTargetSubStage] = useState<string>(record.subStage || "");
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [stoppedReason, setStoppedReason] = useState<string>("");
 
   // Agent form state
   const [selectedAgent, setSelectedAgent] = useState<string>(record.agent || "");
@@ -65,7 +66,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   // Status Transition mutation
   const statusMutation = useMutation({
     mutationFn: async () => {
-      await updateTrademarkStatus(record.id, targetStage, targetSubStage || null);
+      await updateTrademarkStatus(record.id, targetStage, targetSubStage || null, targetStage === "STOPPED" ? stoppedReason : undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
@@ -97,6 +98,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const openStatusModal = () => {
     setTargetStage(record.stage || "STAGE 1");
     setTargetSubStage(record.subStage || "");
+    setStoppedReason("");
     setStatusError(null);
     setStatusModalOpen(true);
   };
@@ -124,9 +126,16 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
     return null;
   };
 
+  const getStoppedWarning = (): string | null => {
+    if (targetStage === "STOPPED" && !stoppedReason.trim()) {
+      return "STOPPED requires a reason. Please explain why this case is being stopped.";
+    }
+    return null;
+  };
+
   const paymentGateWarning = getPaymentGateWarning(targetStage);
+  const stoppedWarning = getStoppedWarning();
   const targetStageRequiresPayment = Boolean(paymentGateWarning);
-  const agentAssignmentBlocked = record.stage === "STAGE 2" && !record.stage1Paid;
   const validTargetStages = STAGES.filter((s) => isValidStageTransition(record.stage, s));
   const availableSubStages = STATUS_WORKFLOW[targetStage] ?? [];
 
@@ -311,12 +320,23 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
             )}
 
+            {stoppedWarning && (
+              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{stoppedWarning}</span>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 setStatusError(null);
                 if (paymentGateWarning) {
                   setStatusError(paymentGateWarning);
+                  return;
+                }
+                if (stoppedWarning) {
+                  setStatusError(stoppedWarning);
                   return;
                 }
                 statusMutation.mutate();
@@ -354,7 +374,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 <select
                   value={targetSubStage}
                   onChange={(e) => setTargetSubStage(e.target.value)}
-                  disabled={statusMutation.isPending}
+                  disabled={statusMutation.isPending || targetStage === "STOPPED"}
                   className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
                 >
                   <option value="">-- None / General Stage Status --</option>
@@ -365,6 +385,22 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   ))}
                 </select>
               </div>
+
+              {targetStage === "STOPPED" && (
+                <div>
+                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                    STOPPED Reason *
+                  </label>
+                  <input
+                    type="text"
+                    value={stoppedReason}
+                    onChange={(e) => setStoppedReason(e.target.value)}
+                    disabled={statusMutation.isPending}
+                    placeholder="Enter reason for stopping this case..."
+                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#0C0C0C]/20">
                 <button
@@ -423,21 +459,10 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
             )}
 
-            {agentAssignmentBlocked && (
-              <div className="p-2.5 border-2 border-[#B0740E] bg-[#FFF0D0] text-[#6C1C1F] font-mono text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Stage 2 payment is required before assigning an agent.</span>
-              </div>
-            )}
-
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 setAgentError(null);
-                if (agentAssignmentBlocked) {
-                  setAgentError("Stage 2 payment is required before proceeding.");
-                  return;
-                }
                 if (!selectedAgent.trim()) {
                   setAgentError("Please select or enter an agent name.");
                   return;
@@ -460,7 +485,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                       setSelectedCity(match.city);
                     }
                   }}
-                  disabled={agentMutation.isPending || agentAssignmentBlocked}
+                  disabled={agentMutation.isPending}
                   className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
                 >
                   <option value="">-- Select Agent from Master List --</option>
@@ -479,7 +504,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
-                  disabled={agentMutation.isPending || agentAssignmentBlocked}
+                  disabled={agentMutation.isPending}
                   className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
                 >
                   {CITIES.map((c) => (
@@ -501,7 +526,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 </button>
                 <button
                   type="submit"
-                  disabled={agentAssignmentBlocked || !selectedAgent.trim() || agentMutation.isPending}
+                  disabled={!selectedAgent.trim() || agentMutation.isPending}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 transition-all"
                 >
                   {agentMutation.isPending ? (
@@ -549,7 +574,7 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
           <span>Stage Payments</span>
         </div>
         <span className="font-mono text-[9px] print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-[1px_1px_0_#B0740E] print:shadow-none">
-          MANUAL — NOT VERIFIED
+          SOURCE: Brandex-Ledger
         </span>
       </div>
 

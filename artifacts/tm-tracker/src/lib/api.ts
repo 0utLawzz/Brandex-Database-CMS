@@ -216,10 +216,10 @@ export const STAGES = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4", "STOPPED"] as
 export type StageType = typeof STAGES[number];
 
 export const STATUS_WORKFLOW: Record<string, string[]> = {
-  "STAGE 1": ["Filing", "Acknowledgment", "Examination"],
+  "STAGE 1": ["Filing", "Examination", "Acknowledgment"],
   "STAGE 2": ["Assigned", "Accepted", "Hearing"],
   "STAGE 3": ["D-Note Submitted", "D-Note Received", "OPPO: Filed", "OPPO: Received", "OPPO: Withdrawn", "Published"],
-  "STAGE 4": ["CER Dispatch", "CER Received", "CER Acknowledge"],
+  "STAGE 4": ["CER Acknowledge", "CER Received", "CER Dispatch"],
   "STOPPED": ["Case Stopped"],
 };
 
@@ -273,7 +273,7 @@ export const STAGE_DOCUMENT_WORKFLOW: StageDocumentDefinition[] = [
   {
     stage: "STAGE 1",
     label: "Stage 1",
-    subStages: ["Filing", "Acknowledgment", "Examination"],
+    subStages: ["Filing", "Examination", "Acknowledgment"],
   },
   {
     stage: "STAGE 2",
@@ -296,9 +296,9 @@ export const STAGE_DOCUMENT_WORKFLOW: StageDocumentDefinition[] = [
     stage: "STAGE 4",
     label: "Stage 4",
     subStages: [
-      "CER Dispatch",
-      "CER Received",
       "CER Acknowledge",
+      "CER Received",
+      "CER Dispatch",
     ],
   },
 ];
@@ -848,7 +848,7 @@ export async function createTrademark(input: TrademarkInput): Promise<{ id: stri
 
 /**
  * Assigns an agent to a Stage 2 Assigned trademark.
- * Requires stage2_paid = true or stage1_paid = true.
+ * Agent assignment is part of Stage 2 workflow and does NOT require Stage 2 payment.
  * Reuses existing agent string field and agents master profiles.
  */
 export async function assignStage2Agent(
@@ -859,15 +859,6 @@ export async function assignStage2Agent(
   ensureConfigured();
   if (!agentName || !agentName.trim()) {
     throw new Error("Agent name is required.");
-  }
-  const { data, error: fetchErr } = await supabase
-    .from("trademarks")
-    .select("stage1_paid, stage2_paid, status, sub_status")
-    .eq("id", id)
-    .single();
-  throwIfError(fetchErr);
-  if (!data?.stage1_paid) {
-    throw new StagePaymentRequiredError("Stage 1 payment is required before proceeding in Stage 2.");
   }
   const patch: Record<string, string> = {
     agent: agentName.trim().toUpperCase(),
@@ -886,11 +877,13 @@ export async function assignStage2Agent(
  * Updates a trademark's stage and sub-stage directly.
  * Enforces strict forward-only workflow and payment gates.
  * Normalizes user-facing subStage values to database values.
+ * Requires STOPPED reason when entering STOPPED state.
  */
 export async function updateTrademarkStatus(
   id: string,
   stage: string,
   subStage?: string | null,
+  stoppedReason?: string,
 ): Promise<void> {
   ensureConfigured();
 
@@ -911,9 +904,14 @@ export async function updateTrademarkStatus(
     }
   }
 
+  // STOPPED requires reason
+  if (stage === "STOPPED" && !stoppedReason?.trim()) {
+    throw new Error("STOPPED requires a reason. Please provide a reason for stopping this case.");
+  }
+
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
-    .select("status, stage1_paid, stage2_paid, stage3_paid, stage4_paid")
+    .select("status, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes")
     .eq("id", id)
     .single();
   throwIfError(fetchErr);
@@ -926,18 +924,30 @@ export async function updateTrademarkStatus(
   }
 
   const canonicalSubStage = subStage ? normalizeWorkflowValue(subStage) : null;
+  const updateData: Record<string, any> = {
+    status: stage,
+    sub_status: canonicalSubStage,
+  };
+
+  // If entering STOPPED, append reason to notes
+  if (stage === "STOPPED" && stoppedReason?.trim()) {
+    const existingNotes = current?.notes || "";
+    const timestamp = new Date().toISOString();
+    updateData.notes = existingNotes 
+      ? `${existingNotes}\n\nSTOPPED: ${stoppedReason} (${timestamp})`
+      : `STOPPED: ${stoppedReason} (${timestamp})`;
+  }
+
   const { error } = await supabase
     .from("trademarks")
-    .update({
-      status: stage,
-      sub_status: canonicalSubStage,
-    })
+    .update(updateData)
     .eq("id", id);
   throwIfError(error);
 }
 
 /**
  * Updates a trademark's assigned agent and city.
+ * Agent assignment does NOT require payment gate - it's part of Stage 2 workflow.
  */
 export async function updateTrademarkAgent(
   id: string,

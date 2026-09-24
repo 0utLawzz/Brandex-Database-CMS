@@ -289,15 +289,6 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
   };
 
   const onSubmit = (data: FormValues) => {
-    // Stage 2 Payment Gate: Assigned -> Accepted -> Hearing requires stage2_paid = true
-    if (data.stage === "STAGE 2" && !isStage2Paid) {
-      toast({
-        title: "⚠ Payment Required",
-        description: "Stage 2 payment is required before proceeding.",
-        variant: "destructive",
-      });
-      return;
-    }
     const payload: TrademarkInput = {
       date:       data.date,
       type:       data.type,
