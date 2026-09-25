@@ -467,7 +467,7 @@ export function Dashboard() {
                     <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between">
                       <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C]">
                         <FileCheck className="w-4 h-4 text-[#6C1C1F]" />
-                        <span>TM DOCUMENT CONTROL (REGISTRY MATCHES)</span>
+                        <span>TM FORM IPO (REGISTRY MATCHES)</span>
                       </div>
                       <span className="font-mono text-[10px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20 hidden sm:inline">
                         STATUTORY FORM REGISTRY

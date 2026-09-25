@@ -1,3 +1,5 @@
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+
 # Brandex Database CMS
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -47,7 +49,7 @@ Brandex Datasheet is the primary operational system for managing trademark recor
 |-------|------------|------|
 | Frontend | React + Vite (artifacts/tm-tracker) | Staff UI on Vercel |
 | Database | Supabase Postgres | Primary record store + audit log |
-| Auth | Supabase Auth + RLS | Staff roles: viewer / editor / admin |
+| Auth | Supabase Auth + RLS | Intended Admin + Viewer; legacy Editor still actively authorized |
 | Storage | Supabase Storage (private) | Trademark logos & files (signed URLs) |
 | Mirror | Google Sheets + Apps Script | Async operational backup |
 | Sync | Supabase Edge Function | Retryable outbox processor |
@@ -64,7 +66,7 @@ Browser (staff) → Vercel (Vite app) → Supabase (Auth + Postgres + Storage)
 
 | Feature | Description |
 |---------|-------------|
-| Role-based access | viewer (read), editor (create/update), admin (delete + admin) |
+| Role-based access | Intended Admin + Viewer; active Editor authorization remains a verified gap |
 | Trademark records | Full case data with search and filtering |
 | Private file storage | Logos and documents via short-lived signed URLs |
 | Audit trail | Every change recorded in Postgres |
@@ -127,7 +129,7 @@ set role = 'admin'
 where user_id = (select id from auth.users where email = 'owner@example.com');
 ```
 
-Roles: `viewer` (read-only), `editor` (create/update), `admin` (delete + administration). Disable public sign-ups.
+Intended roles: Admin + Viewer. Current database policies also allow Editor writes; see the Project Truth role inventory. Disable public sign-ups.
 
 ---
 

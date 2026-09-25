@@ -163,7 +163,7 @@ export function DatabasePage() {
           <table className="w-full text-left font-mono text-xs whitespace-nowrap border-collapse">
             <thead className="bg-[#1A1A1A] text-[#F0E8D0] sticky top-0 z-10">
               <tr>
-                {["DATE", "IMAGE", "MODIFIED", "TYPE", "CLIENT CODE", "CASE NO", "TM/CPR", "CLASS", "APPLICATION", "STATUS", "SUB-STATUS", "AGENT", "CITY", "TM FORMS", "JOURNAL"].map((heading) => (
+                {["DATE", "IMAGE", "MODIFIED", "TYPE", "CLIENT CODE", "CASE NO", "TM/CPR", "CLASS", "APPLICATION", "STATUS", "SUB-STATUS", "AGENT", "CITY", "TM FORM IPO (REGISTRY MATCHES)", "JOURNAL"].map((heading) => (
                   <th key={heading} className="px-3 py-2.5 border-r border-[#333] font-bold tracking-wider text-[10px] last:border-r-0 select-none">
                     {heading}
                   </th>

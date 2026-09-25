@@ -1,3 +1,5 @@
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+
 # Security Policy
 
 ## Data boundary
@@ -23,8 +25,8 @@ Never commit `.env`, paste secrets into source code, or expose server-only value
 ## Authorization
 
 - `viewer`: read access
-- `editor`: read, create and update access
-- `admin`: editor permissions plus deletion and administration
+- `editor`: existing active compatibility debt; current RLS still permits writes, including deletion on some tables. Not the intended application role.
+- `admin`: application management, subject to the same workflow rules; enforcement gaps are listed in Project Truth.
 
 Keep public sign-up disabled and create staff accounts through the Supabase dashboard. Review staff accounts and roles periodically.
 

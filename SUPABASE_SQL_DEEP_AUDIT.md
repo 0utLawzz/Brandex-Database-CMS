@@ -1,3 +1,5 @@
+> **Phase 0 correction — 25 September 2026:** This is a historical report, not current acceptance evidence. Its completion, test, role, payment and UI claims are superseded by [Project Truth](docs/PROJECT_TRUTH.md) and [canonical business rules](docs/WORKFLOW_BUSINESS_RULES.md). Stage 2 payment is NOT required for agent assignment; Stage 1 payment gates Stage 2, and Stage 2 payment gates Stage 3. Intended active roles are Admin + Viewer; Editor remains active in the current implementation. Timers are internal business rules, not verified statutory deadlines. Do not execute the historical recommendations below as a roadmap.
+
 # Supabase SQL Deep Architecture Audit
 
 **Brandex Database CMS**  
@@ -898,7 +900,7 @@ The application workflow defines the following lifecycle:
 - **Opposition Deadline Formula:**
   - Current SQL uses: `jr.journal_date + INTERVAL '2 months'`.
   - **Factual Report:** This is the exact code in production migrations 5 and 7.
-  - **Legal / Business Note:** Under section 28 of Pakistan Trademarks Ordinance 2001, the initial statutory period is 2 months, but an extension of 2 additional months can be granted upon filing Form TM-44. Whether the DB should support extension dates: **BUSINESS RULE REQUIRES OWNER CONFIRMATION**.
+- Phase 0 correction: the publication counter is an internal two-calendar-month business rule; statutory periods/extensions were not verified. TM56 response and extension tracking remain unimplemented.
 
 ---
 
@@ -1009,7 +1011,7 @@ The production database contains approximately 1,671 records imported from legac
 
 ### 16.2 Stage 2 Payment Gate
 - **Risk:** **CRITICAL RISK.** Hundreds of legacy records already occupy `STAGE 2`, `STAGE 3`, and `STAGE 4` without payment records.
-- **Constraint Warning:** If a table-level check constraint `CHECK (status != 'STAGE 2' OR stage2_paid = true)` is applied, **the migration will fail and rollback immediately** due to legacy data violations.
+- **Constraint Warning:** If a table-level check constraint `CHECK (status != 'STAGE 2' OR stage1_paid = true)` is applied, **the migration will fail and rollback immediately** due to legacy data violations.
 - **Remediation:** Must be enforced as a `BEFORE UPDATE` trigger validating transitions, **not** a table check constraint.
 - **Status:** `DATA VERIFICATION REQUIRED BEFORE MIGRATION`.
 
@@ -1074,7 +1076,7 @@ The production database contains approximately 1,671 records imported from legac
 | **M. Stage 2 Payment Gate** | **MISSING** | No trigger or constraint checks payment before Stage 2 | Progression into Stage 2 is unconstrained | Requires Transition Trigger |
 | **N. Agent Assignment FK** | **MISSING** | `trademarks.agent` is raw text; `agents.id` is UUID | Missing `agent_id` column referencing `agents(id)` | Requires Migration |
 | **O. Agent Fees** | **ALREADY SUPPORTED**| `public.agent_fees` and view `agent_summary` | None (Ledger fully operational) | None |
-| **P. Assigned Queue Support** | **ALREADY SUPPORTED**| Index on `(status)` and `(sub_status)` exists | Query currently lacks payment gate condition | None (API Query) |
+| **P. Assigned Queue Support** | **ALREADY SUPPORTED**| Index on `(status)` and `(sub_status)` exists | No Stage 2 payment gate is required for assignment | None (API Query) |
 | **Q. Publication Matching** | **ALREADY SUPPORTED**| RPC `run_journal_match()` in Migration 07 | None (Fully functional in DB) | None |
 | **R. Publication Grouping** | **ALREADY SUPPORTED**| `journal_number` and `journal_date` on `trademarks` | Flat UI display, DB has the data | None (UI Grouping) |
 | **S. Audit Logs** | **ALREADY SUPPORTED**| `public.audit_logs` with trigger | None (Captures all row mutations) | None |
@@ -1134,11 +1136,11 @@ PAYMENT ARCHITECTURE REQUIRES BUSINESS/SOURCE CONFIRMATION
 - **Rollback:** Drop columns.
 
 #### Migration Requirement 3: Transition Trigger for Stage 2 Payment Gate
-- **Purpose:** Enforce that records cannot transition into `STAGE 2` unless `stage2_paid = true`.
+- **Purpose:** Enforce that records cannot transition into `STAGE 2` unless Stage 1 payment clears (`stage1_paid = true`). Stage 2 payment belongs before Stage 3, not assignment.
 - **Affected Table:** `public.trademarks`
 - **Implementation:** `BEFORE UPDATE` trigger function on `public.trademarks`.
 - **Validation Rule:**
-  `IF (NEW.status = 'STAGE 2' AND OLD.status != 'STAGE 2' AND NEW.stage2_paid = FALSE) THEN RAISE EXCEPTION 'Cannot advance to STAGE 2 without payment verification'; END IF;`
+  `IF (NEW.status = 'STAGE 2' AND OLD.status != 'STAGE 2' AND NEW.stage1_paid = FALSE) THEN RAISE EXCEPTION 'Cannot advance to STAGE 2 without payment verification'; END IF;`
 - **Legacy Risk:** **Safe.** Does not affect existing legacy records already at `STAGE 2`. Only fires on status updates into Stage 2.
 - **Rollback:** Drop trigger and function.
 
@@ -1192,7 +1194,7 @@ LEVEL 4: CORE UI & MODALS
 LEVEL 5: SPECIALIZED VIEWS & PRINT
 --------------------------------------------------------------------------------
 5.1 `DatabasePage.tsx`: Primary column reordering (Date, Image, App Name, Stage...)
-5.2 `AssignedPage.tsx`: Add `stage2_paid = true` filter
+5.2 `AssignedPage.tsx`: Do NOT add a Stage 2 payment filter; assignment is independent of Stage 2 payment.
 5.3 `PublicationPipelinePage.tsx`: Group by journal number
 5.4 `LogsPage.tsx`: 8 compact columns
 5.5 Print View: 4 reminder blocks and CEO signature
@@ -1238,7 +1240,7 @@ LEVEL 6: AUTOMATION & VERIFICATION
 - **Legacy Agent Strings:** Verification required to map historical text strings in `trademarks.agent` to `agents(id)`.
 
 ## BUSINESS RULE CONFIRMATION REQUIRED
-- **Opposition Deadline Extension:** Confirmation required on whether the database should automatically calculate TM-44 2-month extensions beyond the initial 2 months.
+- Phase 0 correction: the publication counter is an internal two-calendar-month business rule; statutory periods/extensions were not verified. TM56 response and extension tracking remain unimplemented.
 - **Remand / Reopening Procedure:** Confirmation required on how formal remands/reopenings should be labeled when forward restrictions are enabled.
 
 ## PAYMENT SOURCE STATUS

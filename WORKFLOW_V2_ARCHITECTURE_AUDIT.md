@@ -1,3 +1,5 @@
+> **Phase 0 correction — 25 September 2026:** This is a historical report, not current acceptance evidence. Its completion, test, role, payment and UI claims are superseded by [Project Truth](docs/PROJECT_TRUTH.md) and [canonical business rules](docs/WORKFLOW_BUSINESS_RULES.md). Stage 2 payment is NOT required for agent assignment; Stage 1 payment gates Stage 2, and Stage 2 payment gates Stage 3. Intended active roles are Admin + Viewer; Editor remains active in the current implementation. Timers are internal business rules, not verified statutory deadlines. Do not execute the historical recommendations below as a roadmap.
+
 # Brandex Database CMS V2 Workflow & UI Architecture Audit
 
 **Report Date:** 22 September 2026  
@@ -187,7 +189,7 @@ export const STATUS_WORKFLOW: Record<string, string[]> = {
   ```
   This is purely in-memory React state. Refreshing the browser resets all payments to unpaid.
 - **Payment Lookup API:** **Does not exist.** There is no function, endpoint, or RPC searching by `Trademark Number + Page + Date`.
-- **Payment Gates:** **Does not exist.** A user can assign an agent or advance a record to Stage 2 even if no payment was ever received.
+- **Historical payment observation:** superseded. Assignment does not require Stage 2 payment; current browser stage-transition gates check previous-stage local flags. See Project Truth for missing enforcement.
 - **Agent Fees:** The only financial system that actually exists in Postgres is `public.agent_fees` (tracking legal counsel fees billed/paid), which is unrelated to client workflow stage payment verification.
 
 ---
@@ -214,7 +216,7 @@ export const STATUS_WORKFLOW: Record<string, string[]> = {
 ### Existing Gaps:
 - In `trademarks`, `agent` is a raw text column, not a foreign key `agent_id`.
 - In `RecordModal.tsx`, agent assignment is a free-text `<FormInput placeholder="Agent name" />` rather than a dropdown selecting from `public.agents`.
-- In `AssignedPage.tsx`, cases are filtered by `status = 'STAGE 2'` and `sub_status = 'Assigned'`, but there is no check whether Stage 2 payment was cleared prior to assignment.
+- In `AssignedPage.tsx`, cases are filtered by `status = 'STAGE 2'` and `sub_status = 'Assigned'`, which is correct for assignment eligibility: Stage 2 payment must NOT be an assignment prerequisite.
 
 ---
 
@@ -298,7 +300,7 @@ export const STATUS_WORKFLOW: Record<string, string[]> = {
 | **Payment API Lookup** | Does not exist | Lookup by TM No + Page + Date; auto-clears stage gate | **HIGH** |
 | **Stage Documents** | `trademark_files` table unused; only 1 logo stored | Every stage/sub-stage can upload, view, download files | **HIGH** |
 | **Agent Selection** | Raw text input on trademarks | Dropdown from `agents` master table; foreign key or synced ID | **MEDIUM** |
-| **Assigned Page** | Shows Stage 2 Assigned, no payment gate awareness | Shows Stage 2 Assigned only when Stage 2 payment is cleared | **MEDIUM** |
+| **Assigned Page** | Shows Stage 2 Assigned, no payment gate awareness | Stage 2 Assigned without a Stage 2 payment prerequisite (corrected requirement) | **MEDIUM** |
 | **Client Code** | Free text on trademarks, no DB foreign key | Standardized client code dropdown/autocomplete from `clients` | **MEDIUM** |
 | **Database Page Columns** | Date, Image, Modified, Type, Client Code, Case No, TM/CPR, Class, App Name... | Date, Image, Application Name, Stage, Sub-stage, then remaining | **LOW** |
 | **Logs Table Columns** | Timestamp, User, Action, Record, Changes (5 columns) | Date, Time, User, Action, Record, App No, Name, Changes (8 columns)| **LOW** |
@@ -343,7 +345,7 @@ To be implemented in future migrations (no files created now):
 ### Migration 3: Workflow Validation & Stage 1 Sub-Stages
 - **Target:** Postgres trigger or constraint on `public.trademarks`
 - **Rules:**
-  - Prevent transition to `STAGE 2` if `stage2_paid = false` (enforce gate).
+  - Prevent transition to `STAGE 2` if Stage 1 payment is false (Stage 2 payment is for Stage 3).
   - Add check constraint or trigger ensuring valid stages (`STAGE 1`, `STAGE 2`, `STAGE 3`, `STAGE 4`, `STOPPED`).
   - Update `trademark_workflow_history` trigger to capture user metadata and payment gate status.
 
@@ -364,7 +366,7 @@ To be implemented in future migrations (no files created now):
    - Add stage payment fields to `TrademarkRecord` and `TrademarkInput`.
    - Add `updateStagePayment(id, stage, paid, date)`.
    - Add `lookupPayment(tmNumber, page, date)` to query external/internal payment registry.
-   - Enforce gate validation in `updateTrademark`: prevent advancing to `STAGE 2` if `stage2_paid` is false.
+   - Enforce gate validation in `updateTrademark`: prevent advancing to `STAGE 2` if Stage 1 payment is false.
 3. **Add Stage Document Functions:**
    - `listDocumentsForTrademark(trademarkId, stage?)`: queries `trademark_files` joined with signed storage URLs.
    - `uploadStageDocument(trademarkId, stage, subStage, file, title)`: uploads to `trademark-files/{trademarkId}/{stage}/...` and inserts into `trademark_files`.
@@ -388,12 +390,12 @@ To be implemented in future migrations (no files created now):
    - **Workflow History:** Compact chronological timeline (auto-condensing when >10 items).
 2. **`RecordModal.tsx`:**
    - Change Agent field from free-text to dropdown populated from `listAgentProfiles()`.
-   - Prevent jumping directly to Stage 2 if Stage 2 payment is unpaid.
+   - Stage 1 payment must clear before Stage 2; Stage 2 payment does NOT gate agent assignment.
    - Populate Stage 1 sub-stages as `["Filing", "Acknowledgment", "Examination"]`.
 3. **`DatabasePage.tsx`:**
    - Reorder table columns: `DATE`, `IMAGE`, `APPLICATION NAME`, `STAGE`, `SUB-STAGE`, `TYPE`, `CLIENT CODE`, `CASE NO`, `TM/CPR`, `CLASS`, `CITY`, `TM FORMS`, `JOURNAL`, `MODIFIED`.
 4. **`AssignedPage.tsx`:**
-   - Filter cases where `stage = 'STAGE 2'` AND `sub_stage = 'Assigned'` AND `stage2_paid = true`.
+   - Filter cases where `stage = 'STAGE 2'` AND `sub_stage = 'Assigned'` (no Stage 2 payment filter).
    - Surface assigned agent details from `agents` master table.
 5. **`PublicationPipelinePage.tsx`:**
    - Group matched publication records by `journal_number`.
@@ -413,7 +415,7 @@ To be implemented in future migrations (no files created now):
    - Scheduled Edge Function or cron job that checks pending trademark cases against payment records using `Trademark Number + Page + Date`.
    - Automatically sets `stageX_paid = true`, records `stageX_paid_date`, and logs payment verification to audit log.
 2. **Stage 2 Gate Guard:**
-   - Database trigger or backend constraint preventing any update that moves a trademark to `STAGE 2` unless `stage2_paid = true`.
+   - Database trigger or backend constraint preventing any update that moves a trademark to `STAGE 2` unless Stage 1 payment is clear.
 3. **Registry Match Engine:**
    - Existing `run_journal_match()` and `run_form_match()` remain operable and role-guarded by `editor`/`admin`.
 
@@ -431,7 +433,7 @@ To be implemented in future migrations (no files created now):
    - Verify `STAGE 1` sub-stages (`Filing`, `Acknowledgment`, `Examination`).
    - Verify forward transition logic (prevent arbitrary stage skips without validation).
 2. **Payment Gate Tests:**
-   - Verify that updating to `STAGE 2` without `stage2_paid = true` throws a validation error.
+   - Verify that updating to `STAGE 2` without Stage 1 payment clearance throws a validation error.
    - Verify payment lookup function with `(tmNumber, page, date)`.
    - Verify persistent stage payment saving and loading.
 3. **Document Attachment Tests:**
@@ -467,7 +469,7 @@ graph TD
 - *Verification:* `pnpm test && pnpm typecheck && pnpm build`.
 
 ### Batch 2: Payment Gates & Lookup API
-- Add database trigger/constraint blocking `STAGE 2` when `stage2_paid = false`.
+- Add database trigger/constraint blocking entry to `STAGE 2` when Stage 1 payment is false.
 - Implement `updateStagePayment` and payment lookup by `(tmNumber, page, date)`.
 - Unit tests for payment gate enforcement.
 - *Verification:* `pnpm test && pnpm typecheck && pnpm build`.
@@ -490,7 +492,7 @@ graph TD
 ### Batch 5: Stage 2, Agents & Assigned Page
 - Link `agent_id` to `public.agents`.
 - Replace free-text agent input with searchable agent dropdown in `RecordModal.tsx`.
-- Update `AssignedPage.tsx` to enforce Stage 2 payment cleared requirement.
+- Do not add a Stage 2 payment gate to agent assignment. See the canonical business rules.
 - *Verification:* `pnpm test && pnpm typecheck && pnpm build`.
 
 ### Batch 6: Database Page, Navigation, & Logs

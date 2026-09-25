@@ -574,7 +574,7 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
           <span>Stage Payments</span>
         </div>
         <span className="font-mono text-[9px] print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-[1px_1px_0_#B0740E] print:shadow-none">
-          SOURCE: Brandex-Ledger
+          MANUAL CMS FLAGS — NOT LEDGER VERIFIED
         </span>
       </div>
 

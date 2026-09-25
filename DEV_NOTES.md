@@ -1,3 +1,5 @@
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+
 # Developer Notes
 
 ## Runtime flow
@@ -11,9 +13,9 @@
 ## Performance contract
 
 - Database and Assigned screens use 50-row server pages.
-- Canonical order is `type`, `client_code`, `case_number`.
+- Identifier presentation is Type / Client Code / Case Number. Current default sort is filing date descending, updated time descending, then identifier tiebreakers.
 - Dashboard metrics use count-only queries and never fetch trademark payloads.
-- Notes, journal JSON and signed image URLs are excluded from lists.
+- List queries omit full notes/journal JSON; image signing occurs when the list path requests it. Do not equate thumbnail presence in selected columns with verified image rendering.
 - React Query caches pages, filter options and metrics with explicit stale times.
 - CSV export downloads only records matching the active filters and does so on demand.
 

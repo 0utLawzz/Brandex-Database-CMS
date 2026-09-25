@@ -387,7 +387,7 @@ export function RecordView() {
               <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
                 <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
                   <CheckCircle2 className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
-                  <span>Document Status (TM Forms)</span>
+                  <span>TM FORM IPO (REGISTRY MATCHES)</span>
                 </div>
                 <span className="font-mono text-[10px] print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20 hidden sm:inline">
                   Statutory Registry Matches
@@ -497,7 +497,7 @@ export function RecordView() {
                   <div className="border-t border-[#0C0C0C]/20 pt-3 print:pt-2 mt-3 print:mt-2 text-[9px] print:text-[8px] text-[#6d6658]">
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                       <div>Last Modified: <span className="text-[#0C0C0C]">{record.updatedAt ? formatDate(record.updatedAt) : "—"}</span></div>
-                      <div>Date Created: <span className="text-[#0C0C0C]">{record.date ? formatDate(record.date) : "—"}</span></div>
+                      <div>Date Created: <span className="text-[#0C0C0C]">{record.createdAt ? formatDate(record.createdAt) : "—"}</span></div>
                     </div>
                   </div>
                 </div>

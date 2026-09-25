@@ -1,3 +1,5 @@
+> **Phase 0 correction — 25 September 2026:** This is a historical report, not current acceptance evidence. Its completion, test, role, payment and UI claims are superseded by [Project Truth](docs/PROJECT_TRUTH.md) and [canonical business rules](docs/WORKFLOW_BUSINESS_RULES.md). Stage 2 payment is NOT required for agent assignment; Stage 1 payment gates Stage 2, and Stage 2 payment gates Stage 3. Intended active roles are Admin + Viewer; Editor remains active in the current implementation. Timers are internal business rules, not verified statutory deadlines. Do not execute the historical recommendations below as a roadmap.
+
 # Brandex Database CMS — Version 2.0.0 Release Notes
 
 **Release Tag**: `v2.0.0`  
@@ -26,7 +28,7 @@ Brandex Database CMS V2 is the authoritative, production-grade trademark case ma
 
 ### 2. Structured Stage Payments & Stage 2 Payment Gate
 - **Structured Database Columns**: Persisted payment tracking via additive migration `202609220003_stage_payment_columns.sql` (`stage1_paid`, `stage1_paid_date`, `stage2_paid`, `stage2_paid_date`, `stage3_paid`, `stage3_paid_date`, `stage4_paid`, `stage4_paid_date`, `payment_reference`).
-- **Stage 2 Payment Gate**: Hard security constraint preventing cases from advancing to Stage 2 or assigning agents unless Stage 2 payment is confirmed (`stage2_paid = true`). Enforced across `createTrademark`, `updateTrademark`, `updateTrademarkStatus`, `updateTrademarkAgent`, and `assignStage2Agent`.
+- **Stage 2 Payment Gate**: Historical claim withdrawn: Stage 1 payment gates entry to Stage 2; Stage 2 payment gates Stage 3 and does NOT gate agent assignment. Enforcement is incomplete and browser-side; see Project Truth.
 - **Payment Attestation**: Marked with a clear `MANUAL — NOT VERIFIED` status badge indicating human bookkeeping entry without automated bank clearance.
 
 ### 3. Agent Assignment & Fee Tracking System
@@ -43,7 +45,7 @@ Brandex Database CMS V2 is the authoritative, production-grade trademark case ma
 
 ### 5. Publication Pipeline & Match Engine
 - **Journal-Matched Pipeline**: `PublicationPipelinePage.tsx` operating exclusively on published cases (`publication_date IS NOT NULL`).
-- **Opposition Deadline Tracking**: Computes days remaining against statutory opposition windows with color-coded badges (`pending`, `overdue`, `done`).
+- **Opposition Deadline Tracking**: Computes days remaining against internal publication counters with color-coded badges (`pending`, `overdue`, `done`).
 - **Demand Note Management**: Controlled recording of Demand Note received dates.
 - **Dual Match Engine RPCs**: `run_journal_match()` and `run_form_match()` with security-definer execution restricted to Editor and Admin roles.
 
@@ -101,7 +103,7 @@ The following items require authenticated staff credentials or cloud console acc
 2. **Live Storage Upload / Download**: End-to-end test of signed URL retrieval in the production `trademark-files` bucket.
 3. **Live Web Smoke Test**: Verification against [SMOKE_TEST_CHECKLIST.md](file:///g:/PyTools/Brandex-Database-CMS/SMOKE_TEST_CHECKLIST.md) on `https://brandexsheet.vercel.app`.
 4. **Vercel Secret Inventory**: Confirm absence of `SUPABASE_SERVICE_ROLE_KEY` from public client environment variables.
-5. **Publication Opposition Extension Rules**: Legal confirmation regarding statutory Trade Marks Ordinance 2001 Section 28 notice extensions (Form TM-44).
+- Phase 0 correction: the publication counter is an internal two-calendar-month business rule; statutory periods/extensions were not verified. TM56 response and extension tracking remain unimplemented.
 
 ---
 

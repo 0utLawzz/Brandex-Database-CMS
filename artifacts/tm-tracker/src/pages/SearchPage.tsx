@@ -148,7 +148,7 @@ function TmCard({ result, onViewRecord }: {
             {/* TM Sheet Matches */}
             <div>
               <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-[#6d6658] mb-1.5">
-                Document Status (TM Forms)
+                TM FORM IPO (REGISTRY MATCHES)
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
@@ -495,7 +495,7 @@ export function SearchPage() {
                         {/* TM Forms */}
                         <div>
                           <div className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#6d6658] mb-1">
-                            TM FORMS
+                            TM FORM IPO (REGISTRY MATCHES)
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {

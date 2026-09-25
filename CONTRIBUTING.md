@@ -1,3 +1,5 @@
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+
 # Contributing to Brandex Datasheet
 
 Thank you for your interest in contributing to Brandex Datasheet. This document provides clear guidelines for contributing to the project.

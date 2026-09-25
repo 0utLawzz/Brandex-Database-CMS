@@ -104,7 +104,9 @@ const baseSupabaseRow = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  // Clear queued mockReturnValueOnce responses as well as call history.
+  // Early validation failures can leave unused responses for the next test.
+  vi.resetAllMocks();
   supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
   supabaseMock.storage.from.mockReturnValue({
     createSignedUrls: vi.fn().mockResolvedValue({ data: [] }),
@@ -113,6 +115,26 @@ beforeEach(() => {
 });
 
 describe("Brandex data mapping", () => {
+  it("keeps creation, filing, and modification dates independent", async () => {
+    const row = { ...baseSupabaseRow, created_at: "2026-09-01T09:15:00Z", updated_at: "2026-09-02T12:30:00Z" };
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === "trademarks") return createQuery({ data: row, error: null });
+      if (table === "form_registry") return createQuery({ data: [], error: null });
+      throw new Error(`Unexpected table: ${table}`);
+    });
+    const record = await getRecord(row.id);
+    expect(record?.createdAt).toBe(row.created_at);
+    expect(record?.date).toBe("2026-08-28");
+    expect(record?.updatedAt).toBe(row.updated_at);
+  });
+
+  it("does not substitute filing date when creation timestamp is unavailable", async () => {
+    supabaseMock.from.mockImplementation((table: string) =>
+      createQuery({ data: table === "trademarks" ? baseSupabaseRow : [], error: null }),
+    );
+    expect((await getRecord(baseSupabaseRow.id))?.createdAt).toBeUndefined();
+  });
+
   it("maps the 24-column Sheet format without changing legal identifiers", () => {
     const record = mapRowToRecord({
       ID: "BX-1",

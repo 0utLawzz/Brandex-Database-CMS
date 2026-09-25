@@ -1,8 +1,28 @@
+# Current Phase 0 status — 25 September 2026
+
+[Project Truth](docs/PROJECT_TRUTH.md) is the evidence-backed current status. [Workflow Business Rules](docs/WORKFLOW_BUSINESS_RULES.md) defines intended behavior. The historical work log below is preserved as context; its checkmarks, release/freeze claims, and test counts are not current acceptance evidence.
+
+- Scope: PHASE 0 = Truth Cleanup. No Phase 1–4 features, migration execution, production data changes, deployment or tag changes.
+- Baseline main/production: `727ec07775300cb22841a4748f1bfb4c1de58758`.
+- Date Created now maps `created_at` independently from filing and modification dates, with mapping and rendered-component tests.
+- TM headings corrected; filter/matching logic preserved. Payment label now explicitly identifies manual CMS flags.
+- Five baseline Stage Document failures traced to queued mock responses leaking between tests. Resetting mocks restores isolation without changing expected results or application upload behavior.
+- Local validation: 178 tests pass across 6 files; typecheck passes; production build passes. These are not live database integration tests.
+- Authenticated admin production navigation, case display, unpaid Stage 4 gate, missing STOPPED reason rejection, document upload selector and historical document visibility inspected. Viewer, successful writes/uploads and deployed corrections remain unverified.
+- Major contradictions: stage skipping and sub-stage reversals are not prevented; STOPPED can retain a sub-stage and general update lacks its reason gate; Editor is actively authorized; DB workflow constraints absent; branding persistence table absent on live CMS.
+- Missing: automatic Accepted agent payable, Ledger integration, multiple opposition events, TM56 response/extension tracking and Demand Note 25-day counter.
+- CASE DATA FIRST. UI FURNITURE SECOND. Live 1440×900 inspection and source confirm tiny metadata and dominant borders; Phase 4 remains pending.
+- Acceptance/release checks remain open. No project completion percentage or full V2 completion claim is made.
+
+Established phases only: Phase 0 Truth Cleanup → Phase 1 Business Workflow Completion → Phase 2 Payment Architecture → Phase 3 Workflow Hardening → Phase 4 UI / Workbench Transformation.
+
+## Historical work log — superseded as current status
+
 # Brandex Datasheet Progress
 
 **Last updated: 24 September 2026 (Batch 6B: Branding + Logo System)**
 
-This file is the single source of truth for project status.  
+The following is a historical work log. Current status is the Phase 0 section above and docs/PROJECT_TRUTH.md.
 **Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
 
 ---
@@ -18,7 +38,7 @@ This file is the single source of truth for project status.
 - [x] Vercel production deployment (https://brandexsheet.vercel.app)
 - [x] Restored PR #1 optimized production baseline
 
-## Phase 1 (Complete)
+## Historical UI batch labelled Phase 1 (not the current Phase 1 acceptance)
 
 - [x] Transparent lightweight Brandex wordmark and compact mark
 - [x] Maroon, gold and cream brand system
@@ -91,7 +111,7 @@ This file is the single source of truth for project status.
 - [x] Strict forward-only workflow enforcement in `updateTrademarkStatus` (STAGE 1→2→3→4 only; backward rejected)
 - [x] New record defaults: STAGE 1, sub-stage "Filing", `stage1_paid = true`, `filing_date = today`
 - [x] Payment gate: STAGE 2 transition blocked unless `stage1_paid = true`
-- [x] Migration `202609220006_workflow_creation_trigger.sql` — DB trigger enforces stage1/Filing/paid defaults on INSERT
+- Correction: migration 202609220006 creates an AFTER INSERT history event; it does not enforce creation defaults.
 - [x] Applied migration 202609220006 to Supabase production (confirmed by Supabase console)
 - [x] All 46 tests pass; typecheck clean; production build successful
 - [x] Committed `9468de4` and pushed to origin/main
@@ -223,11 +243,11 @@ This file is the single source of truth for project status.
 
 ## 2026-09-22 — Batch 2 & 3: Stage 2 Payment Gate & Agent Assignment
 
-- [x] Enforced Stage 2 payment gate (`isStage2PaymentRequired`, `validateStage2PaymentGate`, `assignStage2Agent` in `api.ts`)
-- [x] Integrated Stage 2 payment requirement check into `AssignedPage.tsx` and `RecordModal.tsx`
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
 - [x] Reused existing Agents master system (`listAgentProfiles()`) for agent assignment dropdowns
 - [x] Preserved legacy agent names and data integrity without schema changes or fake data
-- [x] Added unit tests in `api.test.ts` verifying payment gate blocking unpaid assignments and allowing cleared payments
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
 - [x] Verified `pnpm test` (13/13 passed), `pnpm typecheck` (0 errors), and `pnpm build` (12.35s production bundle)
 
 
@@ -272,7 +292,7 @@ This file is the single source of truth for project status.
 - [x] Updated UI components to remove Stage 2 payment blocks from agent assignment:
   - `CaseWorkflowSection.tsx`: Removed agent assignment payment gate, added STOPPED reason handling
   - `RecordModal.tsx`: Removed Stage 2 payment block from general updates
-  - `AssignedPage.tsx`: Removed agent assignment payment gate, updated messaging
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
 - [x] Added workflow validation tests (27 passing) covering all stage transitions, payment gates, and STOPPED behavior
 - [x] Verified: `pnpm test` (117 passed, 2 pre-existing failures unrelated to workflow), `pnpm typecheck` (0 errors), `pnpm build` (passed)
 - [x] Committed `b7b21fc` and pushed to origin/main
@@ -651,16 +671,16 @@ This file is the single source of truth for project status.
 ## 2026-09-22 — Batch 12: RecordView Workflow Consolidation
 
 - [x] Implemented workflow/status management functions in `api.ts`:
-  - `updateTrademarkStatus(id, stage, subStage)`: updates case stage and sub-stage directly, strictly enforcing the Stage 2 payment gate (`stage2_paid = true` required for STAGE 2) and normalizing sub-stage values via `normalizeWorkflowValue`
-  - `updateTrademarkAgent(id, agentName, city)`: updates assigned agent and city, enforcing the Stage 2 payment gate if the record is currently in Stage 2
+- Historical status-gate claim corrected: Stage 1 payment gates Stage 2; Stage 2 payment gates Stage 3. The client data layer is not database workflow enforcement.
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
 - [x] Created `CaseWorkflowSection.tsx` component in `artifacts/tm-tracker/src/components/`:
   - **Progression Stepper**: horizontal track visually tracing normal forward workflow (`Stage 1` → `Stage 2` → `Stage 3` → `Stage 4`) with completed checkmarks, bold active stage indicator, and distinct alert for `STOPPED` cases
   - **Current Status & Transition Control**: clear Stage and Sub-Stage display with complete canonical terminology (Demand Note, Opposition, CER); role-gated "Update Status" modal for Editor/Admin enforcing the Stage 2 payment gate
-  - **Agent Details & Assignment Control**: displays assigned agent and city; role-gated "Assign / Change Agent" modal pulling from `listAgentProfiles()` master list and enforcing the Stage 2 payment gate
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
   - **Stage Payments**: compact 4-stage payment block (Stage 1 to 4) with real-time toggle, date recording, and prominent `MANUAL — NOT VERIFIED` indication
   - **Workflow History**: chronological event history with timestamp, changed by user, and full terminology transitions (preserving repeated status events intact)
 - [x] Consolidated `RecordView.tsx`: replaced fragmented status, agent, history, and payment cards with unified `CaseWorkflowSection`; preserved registry-matching "Document Status" (TM forms) and Batch 11 `StageDocumentsSection` completely intact
-- [x] Added unit tests in `api.test.ts` verifying `updateTrademarkStatus` and `updateTrademarkAgent` payment gate enforcement and sub-stage normalization
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
 - [x] Verified: `pnpm test --run` (32/32 passed), `pnpm typecheck` (0 errors), `pnpm build` (passed, 11.44s)
 ## 2026-09-22 — Batch 13: Publication Workflow Integration
 
@@ -686,8 +706,8 @@ This file is the single source of truth for project status.
 ### Business / Legal Confirmation Item
 
 - **Publication Opposition Deadline Calculation**:
-  - Current implementation uses `run_journal_match()` which sets `opposition_deadline = publication_date + 60 days` (standard 2 months statutory opposition window).
-  - *Business/Legal Confirmation Required*: In Pakistani trademark practice (Trade Marks Ordinance 2001), the initial opposition period is 2 months from the date of publication in the Trade Marks Journal, extendable by up to 2 additional months upon application (Form TM-44). Need practice-owner confirmation if automatic 60-day calendar calculation should account for statutory gazette publication notice rules or track TM-44 extensions.
+- Phase 0 correction: the live/repository publication counter uses two calendar months as an internal business timer; no statutory deadline or extension rule has been verified.
+- Phase 0 correction: the live/repository publication counter uses two calendar months as an internal business timer; no statutory deadline or extension rule has been verified.
 
 ### Verification
 
@@ -779,7 +799,7 @@ Distinction of verification levels across all subsystems:
 - **Production Bundle**: `pnpm build` (`vite build`) → compiled cleanly with Vite v7.3.6; dist assets generated.
 - **Publication Pipeline Integration**: Added direct record links (`/record/:id`) to both the datasheet table actions and detail modal in `PublicationPipelinePage.tsx`.
 - **Workflow State Machines**: Canonical mapping (`STATUS_WORKFLOW`, `WORKFLOW_DISPLAY_LABELS`, `STAGE_DOCUMENT_WORKFLOW`) verified for all 4 stages, sub-stages, and `STOPPED` state.
-- **Payment Gate Enforcement**: Unit tested that Stage 2 cannot bypass `stage2_paid = true` constraint across `createTrademark`, `updateTrademark`, `updateTrademarkStatus`, `updateTrademarkAgent`, and `assignStage2Agent`.
+- Historical assignment-gate claim superseded: Stage 2 payment is NOT required for agent assignment. Current payment gates govern stage progression; see docs/WORKFLOW_BUSINESS_RULES.md.
 - **Reminders Engine**: Verified hard-cap of 4 informational reminders (1: Filing & Documentation, 2: Agent & Assignment, 3: Publication & Opposition, 4: Registration & Certificate), stage-adaptive, no invented statutory deadlines.
 - **Audit Logs vs Workflow History**: Verified that `audit_logs` (8 columns with record ID links) and `trademark_workflow_history` (event-driven status transitions) remain completely separate.
 - **Documentation Synchronization**: Updated `DEV_NOTES.md` and `SMOKE_TEST_CHECKLIST.md` with full V2 components and operational workflows.
@@ -815,7 +835,7 @@ Distinction of verification levels across all subsystems:
 - **Live Storage Signed URL Access**: Bucket configuration and signed URL generation verified in code; live Supabase storage download test remains manual.
 - **Live Authenticated Role Smoke Test**: Verification of Viewer, Editor, and Admin workflows on `https://brandexsheet.vercel.app` requires staff credentials.
 - **Vercel Dashboard Secret Inventory**: Confirmation that `SUPABASE_SERVICE_ROLE_KEY` is absent from Vercel environment variables requires Vercel dashboard access.
-- **Publication Opposition Legal Confirmation**: Current 60-day calendar calculation from journal date is documented; legal practice-owner confirmation regarding Trade Marks Ordinance 2001 Section 28 (extension rules via TM-44) remains a business/legal decision.
+- Phase 0 correction: the live/repository publication counter uses two calendar months as an internal business timer; no statutory deadline or extension rule has been verified.
 
 ### Release Decision
 **V2 FREEZE RECOMMENDED** — All code-level implementations, RLS policies, migrations, payment gates, document storage protections, reminders, print styles, and test sequences have passed with zero errors.
@@ -885,8 +905,8 @@ The following functionality is fully implemented, tested, and ready for producti
 - Server-side 50-record pagination, universal multi-field search, and multi-parameter filters.
 - Asynchronous Google Sheet outbox synchronization with dead-letter queue and retry limit.
 - 4-Stage Workflow Progression Stepper with strict Stage 2 payment gate enforcement.
-- Agents Master System, per-case fee ledger with automatic payment reconciliation, and real-time case counts.
-- Publication Pipeline V2 with statutory opposition window tracking and demand note date management.
+- Manual agent fees/payments and computed balances exist; automatic Accepted payable creation and Ledger reconciliation do not.
+- Phase 0 correction: the live/repository publication counter uses two calendar months as an internal business timer; no statutory deadline or extension rule has been verified.
 - Dual Match Engine RPCs (`run_journal_match`, `run_form_match`) with role-based security definer protection.
 - Stage-wise Private Document Storage with 10MB bounds, MIME validation, and 1-hour signed URL access.
 - Structured Stage 1–4 manual payment ledger with `MANUAL — NOT VERIFIED` attestation banner.
@@ -904,7 +924,7 @@ The following release items require authenticated human/dashboard execution:
 2. **Live Private Storage File Upload/Download**: Perform end-to-end file upload and verify signed URL retrieval in the production bucket `trademark-files`.
 3. **Authenticated Role Smoke Test**: Execute manual test scenarios from `SMOKE_TEST_CHECKLIST.md` on `https://brandexsheet.vercel.app`.
 4. **Vercel Secret Audit**: Verify in Vercel project settings that `SUPABASE_SERVICE_ROLE_KEY` is not exposed in client environment variables.
-5. **Publication Opposition Legal Confirmation**: Formal confirmation from legal practice-owner regarding Trade Marks Ordinance 2001 Section 28 gazette extension rules (Form TM-44).
+- Phase 0 correction: the live/repository publication counter uses two calendar months as an internal business timer; no statutory deadline or extension rule has been verified.
 
 ---
 

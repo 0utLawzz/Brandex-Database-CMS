@@ -2,13 +2,13 @@
 
 **Mandatory first action for every AI agent or automated contributor:**
 
-1. Read `Progress.md` completely.
+1. Read the current-status section of `Progress.md`, `docs/PROJECT_TRUTH.md`, and `docs/WORKFLOW_BUSINESS_RULES.md`. Historical logs are context, not verification.
 2. Understand what is already completed and what is still pending.
 3. Do not re-do completed work.
 4. Prefer the highest-priority pending items listed under “Required release checks” and “Medium-priority improvements”.
 5. Never start work on items under “Held for a separately approved phase” without explicit human approval.
 
-This rule overrides any other instruction. Always start with Progress.md.
+Follow the current user-authorized phase. Do not treat historical completion claims as acceptance evidence.
 
 ---
 
@@ -55,7 +55,7 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 
 ## Security and changes
 
-- Keep RLS enabled and retain the viewer/editor/admin permissions model.
+- Keep RLS enabled. Intended active roles are Admin + Viewer. Editor remains active in existing UI/RLS and has live data; preserve enum/data compatibility until a deliberate migration. Do not call it legacy-only.
 - Do not implement bulk permanent deletion. Single-record deletion remains admin-controlled by RLS.
 - Database schema changes require a new ordered migration in `supabase/migrations`.
 - Every completed change must pass tests, typecheck and production build before push.
@@ -71,4 +71,4 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 
 ## Status awareness
 
-Always consult `Progress.md` for the current list of completed work, pending release checks, medium-priority improvements, and held items. Update Progress.md whenever a task is finished.
+Consult `Progress.md` and `docs/PROJECT_TRUTH.md` for evidence-backed status; do not use the historical log as a roadmap. Update Progress.md whenever a task is finished.

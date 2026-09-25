@@ -1,3 +1,5 @@
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+
 # Brandex Datasheet Installation
 
 ## Requirements
@@ -43,11 +45,11 @@ set role = 'admin'
 where user_id = (select id from auth.users where email = 'owner@example.com');
 ```
 
-Use `viewer` for read-only staff, `editor` for create/update access and `admin` for deletion and administration.
+Use Admin + Viewer for the intended application model. Do not provision new Editor roles as the target model. Existing editor profiles, enum values and RLS permissions require compatibility-aware reconciliation; do not delete them blindly.
 
 ## One-time Sheet import
 
-The completed production import contains 1,671 records. To repeat an import in another environment, keep these server secrets only in the terminal session running the importer:
+An earlier import was reported as 1,671 records; the 25 September 2026 live CMS snapshot contains 7 records. Historical import counts are not a current inventory or proof of data loss. To repeat an import in another environment, keep these server secrets only in the terminal session running the importer:
 
 ```dotenv
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co

@@ -384,7 +384,7 @@ export function AssignedPage() {
                   </span>
                 </div>
                 <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
-                  SOURCE: Brandex-Ledger
+                  MANUAL CMS FLAGS — NOT LEDGER VERIFIED
                 </span>
               </div>
               <div className="mt-3 p-3 bg-white border-2 border-[#0C0C0C] shadow-[3px_3px_0_#0C0C0C]">

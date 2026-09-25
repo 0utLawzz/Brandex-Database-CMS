@@ -53,6 +53,7 @@ export interface TrademarkRecord {
   city: string;
   notes: string;
   updatedAt: string;
+  createdAt?: string;
   version?: number;
   image: string;
   imagePath?: string;
@@ -384,6 +385,7 @@ type SupabaseTrademarkRow = {
   logo_path?: string | null;
   legacy_image_url?: string | null;
   updated_at: string;
+  created_at?: string;
   version?: number;
   // Publication workflow fields
   publication_date?: string | null;
@@ -447,6 +449,7 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     city: row.city,
     notes: row.notes ?? "",
     updatedAt: row.updated_at,
+    createdAt: row.created_at,
     version: row.version ?? 1,
     image: signedImage || row.legacy_image_url || "",
     imagePath: row.logo_path || row.legacy_image_url || "",
@@ -542,7 +545,7 @@ const TRADEMARK_LIST_COLUMNS = [
   "id", "filing_date", "type", "client_code", "client_name", "case_number",
   "application_name", "tm_cpr_number", "nice_class", "status", "sub_status",
   "case_type", "agent", "city", "tm5", "tm6", "tm11", "tm16", "tm56",
-  "journal_number", "journal_date", "logo_path", "legacy_image_url", "updated_at", "version",
+  "journal_number", "journal_date", "logo_path", "legacy_image_url", "created_at", "updated_at", "version",
   // Publication fields
   "publication_date", "opposition_deadline", "demand_note_received", "demand_note_date",
   // Stage payment placeholder fields (migration 202609220003)
