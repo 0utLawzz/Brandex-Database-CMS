@@ -11,6 +11,7 @@ import {
   formatWorkflowLabel,
   isStage2PaymentRequired,
   isValidStageTransition,
+  availableWorkflowSubStages,
   updateTrademarkStatus,
   updateTrademarkAgent,
   updateStagePayment,
@@ -136,8 +137,8 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const paymentGateWarning = getPaymentGateWarning(targetStage);
   const stoppedWarning = getStoppedWarning();
   const targetStageRequiresPayment = Boolean(paymentGateWarning);
-  const validTargetStages = STAGES.filter((s) => isValidStageTransition(record.stage, s));
-  const availableSubStages = STATUS_WORKFLOW[targetStage] ?? [];
+  const validTargetStages = STAGES.filter((s) => isValidStageTransition(record.stage, s) && (s === "STOPPED" || s === record.stage || availableWorkflowSubStages(record.stage, record.subStage, s).length > 0));
+  const availableSubStages = availableWorkflowSubStages(record.stage, record.subStage, targetStage);
 
   return (
     <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
@@ -218,7 +219,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658]">
                   Current Status & Sub-Status
                 </span>
-                {canEdit && (
+                {canEdit && !isStopped && (
                   <button
                     type="button"
                     onClick={openStatusModal}
@@ -253,7 +254,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
                   <User className="w-3 h-3" /> Agent Details
                 </span>
-                {canEdit && (
+                {canEdit && record.stage === "STAGE 2" && record.subStage === "Assigned" && (
                   <button
                     type="button"
                     onClick={openAgentModal}
@@ -351,7 +352,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   value={targetStage}
                   onChange={(e) => {
                     setTargetStage(e.target.value);
-                    const validSubs = STATUS_WORKFLOW[e.target.value] ?? [];
+                    const validSubs = availableWorkflowSubStages(record.stage, record.subStage, e.target.value);
                     if (!validSubs.includes(targetSubStage)) {
                       setTargetSubStage(validSubs[0] || "");
                     }
@@ -377,7 +378,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   disabled={statusMutation.isPending || targetStage === "STOPPED"}
                   className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
                 >
-                  <option value="">-- None / General Stage Status --</option>
+                  {targetStage === "STOPPED" && <option value="">No sub-stage</option>}
                   {availableSubStages.map((s) => (
                     <option key={s} value={s}>
                       {formatWorkflowLabel(s)}
@@ -413,7 +414,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 </button>
                 <button
                   type="submit"
-                  disabled={targetStageRequiresPayment || statusMutation.isPending}
+                  disabled={targetStageRequiresPayment || Boolean(stoppedWarning) || statusMutation.isPending}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 transition-all"
                 >
                   {statusMutation.isPending ? (

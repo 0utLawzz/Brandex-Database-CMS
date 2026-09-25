@@ -224,9 +224,9 @@ export type StageType = typeof STAGES[number];
 export const STATUS_WORKFLOW: Record<string, string[]> = {
   "STAGE 1": ["Filing", "Examination", "Acknowledgment"],
   "STAGE 2": ["Assigned", "Accepted", "Hearing"],
-  "STAGE 3": ["D-Note Submitted", "D-Note Received", "OPPO: Filed", "OPPO: Received", "OPPO: Withdrawn", "Published"],
+  "STAGE 3": ["Published", "D-Note Received", "D-Note Submitted"],
   "STAGE 4": ["CER Acknowledge", "CER Received", "CER Dispatch"],
-  "STOPPED": ["Case Stopped"],
+  "STOPPED": [],
 };
 
 /**
@@ -754,7 +754,8 @@ export class StagePaymentRequiredError extends Error {
  * Backward transitions (e.g. Stage 2 -> Stage 1, Stage 4 -> Stage 3) are rejected.
  */
 export function isValidStageTransition(fromStage: string, toStage: string): boolean {
-  if (!fromStage || !toStage || fromStage === toStage) return true;
+  if (!STAGES.includes(fromStage as StageType) || !STAGES.includes(toStage as StageType)) return false;
+  if (fromStage === toStage) return true;
   if (toStage === "STOPPED") return true;
   if (fromStage === "STOPPED") return false;
 
@@ -769,10 +770,43 @@ export function isValidStageTransition(fromStage: string, toStage: string): bool
   const toIndex = stageOrder[toStage];
 
   if (fromIndex !== undefined && toIndex !== undefined) {
-    return toIndex >= fromIndex;
+    return toIndex === fromIndex + 1;
   }
 
   return false;
+}
+
+/** Sub-stage transitions are deliberately explicit: Stage 2 outcomes are alternatives. */
+export const SUB_STAGE_TRANSITIONS: Record<string, Record<string, string[]>> = {
+  "STAGE 1": { Filing: ["Examination", "Acknowledgment"], Examination: ["Acknowledgment"], Acknowledgment: [] },
+  "STAGE 2": { Assigned: ["Accepted", "Hearing"], Accepted: [], Hearing: [] },
+  "STAGE 3": { Published: ["D-Note Received"], "D-Note Received": ["D-Note Submitted"], "D-Note Submitted": [] },
+  "STAGE 4": { "CER Acknowledge": ["CER Received"], "CER Received": ["CER Dispatch"], "CER Dispatch": [] },
+};
+const COMPLETED_SUB_STAGES: Record<string, string[]> = {
+  "STAGE 1": ["Acknowledgment"], "STAGE 2": ["Accepted", "Hearing"],
+  "STAGE 3": ["D-Note Submitted"], "STAGE 4": ["CER Dispatch"],
+};
+export function workflowTransitionError(fromStage: string, fromSub: string | null | undefined,
+  toStage: string, toSub: string | null | undefined): string | null {
+  if (!isValidStageTransition(fromStage, toStage)) return `Backward workflow transitions are not allowed (cannot move from ${fromStage} to ${toStage}). Stages cannot be skipped.`;
+  if (toStage === "STOPPED") return toSub ? "STOPPED has no sub-stage." : null;
+  const current = normalizeWorkflowValue(fromSub || "");
+  const target = normalizeWorkflowValue(toSub || "");
+  // Keep legacy records editable without pretending their old workflow is valid.
+  if (fromStage === toStage && current === target) return null;
+  if (!STATUS_WORKFLOW[toStage]?.includes(target)) return `Invalid sub-stage "${toSub || ""}" for ${toStage}.`;
+  if (fromStage !== toStage) {
+    if (!COMPLETED_SUB_STAGES[fromStage]?.includes(current)) return `Complete ${fromStage} before moving to ${toStage}.`;
+    if (target !== STATUS_WORKFLOW[toStage][0]) return `Enter ${toStage} at ${STATUS_WORKFLOW[toStage][0]}.`;
+  } else if (!SUB_STAGE_TRANSITIONS[fromStage]?.[current]?.includes(target)) {
+    return `Cannot move from ${current || "an unspecified sub-stage"} to ${target}.`;
+  }
+  return null;
+}
+export function availableWorkflowSubStages(fromStage: string, fromSub: string, targetStage: string): string[] {
+  const candidates = STATUS_WORKFLOW[targetStage] || [];
+  return candidates.filter(sub => !workflowTransitionError(fromStage, fromSub, targetStage, sub));
 }
 
 /**
@@ -838,6 +872,10 @@ export async function createTrademark(input: TrademarkInput): Promise<{ id: stri
     }
   }
 
+  if (targetStage !== "STAGE 1" || targetSubStage !== "Filing") {
+    throw new Error("New cases must start at Stage 1 / Filing. Historical imports use the import workflow.");
+  }
+  if (input.agent?.trim()) throw new Error("Assign the agent when the case reaches Stage 2 / Assigned.");
   const filingDate = input.date || new Date().toISOString().split("T")[0];
 
   // Prepare initial row data with Batch 1 defaults
@@ -882,6 +920,13 @@ export async function assignStage2Agent(
   ensureConfigured();
   if (!agentName || !agentName.trim()) {
     throw new Error("Agent name is required.");
+  }
+  const { data: current, error: readError } = await supabase.from("trademarks")
+    .select("status,sub_status,version").eq("id", id).single();
+  throwIfError(readError);
+  if (!current) throw new Error("Record not found.");
+  if (current.status !== "STAGE 2" || current.sub_status !== "Assigned") {
+    throw new Error("Agents can only be assigned in Stage 2 / Assigned.");
   }
   const patch: Record<string, string> = {
     agent: agentName.trim().toUpperCase(),
@@ -934,17 +979,15 @@ export async function updateTrademarkStatus(
 
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
-    .select("status, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes")
+    .select("status, sub_status, version, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes")
     .eq("id", id)
     .single();
   throwIfError(fetchErr);
 
-  if (current) {
-    if (!isValidStageTransition(current.status, stage)) {
-      throw new Error(`Backward workflow transitions are not allowed (cannot move from ${current.status} to ${stage}).`);
-    }
-    validatePaymentGate(stage, current);
-  }
+  if (!current) throw new Error("Record not found.");
+  const transitionError = workflowTransitionError(current.status, current.sub_status, stage, subStage);
+  if (transitionError) throw new Error(transitionError);
+  if (current.status !== stage) validatePaymentGate(stage, current);
 
   const canonicalSubStage = subStage ? normalizeWorkflowValue(subStage) : null;
   const updateData: Record<string, any> = {
@@ -977,14 +1020,7 @@ export async function updateTrademarkAgent(
   agentName: string,
   city?: string,
 ): Promise<void> {
-  ensureConfigured();
-  if (!agentName || !agentName.trim()) {
-    throw new Error("Agent name is required.");
-  }
-  const patch: Record<string, string> = { agent: agentName.trim().toUpperCase() };
-  if (city && city.trim()) patch.city = city.trim().toUpperCase();
-  const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
-  throwIfError(error);
+  return assignStage2Agent(id, agentName, city);
 }
 
 export async function updateTrademark(
@@ -994,33 +1030,25 @@ export async function updateTrademark(
 ): Promise<{ id: string; version: number }> {
   ensureConfigured();
 
-  // Validate workflow values if stage is supplied
-  if (input.stage) {
-    if (!STAGES.includes(input.stage as any)) {
-      throw new Error(`Invalid stage "${input.stage}". Permitted stages: ${STAGES.join(", ")}`);
-    }
-    if (input.subStage && input.stage in STATUS_WORKFLOW) {
-      const validSubStages = STATUS_WORKFLOW[input.stage] || [];
-      const normalizedSub = normalizeWorkflowValue(input.subStage);
-      const isValid = validSubStages.some(
-        (s) => s === input.subStage || normalizeWorkflowValue(s) === normalizedSub,
-      );
-      if (!isValid) {
-        throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
-      }
-    }
-
-    const { data: current, error: fetchErr } = await supabase
-      .from("trademarks")
-      .select("status, stage1_paid, stage2_paid, stage3_paid, stage4_paid")
-      .eq("id", id)
-      .single();
-    if (!fetchErr && current) {
-      if (!isValidStageTransition(current.status, input.stage)) {
-        throw new Error(`Backward workflow transitions are not allowed (cannot move from ${current.status} to ${input.stage}).`);
-      }
-      validatePaymentGate(input.stage, current);
-    }
+  if (input.stage && !STAGES.includes(input.stage as StageType)) throw new Error(`Invalid stage "${input.stage}".`);
+  if (input.stage && input.subStage && input.stage !== "STOPPED" && !STATUS_WORKFLOW[input.stage]?.includes(normalizeWorkflowValue(input.subStage))) {
+    throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
+  }
+  const { data: current, error: fetchErr } = await supabase.from("trademarks")
+    .select("status,sub_status,agent,notes,version,stage1_paid,stage2_paid,stage3_paid").eq("id", id).single();
+  throwIfError(fetchErr);
+  if (!current) throw new Error("Record not found.");
+  const targetStage = input.stage ?? current.status;
+  const targetSub = input.subStage ?? current.sub_status;
+  if (targetStage === "STOPPED" && current.status !== "STOPPED") {
+    throw new Error("Use Update Status to stop a case with a mandatory reason.");
+  }
+  const transitionError = workflowTransitionError(current.status, current.sub_status, targetStage, targetSub);
+  if (transitionError) throw new Error(transitionError);
+  if (targetStage !== current.status) validatePaymentGate(targetStage, current);
+  if (input.agent !== undefined && input.agent.trim().toUpperCase() !== (current.agent || "").toUpperCase()
+      && (current.status !== "STAGE 2" || current.sub_status !== "Assigned")) {
+    throw new Error("Agents can only be assigned in Stage 2 / Assigned.");
   }
 
   let query = supabase.from("trademarks").update(inputToRow(input)).eq("id", id);

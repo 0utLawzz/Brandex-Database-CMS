@@ -1,3 +1,14 @@
+# Active implementation — 25 September 2026
+
+The owner authorized Phases 1–4 and incremental GitHub checkpoints after accepting the Phase 0 audit.
+Phase 0 is saved remotely at `8709cba` on `phase0-truth-cleanup`.
+
+- Phase 1 checkpoint: explicit sub-stage graph, adjacent stages, completed-stage exits, no payment gate for eligible assignment, fail-closed record reads, no generic-editor STOPPED bypass, corrected workflow controls.
+- Historical opposition statuses remain readable; structured events and their migration are pending.
+- TM56 clarification: received opposition starts one calendar month; optional additional month without approval. Submission must meet the applicable deadline.
+- 25-day trigger awaiting owner clarification. Ledger, DB enforcement, roles, documents, branding and workbench remain pending.
+- This checkpoint is source/test work; production deployment and end-to-end acceptance have not occurred.
+
 # Current Phase 0 status — 25 September 2026
 
 [Project Truth](docs/PROJECT_TRUTH.md) is the evidence-backed current status. [Workflow Business Rules](docs/WORKFLOW_BUSINESS_RULES.md) defines intended behavior. The historical work log below is preserved as context; its checkmarks, release/freeze claims, and test counts are not current acceptance evidence.

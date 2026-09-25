@@ -1,3 +1,5 @@
+> Phase 0 audit snapshot. Later implementation is tracked at the top of Progress.md; this table records the audited baseline, not later fixes.
+
 # Project Truth — Phase 0 verification
 
 Verified 25 September 2026 against source, Git, mocked tests, live Supabase catalogs and authenticated admin UI.

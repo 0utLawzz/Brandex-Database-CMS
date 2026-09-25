@@ -30,7 +30,7 @@ const STAGE_CONFIG: Record<
 > = {
   "STAGE 1": {
     label: "STAGE 1",
-    subLabel: "Filing → Acknowledgment → Examination",
+    subLabel: "Filing → optional Examination → Acknowledgment",
     bg: "bg-[#0D9970] text-white",
     text: "text-[#0D9970]",
     barBg: "bg-[#0D9970]",

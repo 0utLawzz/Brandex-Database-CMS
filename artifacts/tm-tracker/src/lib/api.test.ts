@@ -27,6 +27,7 @@ import {
   inputToRow,
   isStage2PaymentRequired,
   isValidStageTransition,
+  workflowTransitionError,
   validatePaymentGate,
   listStageDocuments,
   listTrademarkPage,
@@ -238,7 +239,7 @@ describe("Brandex Supabase access patterns", () => {
 
   it("routes create, update, and delete through RLS-protected trademark mutations", async () => {
     const createQueryMock = createQuery({ data: { id: "BX-2", case_number: "CASE-10" }, error: null });
-    const selectBeforeUpdateMock = createQuery({ data: { status: "STAGE 1", stage1_paid: true }, error: null });
+    const selectBeforeUpdateMock = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true }, error: null });
     const updateQueryMock = createQuery({ data: { id: "BX-2", version: 4 }, error: null });
     const deleteQueryMock = createQuery({ error: null });
     supabaseMock.from
@@ -259,14 +260,14 @@ describe("Brandex Supabase access patterns", () => {
   });
 
   it("raises a conflict when optimistic locking updates no row", async () => {
-    const selectQuery = createQuery({ data: { status: "STAGE 1", stage1_paid: true }, error: null });
+    const selectQuery = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true }, error: null });
     const updateQuery = createQuery({ data: null, error: null });
     supabaseMock.from
       .mockReturnValueOnce(selectQuery)
       .mockReturnValueOnce(updateQuery);
 
     await expect(
-      updateTrademark("BX-1", { type: "X", clientCode: "C-7", caseNumber: "CASE-9", appName: "BRANDEX", city: "Islamabad", stage: "STAGE 2" }, 3),
+      updateTrademark("BX-1", { type: "X", clientCode: "C-7", caseNumber: "CASE-9", appName: "BRANDEX", city: "Islamabad", stage: "STAGE 2", subStage: "Assigned" }, 3),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
@@ -329,24 +330,23 @@ describe("Brandex Supabase access patterns", () => {
 
   describe("Stage 1 workflow rules", () => {
     it("allows Filing → Acknowledgement", () => {
-      expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
-      expect(isValidStageTransition("STAGE 1", "STAGE 2")).toBe(true);
+      expect(workflowTransitionError("STAGE 1", "Filing", "STAGE 1", "Acknowledgment")).toBeNull();
     });
 
     it("allows Filing → Examination", () => {
-      expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
+      expect(workflowTransitionError("STAGE 1", "Filing", "STAGE 1", "Examination")).toBeNull();
     });
 
     it("allows Examination → Acknowledgement", () => {
-      expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
+      expect(workflowTransitionError("STAGE 1", "Examination", "STAGE 1", "Acknowledgment")).toBeNull();
     });
 
     it("rejects Acknowledgement → Filing", () => {
-      expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
+      expect(workflowTransitionError("STAGE 1", "Acknowledgment", "STAGE 1", "Filing")).not.toBeNull();
     });
 
     it("rejects Acknowledgement → Examination", () => {
-      expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
+      expect(workflowTransitionError("STAGE 1", "Acknowledgment", "STAGE 1", "Examination")).not.toBeNull();
     });
 
     it("rejects Stage 1 → Stage 2 without required Stage 1 payment condition", () => {
@@ -357,11 +357,11 @@ describe("Brandex Supabase access patterns", () => {
 
   describe("Stage 2 workflow rules", () => {
     it("allows Assigned → Accepted", () => {
-      expect(isValidStageTransition("STAGE 2", "STAGE 2")).toBe(true);
+      expect(workflowTransitionError("STAGE 2", "Assigned", "STAGE 2", "Accepted")).toBeNull();
     });
 
     it("allows Assigned → Hearing", () => {
-      expect(isValidStageTransition("STAGE 2", "STAGE 2")).toBe(true);
+      expect(workflowTransitionError("STAGE 2", "Assigned", "STAGE 2", "Hearing")).toBeNull();
     });
 
     it("rejects Stage 2 → Stage 1", () => {
@@ -374,7 +374,7 @@ describe("Brandex Supabase access patterns", () => {
     });
 
     it("allows agent assignment without Stage 2 payment", async () => {
-      const queryMock = createQuery({ data: { stage1_paid: true, stage2_paid: false }, error: null });
+      const queryMock = createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage1_paid: true, stage2_paid: false }, error: null });
       const updateQueryMock = createQuery({ error: null });
       supabaseMock.from
         .mockReturnValueOnce(queryMock)
@@ -386,19 +386,19 @@ describe("Brandex Supabase access patterns", () => {
 
   describe("Stage 4 workflow rules", () => {
     it("allows CER Acknowledge → CER Received", () => {
-      expect(isValidStageTransition("STAGE 4", "STAGE 4")).toBe(true);
+      expect(workflowTransitionError("STAGE 4", "CER Acknowledge", "STAGE 4", "CER Received")).toBeNull();
     });
 
     it("allows CER Received → CER Dispatch", () => {
-      expect(isValidStageTransition("STAGE 4", "STAGE 4")).toBe(true);
+      expect(workflowTransitionError("STAGE 4", "CER Received", "STAGE 4", "CER Dispatch")).toBeNull();
     });
 
     it("rejects CER Received → CER Acknowledge", () => {
-      expect(isValidStageTransition("STAGE 4", "STAGE 4")).toBe(true);
+      expect(workflowTransitionError("STAGE 4", "CER Received", "STAGE 4", "CER Acknowledge")).not.toBeNull();
     });
 
     it("rejects CER Dispatch → CER Received", () => {
-      expect(isValidStageTransition("STAGE 4", "STAGE 4")).toBe(true);
+      expect(workflowTransitionError("STAGE 4", "CER Dispatch", "STAGE 4", "CER Received")).not.toBeNull();
     });
   });
 
@@ -485,7 +485,7 @@ describe("Brandex Supabase access patterns", () => {
   it("allows agent assignment without Stage 2 payment (new rule)", async () => {
     // Agent assignment no longer requires payment check
     const updateQueryMock = createQuery({ error: null });
-    supabaseMock.from.mockReturnValue(updateQueryMock);
+    supabaseMock.from.mockReturnValueOnce(createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage2_paid: false }, error: null })).mockReturnValueOnce(updateQueryMock);
 
     await expect(assignStage2Agent("BX-1", "Counsel A", "Islamabad")).resolves.not.toThrow();
     // Just verify it doesn't throw - the implementation changed
@@ -891,9 +891,9 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
 });
 
 describe("Batch 12: RecordView Workflow Consolidation", () => {
-  it("updateTrademarkStatus — blocks transition to STAGE 2 when stage2_paid is false", async () => {
+  it("updateTrademarkStatus — blocks transition to STAGE 2 when stage1_paid is false", async () => {
     const selectQuery = createQuery({
-      data: { stage2_paid: false, status: "STAGE 1" },
+      data: { stage1_paid: false, status: "STAGE 1", sub_status: "Acknowledgment" },
       error: null,
     });
     supabaseMock.from.mockReturnValue(selectQuery);
@@ -905,7 +905,7 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkStatus — allows transition to STAGE 2 when stage1_paid is true", async () => {
     const selectQuery = createQuery({
-      data: { stage1_paid: true, status: "STAGE 1" },
+      data: { stage1_paid: true, status: "STAGE 1", sub_status: "Acknowledgment" },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -925,7 +925,7 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkStatus — normalizes user-facing subStage when updating status", async () => {
     const selectQuery = createQuery({
-      data: { status: "STAGE 1", stage1_paid: true, stage2_paid: true },
+      data: { status: "STAGE 3", sub_status: "D-Note Received", stage1_paid: true, stage2_paid: true },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -944,7 +944,7 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkAgent — allows assignment of agent and city", async () => {
     const updateQuery = createQuery({ data: null, error: null });
-    supabaseMock.from.mockReturnValue(updateQuery);
+    supabaseMock.from.mockReturnValueOnce(createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage2_paid: false }, error: null })).mockReturnValueOnce(updateQuery);
 
     await updateTrademarkAgent("BX-1", "Counsel A", "Islamabad");
     // Agent name and city are uppercased at the API boundary (Batch 2 normalisation rule)
@@ -1152,7 +1152,7 @@ describe("Batch 13: Publication Workflow Integration", () => {
 
     it("trims agent and city whitespace on assignStage2Agent", async () => {
       const updateQuery = createQuery({ data: null, error: null });
-      supabaseMock.from.mockReturnValue(updateQuery);
+      supabaseMock.from.mockReturnValueOnce(createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage2_paid: false }, error: null })).mockReturnValueOnce(updateQuery);
 
       await assignStage2Agent("BX-1", "  Agent Smith  ", "  Karachi  ");
       // Whitespace is trimmed AND value is uppercased at the API boundary (Batch 2 normalisation rule)
@@ -1194,7 +1194,7 @@ describe("Batch 13: Publication Workflow Integration", () => {
       expect(isValidStageTransition("STAGE 1", "STAGE 2")).toBe(true);
       expect(isValidStageTransition("STAGE 2", "STAGE 3")).toBe(true);
       expect(isValidStageTransition("STAGE 3", "STAGE 4")).toBe(true);
-      expect(isValidStageTransition("STAGE 1", "STAGE 4")).toBe(true);
+      expect(isValidStageTransition("STAGE 1", "STAGE 4")).toBe(false);
       expect(isValidStageTransition("STAGE 1", "STAGE 1")).toBe(true);
       expect(isValidStageTransition("STAGE 2", "STOPPED")).toBe(true);
 
@@ -1493,5 +1493,50 @@ describe("Database Table Sorting and Pagination", () => {
     const page100 = await listTrademarkPage({ page: 1, pageSize: 100 });
     expect(page100.pageSize).toBe(100);
     expect(page100.records).toHaveLength(100);
+  });
+});
+
+
+describe("Canonical workflow enforcement", () => {
+  it.each([
+    ["STAGE 1", "Acknowledgment", "STAGE 1", "Examination"],
+    ["STAGE 1", "Filing", "STAGE 2", "Assigned"],
+    ["STAGE 1", "Acknowledgment", "STAGE 3", "Published"],
+    ["STAGE 2", "Accepted", "STAGE 2", "Hearing"],
+    ["STAGE 2", "Hearing", "STAGE 2", "Accepted"],
+    ["STAGE 3", "Published", "STAGE 3", "D-Note Submitted"],
+    ["STAGE 4", "CER Acknowledge", "STAGE 4", "CER Dispatch"],
+    ["STOPPED", "", "STAGE 1", "Filing"],
+    ["STAGE 1", "Filing", "STOPPED", "Case Stopped"],
+  ])("rejects %s/%s to %s/%s", (a,b,c,d) => {
+    expect(workflowTransitionError(a,b,c,d)).not.toBeNull();
+  });
+  it.each([
+    ["STAGE 1", "Acknowledgment", "STAGE 2", "Assigned"],
+    ["STAGE 2", "Accepted", "STAGE 3", "Published"],
+    ["STAGE 2", "Hearing", "STAGE 3", "Published"],
+    ["STAGE 3", "Published", "STAGE 3", "D-Note Received"],
+    ["STAGE 3", "D-Note Received", "STAGE 3", "D-Note Submitted"],
+    ["STAGE 3", "D-Note Submitted", "STAGE 4", "CER Acknowledge"],
+  ])("allows %s/%s to %s/%s", (a,b,c,d) => {
+    expect(workflowTransitionError(a,b,c,d)).toBeNull();
+  });
+  it("fails closed when the current record cannot be read", async () => {
+    const query = createQuery({ data: null, error: { message: "Read denied" } });
+    supabaseMock.from.mockReturnValue(query);
+    await expect(updateTrademark("BX-1", { appName: "Changed" })).rejects.toThrow("Read denied");
+    expect(query.update).not.toHaveBeenCalled();
+  });
+  it("blocks general-editor STOPPED bypass", async () => {
+    const query = createQuery({ data: { status: "STAGE 1", sub_status: "Filing" }, error: null });
+    supabaseMock.from.mockReturnValue(query);
+    await expect(updateTrademark("BX-1", { stage: "STOPPED" })).rejects.toThrow("mandatory reason");
+    expect(query.update).not.toHaveBeenCalled();
+  });
+  it("blocks agent assignment outside Stage 2 Assigned without writing", async () => {
+    const query = createQuery({ data: { status: "STAGE 3", sub_status: "Published" }, error: null });
+    supabaseMock.from.mockReturnValue(query);
+    await expect(assignStage2Agent("BX-1", "Agent")).rejects.toThrow("Stage 2 / Assigned");
+    expect(query.update).not.toHaveBeenCalled();
   });
 });

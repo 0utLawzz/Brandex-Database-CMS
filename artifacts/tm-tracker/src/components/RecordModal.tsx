@@ -488,11 +488,13 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               {/* Status */}
               <div>
                 <SectionHead title="Status" />
+                <p className="text-sm mb-3">New cases start at Filing. Use Update Status on the case for workflow changes and stopping reasons.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel required>STAGE</FieldLabel>
                     <FormSelect
                       {...form.register("stage")}
+                      disabled
                       onChange={(e) => {
                         const newStage = e.target.value;
                         form.setValue("stage", newStage);
@@ -508,7 +510,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   </div>
                   <div>
                     <FieldLabel>SUB-STAGE</FieldLabel>
-                    <FormSelect {...form.register("subStage")}>
+                    <FormSelect {...form.register("subStage")} disabled>
                       <option value="">SELECT SUB-STAGE</option>
                       {availableSubStages.map((s) => (
                         <option key={s} value={s}>
