@@ -57,7 +57,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#0C0C0C] border-b-2 border-[#1A1A1A] text-[#F0E8D0] shadow-md print:hidden">
+      <header className="sticky top-0 z-40 bg-[#0C0C0C] border-b-2 border-[#1A1A1A] text-[#F0E8D0] shadow-none print:hidden">
         <div className="flex items-center justify-between px-4 h-16 w-full">
           {/* Logo & Brand */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
@@ -74,21 +74,21 @@ export function Navbar() {
               <div className="font-serif text-base leading-none text-[#F0E8D0] tracking-wider whitespace-nowrap">
                 BRANDEX LAW ASSOCIATES
               </div>
-              <div className="font-mono text-[8px] text-[#D6A64B] tracking-widest uppercase font-bold mt-0.5">
+              <div className="font-mono text-xs text-[#D6A64B] tracking-widest uppercase font-bold mt-0.5">
                 Trademark & IP Registry
               </div>
             </div>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex flex-1 justify-center items-center gap-1">
+          <nav className="hidden xl:flex flex-1 justify-center items-center gap-1">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActive(href);
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-2 px-3 py-2 font-mono font-bold text-[11px] tracking-widest uppercase transition-all border-2 ${
+                  className={`flex items-center gap-2 px-3 py-2 font-mono font-medium text-sm tracking-normal uppercase transition-all border-2 ${
                     active
                       ? "bg-[#6C1C1F] border-[#B0740E] text-white"
                       : "border-transparent text-[#C5B89A] hover:bg-[#1A1A1A] hover:border-[#333] hover:text-[#F0E8D0]"
@@ -107,7 +107,7 @@ export function Navbar() {
               <button
                 onClick={() => setBrandingModalOpen(true)}
                 title="Branding & Logo Settings (Admin)"
-                className="hidden sm:flex items-center justify-center gap-1.5 bg-[#6C1C1F] text-white border-2 border-[#B0740E] px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:brightness-95 transition-all"
+                className="hidden sm:flex items-center justify-center gap-1.5 bg-[#6C1C1F] text-white border-2 border-[#B0740E] px-2.5 py-1.5 font-mono text-xs font-bold uppercase tracking-wider hover:brightness-110 active:brightness-95 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#D6A64B]" />
                 BRANDING
@@ -118,7 +118,7 @@ export function Navbar() {
               onClick={handleRefresh}
               disabled={refreshing}
               title="Refresh data from Supabase"
-              className="hidden sm:flex items-center justify-center gap-2 bg-[#B0740E] text-white border-2 border-[#B0740E] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider hover:brightness-105 active:brightness-95 transition-all disabled:opacity-50"
+              className="hidden sm:flex items-center justify-center gap-2 bg-[#B0740E] text-white border-2 border-[#B0740E] px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider hover:brightness-105 active:brightness-95 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "REFRESHING..." : "REFRESH"}
@@ -133,7 +133,7 @@ export function Navbar() {
             </button>
 
             <button
-              className="lg:hidden p-2 text-[#F0E8D0] hover:text-white"
+              className="xl:hidden p-2 text-[#F0E8D0] hover:text-white"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle menu"
             >
@@ -150,7 +150,7 @@ export function Navbar() {
       />
 
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 top-16 z-30 bg-[#0C0C0C] border-t-2 border-[#1A1A1A] flex flex-col p-4 print:hidden">
+        <div className="xl:hidden fixed inset-0 top-16 z-30 bg-[#0C0C0C] border-t-2 border-[#1A1A1A] flex flex-col p-4 print:hidden">
           <nav className="flex-1 space-y-2">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActive(href);

@@ -49,4 +49,11 @@ describe("Record View date and registry labels", () => {
     expect(html).toMatch(/Date Created:.*?>—<\/span>/);
     expect(html).not.toMatch(/Date Created:.*?01-Aug-26/);
   });
+  it("shows creation and modification timestamps even without a journal match", () => {
+    fixture.record.journal = null;
+    const html = renderToStaticMarkup(<RecordView />);
+    expect(html).toMatch(/Date Created:.*?02-Sep-26/);
+    expect(html).toMatch(/Last Modified:.*?03-Sep-26/);
+  });
+
 });

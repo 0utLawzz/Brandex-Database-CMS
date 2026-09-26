@@ -10,7 +10,8 @@ Phase 0 is saved remotely at `8709cba` on `phase0-truth-cleanup`.
 - Next checkpoint implements SQL workflow/role/document guards, opposition events, TM56 deadlines and extensions, agent FK/rate and automatic Accepted credit, auditable manual agent payments, plus case UI. Database tests execute all migrations in embedded PostgreSQL.
 - Branding shared save/read now agrees on persisted keys; upload errors propagate; stable private storage paths are signed for one hour and refreshed. Missing-table repair migration included.
 - Checkpoint validation: 204 tests / 7 files pass (including PostgreSQL migration/RLS tests); typecheck and build pass. Migrations are not yet applied live.
-- Ledger allocation decision pending. Workbench/release acceptance remain pending.
+- Workbench checkpoint: case/metadata screen text is 14px minimum in primary work views; lighter frames, wider Record View, next-action/payment summary, two-column publication cards with private thumbnails/enlargement and class links, display-only six-digit numeric TM formatting; timestamps now display without a journal match. Print sizing retained. Browser acceptance pending.
+- Ledger allocation decision pending. Connector access to the separate Ledger project is denied; no Ledger data or permissions changed.
 - This checkpoint is source/test work; production deployment and end-to-end acceptance have not occurred.
 
 # Current Phase 0 status — 25 September 2026

@@ -160,3 +160,9 @@ export function normalizeTmNo(val: string | null | undefined): string {
     .replace(/\.0$/, "")
     .replace(/^["']|["']$/g, "");
 }
+
+/** Display-only padding: preserve nonnumeric and longer legal identifiers verbatim. */
+export function formatTmNumber(value: string | null | undefined): string {
+  if (!value) return "—";
+  return /^\d{1,6}$/.test(value) ? value.padStart(6,"0") : value;
+}

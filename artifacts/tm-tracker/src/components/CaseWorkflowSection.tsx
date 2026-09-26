@@ -117,6 +117,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const isStopped = record.stage === "STOPPED";
 
   const getPaymentGateWarning = (target: string): string | null => {
+    if (target === record.stage) return null;
     if (target === "STAGE 2" && !record.stage1Paid) {
       return "Stage 2 cannot be started until Stage 1 payment is cleared.";
     }
@@ -143,21 +144,21 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const availableSubStages = availableWorkflowSubStages(record.stage, record.subStage, targetStage);
 
   return (
-    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+    <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
       {/* Section Header */}
-      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+      <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
           <Workflow className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
           <span>Case Workflow & Status Control</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span
-            className={`px-2.5 py-0.5 font-mono text-xs print:text-[8px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
+            className={`px-2.5 py-0.5 font-mono text-sm print:text-[8px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
           >
             {record.stage || "STAGE 1"}
           </span>
           {record.subStage && (
-            <span className="px-2 py-0.5 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+            <span className="px-2 py-0.5 font-mono text-sm print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
               {formatWorkflowLabel(record.subStage)}
             </span>
           )}
@@ -165,13 +166,19 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
       </div>
 
       <div className="p-4 print:p-2 space-y-3 print:space-y-1.5">
+        <div className="rounded-md bg-[#F8F6F1] p-4 text-base space-y-2">
+          <p><strong>Current:</strong> {record.stage} / {formatWorkflowLabel(record.subStage) || "No sub-stage"}</p>
+          <p><strong>Next workflow action:</strong> {isStopped ? "None — this case is terminal" : availableWorkflowSubStages(record.stage, record.subStage, record.stage).filter(s=>s!==record.subStage).map(formatWorkflowLabel).join(" or ") || (validTargetStages.find(s=>s!==record.stage && s!=="STOPPED") ? `Enter ${validTargetStages.find(s=>s!==record.stage && s!=="STOPPED")} after payment clears` : "No further progression available")}</p>
+          <p><strong>Manual payment flags:</strong> {[1,2,3,4].map(n=>`Stage ${n}: ${(record as any)[`stage${n}Paid`] ? "cleared" : "unpaid"}`).join(" · ")}</p>
+          {record.stage === "STAGE 2" && record.subStage === "Assigned" && <p>Set an agent and agreed rate before Accepted. Stage 2 payment is not needed for assignment.</p>}
+        </div>
         {/* Lifecycle Progression Track */}
-        <div className="border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3 print:p-1.5 shadow-[2px_2px_0_#0C0C0C] print:shadow-none">
-          <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
+        <div className="border border-stone-300 bg-[#FFF9F0] p-3 print:p-1.5 shadow-none print:shadow-none">
+          <div className="text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
             Workflow Progression
           </div>
           {isStopped ? (
-            <div className="p-2.5 print:p-1.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs print:text-[10px] font-bold flex items-center gap-2">
+            <div className="p-2.5 print:p-1.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-sm print:text-[10px] font-bold flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 shrink-0" />
               <span>CASE IS STOPPED — Workflow lifecycle halted</span>
             </div>
@@ -186,14 +193,14 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                     key={stageName}
                     className={`p-2 print:p-1 border-2 transition-all ${
                       isCurrent
-                        ? "border-[#0C0C0C] bg-[#F0E8D0] shadow-[2px_2px_0_#0C0C0C] print:shadow-none"
+                        ? "border-[#0C0C0C] bg-[#F0E8D0] shadow-none print:shadow-none"
                         : isPast
                           ? "border-[#0A6B52] bg-[#D8F2E8]/40"
                           : "border-[#0C0C0C]/20 bg-white opacity-65"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-1 print:mb-0">
-                      <span className="font-mono text-xs print:text-[10px] font-bold text-[#0C0C0C]">
+                      <span className="font-mono text-sm print:text-[10px] font-bold text-[#0C0C0C]">
                         {stageName}
                       </span>
                       {isPast ? (
@@ -202,7 +209,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                         <span className="w-2 h-2 rounded-full bg-[#6C1C1F] animate-pulse" />
                       ) : null}
                     </div>
-                    <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658]">
+                    <div className="font-mono text-sm print:text-[8px] text-[#6d6658]">
                       {isCurrent ? "● ACTIVE" : isPast ? "✓ COMPLETED" : "UPCOMING"}
                     </div>
                   </div>
@@ -215,17 +222,17 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
         {/* Control Grid: Status & Agent Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 print:gap-2">
           {/* Status Card */}
-          <div className="border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3.5 print:p-2 shadow-[2px_2px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
+          <div className="border border-stone-300 bg-[#FFF9F0] p-3.5 print:p-2 shadow-none print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658]">
+                <span className="text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658]">
                   Current Status & Sub-Status
                 </span>
                 {canEdit && !isStopped && (
                   <button
                     type="button"
                     onClick={openStatusModal}
-                    className="print:hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-[1px_1px_0_#0C0C0C]"
+                    className="print:hidden text-sm font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-none"
                   >
                     <Edit3 className="w-3 h-3" />
                     <span>Update Status</span>
@@ -234,13 +241,13 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
               <div className="space-y-1 print:space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Stage:</span>
+                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">Stage:</span>
                   <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                     {record.stage || "—"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Sub-status:</span>
+                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">Sub-status:</span>
                   <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                     {formatWorkflowLabel(record.subStage) || "—"}
                   </span>
@@ -250,17 +257,17 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
           </div>
 
           {/* Agent Details Card */}
-          <div className="border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3.5 print:p-2 shadow-[2px_2px_0_#0C0C0C] print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
+          <div className="border border-stone-300 bg-[#FFF9F0] p-3.5 print:p-2 shadow-none print:shadow-none flex flex-col justify-between gap-2.5 print:gap-1">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
+                <span className="text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
                   <User className="w-3 h-3" /> Agent Details
                 </span>
                 {canEdit && record.stage === "STAGE 2" && record.subStage === "Assigned" && (
                   <button
                     type="button"
                     onClick={openAgentModal}
-                    className="print:hidden text-[10px] font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-[1px_1px_0_#0C0C0C]"
+                    className="print:hidden text-sm font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-none"
                   >
                     <Edit3 className="w-3 h-3" />
                     <span>{record.agent ? "Change Agent" : "Assign Agent"}</span>
@@ -269,13 +276,13 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
               <div className="space-y-1 print:space-y-0.5">
                 <div className="flex items-center gap-2">
-                <span className="font-mono text-xs print:text-[10px] text-[#6d6658]">Agent:</span>
+                <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">Agent:</span>
                 <span className={`font-mono text-sm print:text-xs font-bold text-[#0C0C0C] ${!record.agent ? "italic text-[#9d9488]" : ""}`}>
                   {record.agent || "Unassigned"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs print:text-[10px] text-[#6d6658] flex items-center gap-0.5">
+                <span className="font-mono text-sm print:text-[10px] text-[#6d6658] flex items-center gap-0.5">
                   <MapPin className="w-3 h-3" /> City:
                 </span>
                 <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
@@ -291,8 +298,8 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
       {/* Status Transition Modal */}
       {statusModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="border-3 border-[#0C0C0C] bg-[#F0E8D0] shadow-[8px_8px_0_#0C0C0C] max-w-md w-full p-5 space-y-4">
-            <div className="flex items-center justify-between border-b-2 border-[#0C0C0C] pb-3">
+          <div className="border-3 border-[#0C0C0C] bg-[#F0E8D0] shadow-none max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-300 pb-3">
               <div className="flex items-center gap-2">
                 <Workflow className="w-4 h-4 text-[#6C1C1F]" />
                 <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C]">
@@ -310,21 +317,21 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
             </div>
 
             {statusError && (
-              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{statusError}</span>
               </div>
             )}
 
             {paymentGateWarning && (
-              <div className="p-2.5 border-2 border-[#B0740E] bg-[#FFF0D0] text-[#6C1C1F] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#B0740E] bg-[#FFF0D0] text-[#6C1C1F] font-mono text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{paymentGateWarning}</span>
               </div>
             )}
 
             {stoppedWarning && (
-              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{stoppedWarning}</span>
               </div>
@@ -347,7 +354,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               className="space-y-3.5"
             >
               <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                   Target Stage *
                 </label>
                 <select
@@ -360,7 +367,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                     }
                   }}
                   disabled={statusMutation.isPending}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
+                  className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm font-bold text-[#0C0C0C]"
                 >
                   {validTargetStages.map((s) => (
                     <option key={s} value={s}>
@@ -371,14 +378,14 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
 
               <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                   Target Sub-stage
                 </label>
                 <select
                   value={targetSubStage}
                   onChange={(e) => setTargetSubStage(e.target.value)}
                   disabled={statusMutation.isPending || targetStage === "STOPPED"}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
+                  className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm text-[#0C0C0C]"
                 >
                   {targetStage === "STOPPED" && <option value="">No sub-stage</option>}
                   {availableSubStages.map((s) => (
@@ -391,7 +398,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
 
               {targetStage === "STOPPED" && (
                 <div>
-                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                  <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                     STOPPED Reason *
                   </label>
                   <input
@@ -400,7 +407,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                     onChange={(e) => setStoppedReason(e.target.value)}
                     disabled={statusMutation.isPending}
                     placeholder="Enter reason for stopping this case..."
-                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
+                    className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm text-[#0C0C0C]"
                   />
                 </div>
               )}
@@ -410,14 +417,14 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   type="button"
                   onClick={() => setStatusModalOpen(false)}
                   disabled={statusMutation.isPending}
-                  className="px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                  className="px-3 py-1.5 border border-stone-300 bg-white font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={targetStageRequiresPayment || Boolean(stoppedWarning) || statusMutation.isPending}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-sm font-bold uppercase border border-stone-300 shadow-none hover:brightness-110 disabled:opacity-50 transition-all"
                 >
                   {statusMutation.isPending ? (
                     <>
@@ -437,8 +444,8 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
       {/* Agent Assignment Modal */}
       {agentModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="border-3 border-[#0C0C0C] bg-[#F0E8D0] shadow-[8px_8px_0_#0C0C0C] max-w-md w-full p-5 space-y-4">
-            <div className="flex items-center justify-between border-b-2 border-[#0C0C0C] pb-3">
+          <div className="border-3 border-[#0C0C0C] bg-[#F0E8D0] shadow-none max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-300 pb-3">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-[#6C1C1F]" />
                 <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C]">
@@ -456,7 +463,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
             </div>
 
             {agentError && (
-              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{agentError}</span>
               </div>
@@ -475,7 +482,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               className="space-y-3.5"
             >
               <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                   Assign Agent *
                 </label>
                 <select
@@ -489,7 +496,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                     }
                   }}
                   disabled={agentMutation.isPending}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold text-[#0C0C0C]"
+                  className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm font-bold text-[#0C0C0C]"
                 >
                   <option value="">-- Select Agent from Master List --</option>
                   {agents.map((a) => (
@@ -501,14 +508,14 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
 
               <div>
-                <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                   Agent City
                 </label>
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
                   disabled={agentMutation.isPending}
-                  className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
+                  className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm text-[#0C0C0C]"
                 >
                   {CITIES.map((c) => (
                     <option key={c} value={c}>
@@ -523,14 +530,14 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   type="button"
                   onClick={() => setAgentModalOpen(false)}
                   disabled={agentMutation.isPending}
-                  className="px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                  className="px-3 py-1.5 border border-stone-300 bg-white font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!selectedAgent.trim() || agentMutation.isPending}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-sm font-bold uppercase border border-stone-300 shadow-none hover:brightness-110 disabled:opacity-50 transition-all"
                 >
                   {agentMutation.isPending ? (
                     <>
@@ -571,13 +578,13 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
   });
 
   return (
-    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+    <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+      <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
           <CreditCard className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
           <span>Stage Payments</span>
         </div>
-        <span className="font-mono text-[9px] print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-[1px_1px_0_#B0740E] print:shadow-none">
+        <span className="font-mono text-sm print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-none print:shadow-none">
           MANUAL CMS FLAGS — NOT LEDGER VERIFIED
         </span>
       </div>
@@ -594,11 +601,11 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
           ).map(({ label, stageNum, paid, date }) => (
             <div
               key={label}
-              className={`border-2 p-3 print:p-1.5 shadow-[2px_2px_0_#0C0C0C] print:shadow-none ${
+              className={`border-2 p-3 print:p-1.5 shadow-none print:shadow-none ${
                 paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C] bg-[#FFF9F0]"
               }`}
             >
-              <div className="font-mono text-[10px] print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
+              <div className="font-mono text-sm print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
               <label className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
                 <input
                   type="checkbox"
@@ -613,7 +620,7 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
                   }
                   className="w-4 h-4 print:w-3 print:h-3 accent-[#0A6B52]"
                 />
-                <span className={`font-mono text-xs print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
+                <span className={`font-mono text-sm print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
                   {paid ? "PAID" : "UNPAID"}
                 </span>
               </label>
@@ -624,7 +631,7 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
                 onChange={(e) =>
                   paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
                 }
-                className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-xs print:text-[8px] bg-white disabled:opacity-40"
+                className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-sm print:text-[8px] bg-white disabled:opacity-40"
               />
             </div>
           ))}
@@ -642,20 +649,20 @@ interface WorkflowHistorySectionProps {
 
 export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySectionProps) {
   return (
-    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+    <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+      <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
           <Clock className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
           <span>Workflow History</span>
         </div>
-        <span className="font-mono text-[10px] print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20">
+        <span className="font-mono text-sm print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20">
           {workflowHistory.length} {workflowHistory.length === 1 ? "EVENT" : "EVENTS"}
         </span>
       </div>
 
       <div className="p-4 print:p-2 space-y-2.5 print:space-y-1">
         {workflowHistory.length === 0 ? (
-          <div className="p-3 print:p-1.5 border border-dashed border-[#0C0C0C]/30 bg-[#FFF9F0] font-mono text-xs print:text-[9px] text-[#6d6658] italic text-center">
+          <div className="p-3 print:p-1.5 border border-dashed border-[#0C0C0C]/30 bg-[#FFF9F0] font-mono text-sm print:text-[9px] text-[#6d6658] italic text-center">
             No workflow history recorded.
           </div>
         ) : (
@@ -669,7 +676,7 @@ export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySecti
                   <div className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                     {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
                   </div>
-                  <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                  <div className="font-mono text-sm print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                     <span>{formatDateShort(event.eventAt)}</span>
                     <span>Changed by: <strong className="text-[#0C0C0C]">{event.changedByName}</strong></span>
                   </div>

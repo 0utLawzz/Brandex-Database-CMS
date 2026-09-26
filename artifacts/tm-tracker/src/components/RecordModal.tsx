@@ -68,7 +68,7 @@ interface RecordModalProps {
 
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <label className="block font-mono text-[10px] font-bold uppercase tracking-widest text-[#6d6658] mb-1.5">
+    <label className="block font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658] mb-1.5">
       {children}{required && <span className="text-[#CC0000] ml-0.5">*</span>}
     </label>
   );
@@ -78,7 +78,7 @@ function FormInput({ className = "", ...props }: React.InputHTMLAttributes<HTMLI
   return (
     <input
       {...props}
-      className={`w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
+      className={`w-full h-10 px-3 bg-white border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
     />
   );
 }
@@ -87,7 +87,7 @@ function FormSelect({ children, className = "", ...props }: React.SelectHTMLAttr
   return (
     <select
       {...props}
-      className={`w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
+      className={`w-full h-10 px-3 bg-white border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 disabled:opacity-40 disabled:bg-[#E8DFC7] ${className}`}
     >
       {children}
     </select>
@@ -97,7 +97,7 @@ function FormSelect({ children, className = "", ...props }: React.SelectHTMLAttr
 function SectionHead({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#0C0C0C]">{title}</div>
+      <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#0C0C0C]">{title}</div>
       <div className="flex-1 h-0.5 bg-[#0C0C0C]/10" />
     </div>
   );
@@ -380,7 +380,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-3xl max-h-full bg-[#F0E8D0] border-2 border-[#0C0C0C] flex flex-col shadow-[8px_8px_0_#0C0C0C] overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+      <div className="relative w-full max-w-3xl max-h-full bg-[#F0E8D0] border border-stone-300 flex flex-col shadow-none overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#0C0C0C] text-[#F0E8D0] shrink-0">
           <div>
@@ -388,7 +388,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               {creating ? "ADD RECORD" : "EDIT RECORD"}
             </div>
             {!creating && trademark && (
-              <div className="font-mono text-[10px] text-[#C5B89A] uppercase tracking-widest mt-1">
+              <div className="font-mono text-sm text-[#C5B89A] uppercase tracking-widest mt-1">
                 {trademark.caseNumber || trademark.id} · SECURE DATASHEET
               </div>
             )}
@@ -408,7 +408,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               {isViewer && (
                 <div className="p-3 bg-[#FFF0D0] border-2 border-[#B0740E] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#6C1C1F] shrink-0" />
-                  <span className="font-mono text-xs font-bold text-[#6C1C1F] uppercase">
+                  <span className="font-mono text-sm font-bold text-[#6C1C1F] uppercase">
                     VIEWER MODE: You have read-only access. Saving or deleting records is restricted.
                   </span>
                 </div>
@@ -422,7 +422,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     <FieldLabel required>DATE</FieldLabel>
                     <FormInput type="date" {...form.register("date")} />
                     {form.formState.errors.date && (
-                      <p className="mt-1 text-[10px] font-mono text-[#CC0000]">{form.formState.errors.date.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.date.message}</p>
                     )}
                   </div>
                   <div>
@@ -439,14 +439,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                       onChange={handleClientCodeChange}
                     />
                     {form.formState.errors.clientCode && (
-                      <p className="mt-1 text-[10px] font-mono text-[#CC0000]">{form.formState.errors.clientCode.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.clientCode.message}</p>
                     )}
                   </div>
                   <div>
                     <FieldLabel required>CASE NUMBER</FieldLabel>
                     <FormInput placeholder="e.g. 001" {...form.register("caseNumber")} />
                     {form.formState.errors.caseNumber && (
-                      <p className="mt-1 text-[10px] font-mono text-[#CC0000]">{form.formState.errors.caseNumber.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.caseNumber.message}</p>
                     )}
                   </div>
                 </div>
@@ -466,7 +466,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     <FieldLabel required>APPLICATION NAME</FieldLabel>
                     <FormInput placeholder="Trademark / Application name" {...form.register("appName")} />
                     {form.formState.errors.appName && (
-                      <p className="mt-1 text-[10px] font-mono text-[#CC0000]">{form.formState.errors.appName.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.appName.message}</p>
                     )}
                   </div>
                   <div>
@@ -535,7 +535,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                         <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
                       )}
                       <span
-                        className={`font-mono text-xs font-bold ${
+                        className={`font-mono text-sm font-bold ${
                           isStage2Paid ? "text-[#0A6B52]" : "text-[#6C1C1F]"
                         }`}
                       >
@@ -544,7 +544,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                           : "Stage 2 payment is required before proceeding."}
                       </span>
                     </div>
-                    <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
+                    <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
                       MANUAL — NOT VERIFIED
                     </span>
                   </div>
@@ -559,15 +559,15 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
-                        <span className="font-mono text-xs font-bold text-[#6C1C1F]">
+                        <span className="font-mono text-sm font-bold text-[#6C1C1F]">
                           Stage 2 payment is required before proceeding.
                         </span>
                       </div>
-                      <span className="font-mono text-[9px] font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
+                      <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
                         MANUAL — NOT VERIFIED
                       </span>
                     </div>
-                    <div className="font-mono text-xs text-[#6d6658]">
+                    <div className="font-mono text-sm text-[#6d6658]">
                       Agent assignment is locked until Stage 2 payment is cleared.
                     </div>
                   </div>
@@ -620,14 +620,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                       {...form.register("notes")}
                       rows={3}
                       placeholder="Enter any notes here..."
-                      className="w-full p-3 bg-white border-2 border-[#0C0C0C] font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 resize-none"
+                      className="w-full p-3 bg-white border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F] focus:outline-offset-0 resize-none"
                     />
                   </div>
 
                   {/* Image Upload / Preview */}
                   <div>
                     <FieldLabel>TRADEMARK IMAGE</FieldLabel>
-                    <div className="border-2 border-[#0C0C0C] bg-white p-4 space-y-3">
+                    <div className="border border-stone-300 bg-white p-4 space-y-3">
                       {/* Hidden File Input */}
                       <input
                         type="file"
@@ -642,7 +642,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploading}
-                          className="flex items-center gap-2 px-4 h-10 bg-[#0C0C0C] text-[#F0E8D0] border-2 border-[#0C0C0C] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#6C1C1F] hover:border-[#6C1C1F] hover:text-white transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2 px-4 h-10 bg-[#0C0C0C] text-[#F0E8D0] border border-stone-300 font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#6C1C1F] hover:border-[#6C1C1F] hover:text-white transition-colors disabled:opacity-50"
                         >
                           <UploadCloud className="w-4 h-4" />
                           {uploading ? "UPLOADING…" : watchImage ? "REPLACE IMAGE" : "BROWSE / UPLOAD IMAGE"}
@@ -652,7 +652,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                           <button
                             type="button"
                             onClick={() => { form.setValue("image", ""); setImagePreview(""); }}
-                            className="px-3 h-10 border-2 border-[#CC0000] text-[#CC0000] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#CC0000] hover:text-white transition-colors"
+                            className="px-3 h-10 border-2 border-[#CC0000] text-[#CC0000] font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#CC0000] hover:text-white transition-colors"
                           >
                             REMOVE IMAGE
                           </button>
@@ -662,7 +662,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                       {/* Upload Progress Bar */}
                       {uploading && (
                         <div className="space-y-1">
-                          <div className="flex justify-between font-mono text-[10px] text-[#6d6658]">
+                          <div className="flex justify-between font-mono text-sm text-[#6d6658]">
                             <span>Uploading to secure storage…</span>
                             <span>{uploadProgress}%</span>
                           </div>
@@ -680,7 +680,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                         <div className="flex items-center gap-4 pt-2 border-t border-[#0C0C0C]/10">
                           <div
                             onClick={() => setPreviewModalOpen(true)}
-                            className="w-16 h-16 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center cursor-pointer hover:border-[#6C1C1F] overflow-hidden"
+                            className="w-16 h-16 border border-stone-300 bg-[#F0E8D0] flex items-center justify-center cursor-pointer hover:border-[#6C1C1F] overflow-hidden"
                             title="Click to enlarge"
                           >
                             <img
@@ -692,14 +692,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                               }}
                             />
                           </div>
-                          <div className="flex flex-col gap-1 font-mono text-xs">
-                            <div className="flex items-center gap-1.5 text-[#0A6B52] font-bold text-[10px] uppercase">
+                          <div className="flex flex-col gap-1 font-mono text-sm">
+                            <div className="flex items-center gap-1.5 text-[#0A6B52] font-bold text-sm uppercase">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Image Attached
                             </div>
                             <button
                               type="button"
                               onClick={() => setPreviewModalOpen(true)}
-                              className="flex items-center gap-1 text-[#6C1C1F] text-[11px] font-bold hover:underline"
+                              className="flex items-center gap-1 text-[#6C1C1F] text-sm font-bold hover:underline"
                             >
                               <Eye className="w-3.5 h-3.5" /> View Large Preview
                             </button>
@@ -721,14 +721,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                 onClick={() => setPreviewModalOpen(false)}
               >
                 <div
-                  className="relative max-w-3xl max-h-[85vh] bg-[#F0E8D0] border-4 border-[#0C0C0C] shadow-[10px_10px_0_#0C0C0C] overflow-hidden"
+                  className="relative max-w-3xl max-h-[85vh] bg-[#F0E8D0] border-4 border-[#0C0C0C] shadow-none overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between px-4 py-2 bg-[#0C0C0C] text-[#F0E8D0]">
-                    <span className="font-mono font-bold text-xs uppercase tracking-widest">Image Preview</span>
+                    <span className="font-mono font-bold text-sm uppercase tracking-widest">Image Preview</span>
                     <button
                       onClick={() => setPreviewModalOpen(false)}
-                      className="font-mono text-xs text-[#C5B89A] hover:text-white"
+                      className="font-mono text-sm text-[#C5B89A] hover:text-white"
                     >
                       ✕ CLOSE
                     </button>
@@ -749,7 +749,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending || isPending}
-                  className="flex items-center gap-2 bg-white text-[#CC0000] border-2 border-[#CC0000] px-4 h-10 font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#CC0000] hover:text-white transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 bg-white text-[#CC0000] border-2 border-[#CC0000] px-4 h-10 font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#CC0000] hover:text-white transition-colors disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" /> DELETE
                 </button>
@@ -759,14 +759,14 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   type="button"
                   onClick={onClose}
                   disabled={isPending}
-                  className="px-5 h-10 bg-white border-2 border-[#0C0C0C] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#0C0C0C] hover:text-[#F0E8D0] transition-colors disabled:opacity-50"
+                  className="px-5 h-10 bg-white border border-stone-300 font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#0C0C0C] hover:text-[#F0E8D0] transition-colors disabled:opacity-50"
                 >
                   CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={isPending || isViewer}
-                  className="flex items-center gap-2 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] px-6 h-10 font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] px-6 h-10 font-mono font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50"
                   title={isViewer ? "Admin role required" : undefined}
                 >
                   <Save className="w-4 h-4" />

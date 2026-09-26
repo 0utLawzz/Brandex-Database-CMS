@@ -1,3 +1,4 @@
+import { formatTmNumber } from "./utils";
 import { describe, expect, it } from "vitest";
 import { formatDateLong, getRelativeAge, getFormDate } from "./utils";
 
@@ -164,5 +165,14 @@ describe("getFormDate", () => {
     };
     const result = getFormDate(tmMatches, "TM5");
     expect(result === undefined || result === null).toBe(true);
+  });
+});
+
+
+describe("TM display formatting preserves identifiers",()=>{
+  it("pads short numeric TM numbers for display only",()=>expect(formatTmNumber("123")).toBe("000123"));
+  it("preserves alphanumeric and longer identifiers",()=>{
+    expect(formatTmNumber("TM-48")).toBe("TM-48");
+    expect(formatTmNumber("1234567")).toBe("1234567");
   });
 });

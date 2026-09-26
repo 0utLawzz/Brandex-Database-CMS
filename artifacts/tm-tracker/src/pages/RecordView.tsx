@@ -30,8 +30,8 @@ const STAGE_BADGE: Record<string, string> = {
 function Field({ label, value, wide }: { label: string; value?: string | null; wide?: boolean }) {
   if (!value) return null;
   return (
-    <div className={`${wide ? "col-span-2" : ""} border-2 border-[#0C0C0C] bg-[#FFF9F0] p-3 print:p-1.5 shadow-[2px_2px_0_#0C0C0C] print:shadow-none`}>
-      <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-1 print:mb-0.5">{label}</div>
+    <div className={`${wide ? "col-span-2" : ""} border border-stone-300 bg-[#FFF9F0] p-3 print:p-1.5 shadow-none print:shadow-none`}>
+      <div className="font-mono text-sm print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-1 print:mb-0.5">{label}</div>
       <div className="font-sans text-base sm:text-lg print:text-xs font-bold text-[#0C0C0C] break-words">{value}</div>
     </div>
   );
@@ -45,9 +45,9 @@ function TmFormBadge({ label, active, tmMatches }: { label: string; active: bool
   return (
     <div className="flex flex-col gap-0.5">
       <span
-        className={`inline-flex items-center gap-1 px-2.5 py-1.5 print:px-1.5 print:py-0.5 font-mono text-[10px] print:text-[8px] font-bold border-2 ${
+        className={`inline-flex items-center gap-1 px-2.5 py-1.5 print:px-1.5 print:py-0.5 font-mono text-sm print:text-[8px] font-bold border-2 ${
           active
-            ? "border-[#0A6B52] text-[#0A6B52] bg-[#D8F2E8] shadow-[2px_2px_0_#0A6B52] print:shadow-none"
+            ? "border-[#0A6B52] text-[#0A6B52] bg-[#D8F2E8] shadow-none print:shadow-none"
             : "border-[#0C0C0C]/35 text-[#6d6658] bg-[#FFF9F0]"
         }`}
       >
@@ -55,12 +55,12 @@ function TmFormBadge({ label, active, tmMatches }: { label: string; active: bool
         {label}
       </span>
       {active && formattedDate && (
-        <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658] pl-1">
+        <div className="font-mono text-sm print:text-[8px] text-[#6d6658] pl-1">
           {formattedDate} · {relativeAge}
         </div>
       )}
       {active && !formattedDate && (
-        <div className="font-mono text-[9px] print:text-[8px] text-[#6d6658] pl-1">
+        <div className="font-mono text-sm print:text-[8px] text-[#6d6658] pl-1">
           Date not available
         </div>
       )}
@@ -116,7 +116,7 @@ export function RecordView() {
           <div className="font-mono font-bold text-[#CC0000]">Record not found</div>
           <button
             onClick={() => navigate("/search")}
-            className="px-4 py-2 border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase"
+            className="px-4 py-2 border border-stone-300 font-mono text-sm font-bold uppercase"
           >
             BACK TO SEARCH
           </button>
@@ -133,10 +133,10 @@ export function RecordView() {
     <AppShell>
       <div className="flex flex-col h-full bg-[#F0E8D0]">
         {/* Top bar — hidden on print */}
-        <div className="shrink-0 px-4 py-3 bg-[#E8DFC7] border-b-2 border-[#0C0C0C] flex items-center gap-3 flex-wrap print:hidden">
+        <div className="shrink-0 px-4 py-3 bg-[#E8DFC7] border-b border-stone-300 flex items-center gap-3 flex-wrap print:hidden">
           <button
             onClick={() => window.history.back()}
-            className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-stone-300 bg-white font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> BACK
           </button>
@@ -144,20 +144,20 @@ export function RecordView() {
             <div className="font-serif text-lg uppercase tracking-wide text-[#0C0C0C] font-bold truncate">
               {record.appName || "—"}
             </div>
-            <div className="font-mono text-[10px] text-[#6d6658]">
+            <div className="font-mono text-sm text-[#6d6658]">
               {record.caseNumber} · {record.clientCode} · {record.type}
             </div>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setEditOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0A6B52] hover:brightness-110"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A6B52] text-white font-mono text-sm font-bold uppercase border-2 border-[#0A6B52] hover:brightness-110"
             >
               <Edit2 className="w-3.5 h-3.5" /> EDIT
             </button>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-300 font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
             >
               <Printer className="w-3.5 h-3.5" /> PRINT A4
             </button>
@@ -181,7 +181,7 @@ export function RecordView() {
             />
           </div>
 
-          <div className="max-w-4xl mx-auto space-y-4 print:max-w-none print:space-y-2">
+          <div className="max-w-7xl mx-auto space-y-4 print:max-w-none print:space-y-2">
 
             {/* Print-only header — Brandex letterhead banner */}
             <div className="hidden print:block border-b-2 border-[#6C1C1F] pb-2 mb-1.5">
@@ -199,24 +199,24 @@ export function RecordView() {
                     <div className="font-serif text-lg uppercase tracking-widest text-[#0C0C0C] font-bold leading-none">
                       Brandex Law Associates — Trademark Record
                     </div>
-                    <div className="font-mono text-[9px] text-[#6d6658] mt-0.5">
+                    <div className="font-mono text-sm text-[#6d6658] mt-0.5">
                       {record.caseNumber} · {record.clientCode} · {record.type} · Printed {new Date().toLocaleDateString()}
                     </div>
                   </div>
                 </div>
-                <div className="text-right font-mono text-[8px] text-[#6d6658] font-bold uppercase tracking-wider">
+                <div className="text-right font-mono text-sm text-[#6d6658] font-bold uppercase tracking-wider">
                   CONFIDENTIAL IP DOSSIER
                 </div>
               </div>
             </div>
 
             {/* ===== RECORD HEADER — Two-Column Layout ===== */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none print:border-[#0C0C0C]">
+            <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none print:border-[#0C0C0C]">
               {/* Top: Left (image+name) | Right (client info) */}
               <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x-2 divide-[#0C0C0C]/15">
                 {/* LEFT — Logo + Application Name + TM + Class */}
                 <div className="flex gap-3 p-4 print:p-2 sm:w-[55%] items-start">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 print:w-16 print:h-16 shrink-0 border-2 border-[#0C0C0C] bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 print:w-16 print:h-16 shrink-0 border border-stone-300 bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
                     {record.image ? (
                       <img src={record.image} alt={record.appName} className="w-full h-full object-contain" />
                     ) : (
@@ -224,10 +224,10 @@ export function RecordView() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0 space-y-1.5 print:space-y-0.5">
-                    <div className="font-serif text-xl sm:text-2xl print:text-base uppercase tracking-wide text-[#0C0C0C] font-bold leading-tight break-words">
+                    <div className="font-serif text-xl sm:text-2xl print:text-base uppercase tracking-wide text-[#0C0C0C] font-bold leading-snug break-words">
                       {record.appName || "—"}
                     </div>
-                    <div className="font-mono text-xs print:text-[9px] text-[#6d6658] space-y-0.5">
+                    <div className="font-mono text-sm print:text-[9px] text-[#6d6658] space-y-0.5">
                       {record.tmCprNo && (
                         <div>
                           <span className="text-[#9d9488]">TM / CPR&nbsp;</span>
@@ -246,7 +246,7 @@ export function RecordView() {
 
                 {/* RIGHT — Client Info */}
                 <div className="flex-1 p-4 print:p-2 space-y-2 print:space-y-1">
-                  <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
+                  <div className="font-mono text-sm print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
                     Client Information
                   </div>
                   <div className="space-y-1.5 print:space-y-1">
@@ -261,25 +261,25 @@ export function RecordView() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 print:gap-x-2 print:gap-y-0.5">
                       {record.clientCode && (
                         <div>
-                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Code</div>
+                          <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488]">Client Code</div>
                           <div className="font-mono font-bold text-sm print:text-[9px] text-[#0C0C0C]">{record.clientCode}</div>
                         </div>
                       )}
                       {record.caseNumber && (
                         <div>
-                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case No</div>
+                          <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488]">Case No</div>
                           <div className="font-mono font-bold text-sm print:text-[9px] text-[#0A6B52]">{record.caseNumber}</div>
                         </div>
                       )}
                       {record.caseType && (
                         <div className="col-span-2">
-                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Case Type</div>
-                          <div className="font-mono font-bold text-xs print:text-[8px] text-[#0C0C0C]">{record.caseType}</div>
+                          <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488]">Case Type</div>
+                          <div className="font-mono font-bold text-sm print:text-[8px] text-[#0C0C0C]">{record.caseType}</div>
                         </div>
                       )}
                       {record.clientName && (
                         <div className="col-span-2">
-                          <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488]">Client Name</div>
+                          <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488]">Client Name</div>
                           <div className="font-sans font-bold text-sm print:text-[10px] text-[#0C0C0C] break-words">{record.clientName}</div>
                         </div>
                       )}
@@ -293,20 +293,20 @@ export function RecordView() {
                 {/* Current Stage + Sub Stage */}
                 <div className="flex-1 flex items-start gap-2 flex-wrap">
                   <div>
-                    <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488] mb-0.5">Current Stage</div>
+                    <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488] mb-0.5">Current Stage</div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {record.stage && (
-                        <span className={`px-2.5 py-0.5 font-mono text-xs print:text-[8px] font-bold uppercase border-2 border-[#0C0C0C] ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
+                        <span className={`px-2.5 py-0.5 font-mono text-sm print:text-[8px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
                           {record.stage}
                         </span>
                       )}
                       {record.subStage && (
-                        <span className="px-2 py-0.5 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
+                        <span className="px-2 py-0.5 font-mono text-sm print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-white text-[#0C0C0C]">
                           {formatWorkflowLabel(record.subStage)}
                         </span>
                       )}
                       {record.date && (
-                        <span className="font-mono text-[10px] print:text-[8px] text-[#9d9488]">
+                        <span className="font-mono text-sm print:text-[8px] text-[#9d9488]">
                           Filed: <strong className="text-[#0C0C0C]">{formatDateShort(record.date)}</strong>
                         </span>
                       )}
@@ -319,8 +319,8 @@ export function RecordView() {
                   const prev = workflowHistory[1]; // index 0 = latest, 1 = previous
                   return (
                     <div className="shrink-0 text-right print:text-left">
-                      <div className="font-mono text-[8px] uppercase tracking-widest text-[#9d9488] mb-0.5">Previous Action</div>
-                      <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658]">
+                      <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488] mb-0.5">Previous Action</div>
+                      <div className="font-mono text-sm print:text-[8px] text-[#6d6658]">
                         {prev.fromStatus && (
                           <span>{prev.fromStatus}{prev.fromSubStatus ? ` / ${formatWorkflowLabel(prev.fromSubStatus)}` : ""} → </span>
                         )}
@@ -338,9 +338,9 @@ export function RecordView() {
             </div>
 
             {/* Application Details */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-              <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-                <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+            <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+              <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
                   <FileText className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
                   <span>Application Details</span>
                 </div>
@@ -385,13 +385,13 @@ export function RecordView() {
             />
 
             {/* 5. Document Status / TM Forms */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-              <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-                <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+            <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+              <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
                   <CheckCircle2 className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
                   <span>TM FORM IPO (REGISTRY MATCHES)</span>
                 </div>
-                <span className="font-mono text-[10px] print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20 hidden sm:inline">
+                <span className="font-mono text-sm print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20 hidden sm:inline">
                   Statutory Registry Matches
                 </span>
               </div>
@@ -405,9 +405,9 @@ export function RecordView() {
             </div>
 
             {/* 6. Office Notes & Manual Proceeding Remarks */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-              <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-                <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+            <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+              <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
                   <FileText className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
                   <span>Office Notes & Manual Proceeding Remarks</span>
                 </div>
@@ -419,24 +419,24 @@ export function RecordView() {
 
             {/* Journal */}
             {record.journal && (
-              <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-                <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-                  <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+              <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+                <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                  <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
                     <FileText className="w-4 h-4 text-[#0A6B52] print:w-3.5 print:h-3.5" />
                     <span>Journal Record</span>
                   </div>
                 </div>
-                <div className="p-4 print:p-2 font-mono text-xs print:text-[9px] text-[#0C0C0C]">
+                <div className="p-4 print:p-2 font-mono text-sm print:text-[9px] text-[#0C0C0C]">
                   {/* Primary hierarchy - Journal No and Publication Date */}
                   <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 mb-3 print:mb-2">
                     <div className="flex-1">
-                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">JOURNAL NO</div>
+                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">JOURNAL NO</div>
                       <div className="font-serif text-lg sm:text-xl print:text-sm font-bold text-[#0A6B52] leading-none">
                         {String(record.journal["Journal No"] || "—")}
                       </div>
                     </div>
                     <div className="flex-1">
-                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">PUBLICATION DATE</div>
+                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">PUBLICATION DATE</div>
                       <div className="font-serif text-lg sm:text-xl print:text-sm font-bold text-[#6C1C1F] leading-none">
                         {record.journal["Journal Date"] ? formatDateShort(String(record.journal["Journal Date"])) : "—"}
                       </div>
@@ -447,19 +447,19 @@ export function RecordView() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 print:mb-2 border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
                     {record.journal["Application No"] && (
                       <div>
-                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">TM / CPR NO</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">TM / CPR NO</div>
                         <div className="font-bold text-sm print:text-[10px]">{String(record.journal["Application No"])}</div>
                       </div>
                     )}
                     {record.journal.Class && (
                       <div>
-                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">CLASS</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">CLASS</div>
                         <div className="font-bold text-sm print:text-[10px]">{String(record.journal.Class)}</div>
                       </div>
                     )}
                     {record.journal["Date of Filing"] && (
                       <div>
-                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658]">FILING DATE</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">FILING DATE</div>
                         <div className="font-bold text-sm print:text-[10px]">{formatDateShort(String(record.journal["Date of Filing"]))}</div>
                       </div>
                     )}
@@ -469,16 +469,16 @@ export function RecordView() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 print:mb-2 border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
                     {record.journal["Applicant Name and Address"] && (
                       <div>
-                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">APPLICANT</div>
-                        <div className="text-[10px] print:text-[8px] text-[#0C0C0C] leading-tight">
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">APPLICANT</div>
+                        <div className="text-sm print:text-[8px] text-[#0C0C0C] leading-snug">
                           {String(record.journal["Applicant Name and Address"])}
                         </div>
                       </div>
                     )}
                     {record.journal["Agent Name and Address"] && (
                       <div>
-                        <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">AGENT</div>
-                        <div className="text-[10px] print:text-[8px] text-[#0C0C0C] leading-tight">
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">AGENT</div>
+                        <div className="text-sm print:text-[8px] text-[#0C0C0C] leading-snug">
                           {String(record.journal["Agent Name and Address"])}
                         </div>
                       </div>
@@ -488,52 +488,51 @@ export function RecordView() {
                   {/* Additional details */}
                   {record.journal.Title && (
                     <div className="border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
-                      <div className="text-[8px] uppercase tracking-widest text-[#6d6658] mb-0.5">TITLE</div>
-                      <div className="text-[10px] print:text-[8px] text-[#0C0C0C] leading-tight">
+                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">TITLE</div>
+                      <div className="text-sm print:text-[8px] text-[#0C0C0C] leading-snug">
                         {String(record.journal.Title)}
                       </div>
                     </div>
                   )}
 
-                  {/* End of record - Modified and Created */}
-                  <div className="border-t border-[#0C0C0C]/20 pt-3 print:pt-2 mt-3 print:mt-2 text-[9px] print:text-[8px] text-[#6d6658]">
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                      <div>Last Modified: <span className="text-[#0C0C0C]">{record.updatedAt ? formatDate(record.updatedAt) : "—"}</span></div>
-                      <div>Date Created: <span className="text-[#0C0C0C]">{record.createdAt ? formatDate(record.createdAt) : "—"}</span></div>
-                    </div>
-                  </div>
+
                 </div>
               </div>
             )}
 
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                      <div>Last Modified: <span className="text-[#0C0C0C]">{record.updatedAt ? formatDate(record.updatedAt) : "—"}</span></div>
+                      <div>Date Created: <span className="text-[#0C0C0C]">{record.createdAt ? formatDate(record.createdAt) : "—"}</span></div>
+                    </div>
+
             {/* CEO Signature / Stamp Block — professional block, no fake signature */}
-            <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
-              <div className="px-4 py-2 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-                <div className="font-mono text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
+            <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+              <div className="px-4 py-2 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+                <div className="font-mono text-sm print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F]">
                   CEO BRANDEX — SIGNATURE / STAMP
                 </div>
               </div>
               <div className="p-4 print:p-2 flex flex-col sm:flex-row gap-6 print:gap-4 items-end">
                 <div className="flex-1 w-full">
                   <div className="border-2 border-dashed border-[#0C0C0C]/30 p-4 print:p-2 text-center min-h-[56px] print:min-h-[42px] flex items-center justify-center">
-                    <span className="font-mono text-[9px] print:text-[8px] text-[#9d9488] uppercase tracking-wider">
+                    <span className="font-mono text-sm print:text-[8px] text-[#9d9488] uppercase tracking-wider">
                       Official Signature / Stamp
                     </span>
                   </div>
                 </div>
-                <div className="font-mono text-[10px] print:text-[8px] text-[#6d6658] uppercase tracking-wider shrink-0">
+                <div className="font-mono text-sm print:text-[8px] text-[#6d6658] uppercase tracking-wider shrink-0">
                   Date: _______________
                 </div>
               </div>
             </div>
 
             {/* Last modified — screen only */}
-            <div className="font-mono text-[10px] text-[#6d6658] text-right print:hidden">
+            <div className="font-mono text-sm text-[#6d6658] text-right print:hidden">
               Last modified: {record.updatedAt ? formatDate(record.updatedAt) : "—"}
             </div>
 
             {/* Print footer — brand tokens, no dark-blue */}
-            <div className="hidden print:block border-t border-[#6C1C1F]/30 pt-1.5 mt-2 text-[#6d6658] font-mono text-[8px]">
+            <div className="hidden print:block border-t border-[#6C1C1F]/30 pt-1.5 mt-2 text-[#6d6658] font-mono text-sm">
               Brandex Law Associates · Confidential · Official Registry Dossier
             </div>
           </div>

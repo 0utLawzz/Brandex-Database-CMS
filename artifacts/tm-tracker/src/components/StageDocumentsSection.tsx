@@ -203,13 +203,13 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
   const activeStageWorkflow = STAGE_DOCUMENT_WORKFLOW.find((s) => s.stage === targetStage);
 
   return (
-    <div className="print-avoid-break border-2 border-[#0C0C0C] bg-white shadow-[4px_4px_0_#0C0C0C] print:shadow-none">
+    <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
       {/* Section Header */}
-      <div className="px-4 py-3 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-        <div className="flex items-center gap-2 font-mono font-bold text-xs uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+      <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
+        <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
           <FolderArchive className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
           <span>Case Documents</span>
-          <span className="font-mono text-[10px] print:text-[8px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C] ml-1">
+          <span className="font-mono text-sm print:text-[8px] font-bold px-2 py-0.5 border border-[#0C0C0C]/40 bg-white text-[#0C0C0C] ml-1">
             {documents.length} {documents.length === 1 ? "FILE" : "FILES"}
           </span>
         </div>
@@ -218,7 +218,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
           <button
             type="button"
             onClick={() => openModal()}
-            className="print:hidden flex items-center gap-1.5 px-3 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 active:translate-x-[1px] active:translate-y-[1px] transition-all"
+            className="print:hidden flex items-center gap-1.5 px-3 py-1.5 bg-[#0A6B52] text-white font-mono text-sm font-bold uppercase border border-stone-300 shadow-none hover:brightness-110 active:translate-x-[1px] active:translate-y-[1px] transition-all"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload Document</span>
@@ -230,7 +230,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
 
       {/* Section Success Banner */}
       {sectionSuccess && (
-        <div className="p-2.5 border-2 border-[#0A6B52] bg-[#D8F2E8] text-[#0A6B52] font-mono text-xs flex items-center justify-between gap-2 shadow-[2px_2px_0_#0A6B52] print:hidden">
+        <div className="p-2.5 border-2 border-[#0A6B52] bg-[#D8F2E8] text-[#0A6B52] font-mono text-sm flex items-center justify-between gap-2 shadow-none print:hidden">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span className="font-bold">{sectionSuccess}</span>
@@ -247,20 +247,20 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
       )}
 
       {isLoading && (
-        <div className="p-4 font-mono text-xs text-[#6d6658] animate-pulse text-center">
+        <div className="p-4 font-mono text-sm text-[#6d6658] animate-pulse text-center">
           LOADING CASE DOCUMENTS…
         </div>
       )}
 
       {loadError && (
-        <div className="p-3 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs">
+        <div className="p-3 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-sm">
           Failed to load case documents.
         </div>
       )}
 
       {/* Print-only fallback when no documents attached across any stage */}
       {documents.length === 0 && (
-        <div className="hidden print:block p-2 border border-dashed border-[#0C0C0C]/30 bg-white font-mono text-[9px] text-[#6d6658] italic text-center">
+        <div className="hidden print:block p-2 border border-dashed border-[#0C0C0C]/30 bg-white font-mono text-sm text-[#6d6658] italic text-center">
           No case documents attached to this record.
         </div>
       )}
@@ -287,7 +287,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
           return (
             <div
               key={stageDef.stage}
-              className={`border-2 border-[#0C0C0C] bg-white shadow-[3px_3px_0_#0C0C0C] print:shadow-none p-3.5 print:p-2 space-y-3 print:space-y-1.5 ${
+              className={`border border-stone-300 bg-white shadow-none print:shadow-none p-3.5 print:p-2 space-y-3 print:space-y-1.5 ${
                 stageDocs.length === 0 ? "print:hidden" : ""
               }`}
             >
@@ -295,11 +295,11 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#0C0C0C]/20 pb-2 print:pb-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2.5 py-1 print:px-1.5 print:py-0.5 font-mono text-xs print:text-[9px] font-bold uppercase border-2 border-[#0C0C0C] ${colors.bg} ${colors.text}`}
+                    className={`px-2.5 py-1 print:px-1.5 print:py-0.5 font-mono text-sm print:text-[9px] font-bold uppercase border border-stone-300 ${colors.bg} ${colors.text}`}
                   >
                     {stageDef.label}
                   </span>
-                  <span className="font-mono text-[10px] print:text-[8px] text-[#6d6658]">
+                  <span className="font-mono text-sm print:text-[8px] text-[#6d6658]">
                     ({stageDocs.length} {stageDocs.length === 1 ? "document" : "documents"})
                   </span>
                 </div>
@@ -308,7 +308,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                   <button
                     type="button"
                     onClick={() => openModal(stageDef.stage)}
-                    className="print:hidden flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-2 py-1 border border-[#0C0C0C] bg-[#F0E8D0] hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                    className="print:hidden flex items-center gap-1 text-sm font-mono font-bold uppercase px-2 py-1 border border-[#0C0C0C] bg-[#F0E8D0] hover:bg-[#0C0C0C] hover:text-white transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Upload Document</span>
@@ -319,14 +319,14 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               {/* Documents List */}
               <div className="space-y-2 print:space-y-1 pt-1 print:pt-0.5">
                 {stageDocs.length === 0 ? (
-                  <div className="p-3 border border-dashed border-[#0C0C0C]/30 bg-[#F0E8D0]/40 font-mono text-xs text-[#6d6658] italic text-center">
+                  <div className="p-3 border border-dashed border-[#0C0C0C]/30 bg-[#F0E8D0]/40 font-mono text-sm text-[#6d6658] italic text-center">
                     No documents attached for {stageDef.label}.
                   </div>
                 ) : (
                   stageDocs.map((doc: StageDocument) => (
                     <div
                       key={doc.id}
-                      className="p-3 print:p-1.5 border-2 border-[#0C0C0C] bg-[#FDFBF7] shadow-[2px_2px_0_#0C0C0C] print:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 print:gap-1"
+                      className="p-3 print:p-1.5 border border-stone-300 bg-[#FDFBF7] shadow-none print:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 print:gap-1"
                     >
                       <div className="min-w-0 flex-1 space-y-1 print:space-y-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -334,15 +334,15 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                             {doc.title || doc.fileName}
                           </span>
                           {doc.subStage && (
-                            <span className="px-2 py-0.5 print:px-1.5 print:py-0 font-mono text-[10px] print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-[#E8DFC7] text-[#0C0C0C]">
+                            <span className="px-2 py-0.5 print:px-1.5 print:py-0 font-mono text-sm print:text-[8px] font-bold uppercase border border-[#0C0C0C]/40 bg-[#E8DFC7] text-[#0C0C0C]">
                               {formatWorkflowLabel(doc.subStage)}
                             </span>
                           )}
-                          <span className="px-1.5 py-0.5 print:px-1 print:py-0 font-mono text-[9px] print:text-[8px] font-bold uppercase bg-[#6C1C1F]/10 text-[#6C1C1F] border border-[#6C1C1F]/30">
+                          <span className="px-1.5 py-0.5 print:px-1 print:py-0 font-mono text-sm print:text-[8px] font-bold uppercase bg-[#6C1C1F]/10 text-[#6C1C1F] border border-[#6C1C1F]/30">
                             {formatMimeBadge(doc.mimeType, doc.fileName)}
                           </span>
                         </div>
-                        <div className="font-mono text-[11px] print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5">
+                        <div className="font-mono text-sm print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5">
                           <span className="truncate max-w-xs">
                             File: <strong className="text-[#0C0C0C]">{doc.fileName}</strong>
                           </span>
@@ -362,7 +362,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                               <button
                                 type="button"
                                 onClick={() => setImagePreview({ url: doc.signedUrl!, title: doc.title || doc.fileName })}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase text-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-300 font-mono text-sm font-bold uppercase text-[#0C0C0C] shadow-none hover:bg-[#0C0C0C] hover:text-white transition-colors"
                               >
                                 <ZoomIn className="w-3.5 h-3.5" />
                                 <span>Preview</span>
@@ -372,14 +372,14 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                               href={doc.signedUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase text-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-stone-300 font-mono text-sm font-bold uppercase text-[#0C0C0C] shadow-none hover:bg-[#0C0C0C] hover:text-white transition-colors"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                               <span>View</span>
                             </a>
                           </>
                         ) : (
-                          <span className="font-mono text-[10px] text-[#9d9488] border border-dashed border-[#9d9488] px-2 py-1">
+                          <span className="font-mono text-sm text-[#9d9488] border border-dashed border-[#9d9488] px-2 py-1">
                             URL Unavailable
                           </span>
                         )}
@@ -397,9 +397,9 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
       {/* Upload Document Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="border-3 border-[#0C0C0C] bg-[#F0E8D0] shadow-[8px_8px_0_#0C0C0C] max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="border-3 border-[#0C0C0C] bg-[#F0E8D0] shadow-none max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b-2 border-[#0C0C0C] pb-3">
+            <div className="flex items-center justify-between border-b border-stone-300 pb-3">
               <div className="flex items-center gap-2">
                 <Upload className="w-4 h-4 text-[#6C1C1F]" />
                 <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C]">
@@ -418,7 +418,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
 
             {/* Error Feedback */}
             {formError && (
-              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-xs flex items-center gap-2">
+              <div className="p-2.5 border-2 border-[#CC0000] bg-[#FFEEEE] text-[#CC0000] font-mono text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
@@ -434,17 +434,17 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                   <div className="font-serif text-lg font-bold text-[#0A6B52] uppercase tracking-wide">
                     Upload Successful
                   </div>
-                  <div className="font-mono text-xs text-[#0C0C0C] max-w-xs break-words">
+                  <div className="font-mono text-sm text-[#0C0C0C] max-w-xs break-words">
                     {successMessage}
                   </div>
                 </div>
-                <div className="pt-2 font-mono text-[10px] text-[#6d6658]">
+                <div className="pt-2 font-mono text-sm text-[#6d6658]">
                   Closing window…
                 </div>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="mt-2 px-4 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
+                  className="mt-2 px-4 py-1.5 border border-stone-300 bg-white font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors"
                 >
                   Done
                 </button>
@@ -454,27 +454,27 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
               <form onSubmit={handleUploadSubmit} className="space-y-3.5">
                 {/* Stage Display (read-only - current stage only) */}
                 <div>
-                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                  <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                     Workflow Stage
                   </label>
-                  <div className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-[#F0E8D0] font-mono text-xs font-bold text-[#0C0C0C] flex items-center">
+                  <div className="w-full h-9 px-2.5 border border-stone-300 bg-[#F0E8D0] font-mono text-sm font-bold text-[#0C0C0C] flex items-center">
                     {activeStageWorkflow?.label || targetStage}
                   </div>
-                  <div className="mt-1 font-mono text-[9px] text-[#6d6658]">
+                  <div className="mt-1 font-mono text-sm text-[#6d6658]">
                     Documents can only be uploaded to the current workflow stage.
                   </div>
                 </div>
 
                 {/* Sub-stage Selection */}
                 <div>
-                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                  <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                     Sub-stage (Optional)
                   </label>
                   <select
                     value={targetSubStage}
                     onChange={(e) => setTargetSubStage(e.target.value)}
                     disabled={uploadMutation.isPending}
-                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C]"
+                    className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm text-[#0C0C0C]"
                   >
                     <option value="">-- None / General Stage Document --</option>
                     {activeStageWorkflow?.subStages.map((sub) => (
@@ -487,7 +487,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
 
                 {/* Document Title */}
                 <div>
-                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                  <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                     Document Title (Optional)
                   </label>
                   <input
@@ -496,13 +496,13 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Filing Receipt, Examination Report, Power of Attorney"
                     disabled={uploadMutation.isPending}
-                    className="w-full h-9 px-2.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs text-[#0C0C0C] placeholder:text-[#9d9488]"
+                    className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm text-[#0C0C0C] placeholder:text-[#9d9488]"
                   />
                 </div>
 
                 {/* File Input */}
                 <div>
-                  <label className="block font-mono text-[10px] font-bold uppercase text-[#6C1C1F] mb-1">
+                  <label className="block font-mono text-sm font-bold uppercase text-[#6C1C1F] mb-1">
                     Select File * (PDF, Word, Excel, Plain Text, Image — Max 10MB)
                   </label>
                   <input
@@ -511,10 +511,10 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.gif,.webp"
                     onChange={handleFileChange}
                     disabled={uploadMutation.isPending}
-                    className="w-full text-xs font-mono file:mr-3 file:py-1.5 file:px-3 file:border-2 file:border-[#0C0C0C] file:bg-white file:font-mono file:text-xs file:font-bold file:uppercase hover:file:bg-[#0C0C0C] hover:file:text-white file:transition-colors cursor-pointer"
+                    className="w-full text-sm font-mono file:mr-3 file:py-1.5 file:px-3 file:border-2 file:border-[#0C0C0C] file:bg-white file:font-mono file:text-xs file:font-bold file:uppercase hover:file:bg-[#0C0C0C] hover:file:text-white file:transition-colors cursor-pointer"
                   />
                   {selectedFile && (
-                    <div className="mt-1 font-mono text-[10px] text-[#0A6B52]">
+                    <div className="mt-1 font-mono text-sm text-[#0A6B52]">
                       Selected: {selectedFile.name} ({formatBytes(selectedFile.size)})
                     </div>
                   )}
@@ -526,14 +526,14 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
                     type="button"
                     onClick={closeModal}
                     disabled={uploadMutation.isPending}
-                    className="px-3 py-1.5 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 border border-stone-300 bg-white font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!selectedFile || uploadMutation.isPending}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase border-2 border-[#0C0C0C] shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 disabled:opacity-50 active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-sm font-bold uppercase border border-stone-300 shadow-none hover:brightness-110 disabled:opacity-50 active:translate-x-[1px] active:translate-y-[1px] transition-all"
                   >
                     {uploadMutation.isPending ? (
                       <>
@@ -557,8 +557,8 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
       {/* Image Preview Modal */}
       {imagePreview && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setImagePreview(null)}>
-          <div className="max-w-4xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between bg-[#F0E8D0] border-2 border-[#0C0C0C] p-3">
+          <div className="max-w-7xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between bg-[#F0E8D0] border border-stone-300 p-3">
               <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C] truncate flex-1 mr-4">
                 {imagePreview.title}
               </div>

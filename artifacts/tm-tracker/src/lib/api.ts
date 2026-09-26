@@ -1335,6 +1335,7 @@ export interface AgentFeeInput {
 /** A trademark that has been matched to journal data — tracks opposition window & demand note workflow */
 export interface PublicationRecord {
   id: string;
+  image?: string;
   caseNumber: string;
   clientCode: string;
   type: string;
@@ -1412,12 +1413,18 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
     .select(
       "id, case_number, client_code, type, client_name, application_name, tm_cpr_number, nice_class, " +
       "journal_number, status, sub_status, agent, publication_date, opposition_deadline, " +
-      "demand_note_received, demand_note_date, filing_date"
+      "demand_note_received, demand_note_date, filing_date, logo_path, legacy_image_url"
     )
     .not("publication_date", "is", null) // only journal-matched cases
     .order("opposition_deadline", { ascending: true, nullsFirst: false });
   throwIfError(error);
 
+  const paths = (data ?? []).map((row:any)=>row.logo_path).filter(Boolean);
+  const images = new Map<string,string>();
+  if(paths.length) {
+    const {data:signed} = await supabase.storage.from(TRADEMARK_FILES_BUCKET).createSignedUrls(paths,3600);
+    signed?.forEach((item,index)=>{if(item.signedUrl) images.set(paths[index],item.signedUrl);});
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -1436,6 +1443,7 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
 
     return {
       id: row.id,
+      image: images.get(row.logo_path) || row.legacy_image_url || "",
       caseNumber: row.case_number ?? "",
       clientCode: row.client_code ?? "",
       type: row.type ?? "",
