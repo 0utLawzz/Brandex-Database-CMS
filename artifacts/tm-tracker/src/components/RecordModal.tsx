@@ -153,7 +153,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
     queryFn: getStaffRole,
     staleTime: 5 * 60_000,
   });
-  const isViewer = staffRole === "viewer";
+  const isViewer = staffRole !== "admin";
 
   const { data: agentProfiles = [] } = useQuery({
     queryKey: ["agent-profiles"],
@@ -767,7 +767,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   type="submit"
                   disabled={isPending || isViewer}
                   className="flex items-center gap-2 bg-[#6C1C1F] text-white border-2 border-[#6C1C1F] px-6 h-10 font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all disabled:opacity-50"
-                  title={isViewer ? "Editor or Admin role required" : undefined}
+                  title={isViewer ? "Admin role required" : undefined}
                 >
                   <Save className="w-4 h-4" />
                   {isPending ? "SAVING TO DATABASE…" : creating ? "SAVE RECORD" : "UPDATE RECORD"}

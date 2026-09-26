@@ -54,6 +54,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   // Agent form state
   const [selectedAgent, setSelectedAgent] = useState<string>(record.agent || "");
   const [selectedCity, setSelectedCity] = useState<string>(record.city || "Islamabad");
+  const [agentRate, setAgentRate] = useState(String(record.agentRate ?? ""));
   const [agentError, setAgentError] = useState<string | null>(null);
 
   // Agents list for assignment
@@ -83,7 +84,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   // Agent Assignment mutation
   const agentMutation = useMutation({
     mutationFn: async () => {
-      await updateTrademarkAgent(record.id, selectedAgent.trim(), selectedCity.trim() || undefined);
+      await updateTrademarkAgent(record.id, selectedAgent.trim(), selectedCity.trim() || undefined, agents.find(a => a.name === selectedAgent)?.id, Number(agentRate));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
@@ -108,6 +109,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
     setSelectedAgent(record.agent || "");
     setSelectedCity(record.city || "Islamabad");
     setAgentError(null);
+    setAgentRate(String(record.agentRate ?? ""));
     setAgentModalOpen(true);
   };
 
@@ -540,7 +542,8 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   )}
                 </button>
               </div>
-            </form>
+            <label className="block text-sm">Agreed case rate (Rs.)<input required type="number" min="0" step="0.01" value={agentRate} onChange={e=>setAgentRate(e.target.value)} className="block w-full border px-3 py-2" /></label>
+</form>
           </div>
         </div>
       )}

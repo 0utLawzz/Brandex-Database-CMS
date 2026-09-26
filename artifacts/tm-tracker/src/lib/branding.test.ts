@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   validateLogoFile,
@@ -236,5 +237,28 @@ describe("Batch 6B: Branding & Logo System", () => {
         "Permission denied: Only administrators can upload branding assets."
       );
     });
+  });
+});
+
+
+describe("Shared branding persistence", () => {
+  beforeEach(() => { mockStaffRole = "admin"; });
+  it("reads the snake-case settings written by the migration", async () => {
+    vi.mocked(supabase.from).mockReturnValueOnce({select:()=>({eq:()=>({maybeSingle:async()=>({data:{value:{custom_logo_url:"/saved-logo.svg"}},error:null})})})} as any);
+    expect((await getBrandingConfig()).logoUrl).toBe("/saved-logo.svg");
+  });
+  it("reports failed shared save instead of silently succeeding locally", async () => {
+    vi.mocked(supabase.from).mockReturnValueOnce({select:()=>({eq:()=>({maybeSingle:async()=>({data:null,error:null})})})} as any)
+      .mockReturnValueOnce({upsert:async()=>({error:{message:"Database unavailable"}})} as any);
+    await expect(updateBrandingConfig({customLogoUrl:"/test.svg"})).rejects.toThrow("Database unavailable");
+  });
+  it("stores a stable private storage reference", async () => {
+    const result = await uploadBrandingAsset(new File(["image"],"logo.png",{type:"image/png"}));
+    expect(result).toMatch(/^storage:branding\/logo_\d+\.png$/);
+    expect(result).not.toContain("token=");
+  });
+  it("reports upload failure rather than saving a local data URL", async () => {
+    vi.mocked(supabase.storage.from).mockReturnValueOnce({upload:async()=>({error:{message:"Upload denied"}})} as any);
+    await expect(uploadBrandingAsset(new File(["image"],"logo.png",{type:"image/png"}))).rejects.toThrow("Upload denied");
   });
 });

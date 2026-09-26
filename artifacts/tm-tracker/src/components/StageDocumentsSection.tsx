@@ -75,7 +75,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
     staleTime: 5 * 60 * 1000,
   });
 
-  const canUpload = staffRole === "editor" || staffRole === "admin";
+  const canUpload = staffRole === "admin";
 
   // 2. Stage documents list
   const {

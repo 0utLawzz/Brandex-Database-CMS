@@ -6,7 +6,11 @@ Phase 0 is saved remotely at `8709cba` on `phase0-truth-cleanup`.
 - Phase 1 checkpoint: explicit sub-stage graph, adjacent stages, completed-stage exits, no payment gate for eligible assignment, fail-closed record reads, no generic-editor STOPPED bypass, corrected workflow controls.
 - Historical opposition statuses remain readable; structured events and their migration are pending.
 - TM56 clarification: received opposition starts one calendar month; optional additional month without approval. Submission must meet the applicable deadline.
-- 25-day trigger awaiting owner clarification. Ledger, DB enforcement, roles, documents, branding and workbench remain pending.
+- Owner confirmed: 25-day certificate timer starts on Demand Note Submitted.
+- Next checkpoint implements SQL workflow/role/document guards, opposition events, TM56 deadlines and extensions, agent FK/rate and automatic Accepted credit, auditable manual agent payments, plus case UI. Database tests execute all migrations in embedded PostgreSQL.
+- Branding shared save/read now agrees on persisted keys; upload errors propagate; stable private storage paths are signed for one hour and refreshed. Missing-table repair migration included.
+- Checkpoint validation: 204 tests / 7 files pass (including PostgreSQL migration/RLS tests); typecheck and build pass. Migrations are not yet applied live.
+- Ledger allocation decision pending. Workbench/release acceptance remain pending.
 - This checkpoint is source/test work; production deployment and end-to-end acceptance have not occurred.
 
 # Current Phase 0 status — 25 September 2026

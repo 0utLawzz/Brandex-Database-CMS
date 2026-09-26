@@ -54,6 +54,11 @@ export interface TrademarkRecord {
   notes: string;
   updatedAt: string;
   createdAt?: string;
+  assignedAgentId?: string;
+  agentRate?: number;
+  demandNoteSubmittedDate?: string;
+  certificateDueDate?: string;
+  certificateAcknowledgedDate?: string;
   version?: number;
   image: string;
   imagePath?: string;
@@ -386,6 +391,11 @@ type SupabaseTrademarkRow = {
   legacy_image_url?: string | null;
   updated_at: string;
   created_at?: string;
+  assigned_agent_id?: string;
+  agent_rate?: number;
+  demand_note_submitted_date?: string;
+  certificate_due_date?: string;
+  certificate_acknowledged_date?: string;
   version?: number;
   // Publication workflow fields
   publication_date?: string | null;
@@ -450,6 +460,11 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     notes: row.notes ?? "",
     updatedAt: row.updated_at,
     createdAt: row.created_at,
+    assignedAgentId: row.assigned_agent_id,
+    agentRate: row.agent_rate,
+    demandNoteSubmittedDate: row.demand_note_submitted_date,
+    certificateDueDate: row.certificate_due_date,
+    certificateAcknowledgedDate: row.certificate_acknowledged_date,
     version: row.version ?? 1,
     image: signedImage || row.legacy_image_url || "",
     imagePath: row.logo_path || row.legacy_image_url || "",
@@ -545,6 +560,7 @@ const TRADEMARK_LIST_COLUMNS = [
   "id", "filing_date", "type", "client_code", "client_name", "case_number",
   "application_name", "tm_cpr_number", "nice_class", "status", "sub_status",
   "case_type", "agent", "city", "tm5", "tm6", "tm11", "tm16", "tm56",
+  "assigned_agent_id", "agent_rate", "demand_note_submitted_date", "certificate_due_date", "certificate_acknowledged_date",
   "journal_number", "journal_date", "logo_path", "legacy_image_url", "created_at", "updated_at", "version",
   // Publication fields
   "publication_date", "opposition_deadline", "demand_note_received", "demand_note_date",
@@ -916,6 +932,8 @@ export async function assignStage2Agent(
   id: string,
   agentName: string,
   city?: string,
+  agentId?: string,
+  rate?: number,
 ): Promise<void> {
   ensureConfigured();
   if (!agentName || !agentName.trim()) {
@@ -928,9 +946,12 @@ export async function assignStage2Agent(
   if (current.status !== "STAGE 2" || current.sub_status !== "Assigned") {
     throw new Error("Agents can only be assigned in Stage 2 / Assigned.");
   }
-  const patch: Record<string, string> = {
-    agent: agentName.trim().toUpperCase(),
-  };
+  const patch: Record<string, string | number> = { agent: agentName.trim().toUpperCase() };
+  if (agentId) patch.assigned_agent_id = agentId;
+  if (rate !== undefined) {
+    if (!Number.isFinite(rate) || rate < 0) throw new Error("Agreed rate must be zero or greater.");
+    patch.agent_rate = rate;
+  }
   if (city && city.trim()) {
     patch.city = city.trim().toUpperCase();
   }
@@ -995,14 +1016,7 @@ export async function updateTrademarkStatus(
     sub_status: canonicalSubStage,
   };
 
-  // If entering STOPPED, append reason to notes
-  if (stage === "STOPPED" && stoppedReason?.trim()) {
-    const existingNotes = current?.notes || "";
-    const timestamp = new Date().toISOString();
-    updateData.notes = existingNotes 
-      ? `${existingNotes}\n\nSTOPPED: ${stoppedReason} (${timestamp})`
-      : `STOPPED: ${stoppedReason} (${timestamp})`;
-  }
+  if (stage === "STOPPED") updateData.stopped_reason = stoppedReason?.trim();
 
   const { error } = await supabase
     .from("trademarks")
@@ -1019,8 +1033,10 @@ export async function updateTrademarkAgent(
   id: string,
   agentName: string,
   city?: string,
+  agentId?: string,
+  rate?: number,
 ): Promise<void> {
-  return assignStage2Agent(id, agentName, city);
+  return assignStage2Agent(id, agentName, city, agentId, rate);
 }
 
 export async function updateTrademark(

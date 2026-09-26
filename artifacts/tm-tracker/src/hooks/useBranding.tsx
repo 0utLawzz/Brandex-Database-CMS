@@ -35,6 +35,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     queryKey: ["branding-config"],
     queryFn: getBrandingConfig,
     staleTime: 5 * 60_000,
+    refetchInterval: 30 * 60_000,
   });
 
   useEffect(() => {

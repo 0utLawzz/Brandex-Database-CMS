@@ -1,4 +1,4 @@
-import { listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, CITIES, formatWorkflowLabel } from "@/lib/api";
+import { getStaffRole, listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, CITIES, formatWorkflowLabel } from "@/lib/api";
 import type { TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
@@ -56,6 +56,9 @@ function FilterSelect({
 
 export function AssignedPage() {
   const [, navigate] = useLocation();
+  const {data: role} = useQuery({queryKey:["staff-role"],queryFn:getStaffRole});
+  const canEdit = role === "admin";
+  const [agentRate,setAgentRate] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [filters, setFilters] = useState<Filters>(EMPTY);
@@ -114,13 +117,15 @@ export function AssignedPage() {
   const goToRecord = (id: string) => navigate(`/record/${id}`);
 
   const openAssignmentModal = (record: TrademarkPage["records"][number]) => {
+    if (!canEdit) return;
+    setAgentRate(String(record.agentRate ?? ""));
     setAssignmentRecord(record);
     setSelectedAgentName(record.agent || "");
     setSelectedAgentCity(record.city || "");
   };
 
   const handleAssignAgent = async () => {
-    if (!assignmentRecord) return;
+    if (!assignmentRecord || !canEdit || agentRate === "" || Number(agentRate) < 0) return;
     if (!selectedAgentName.trim()) {
       toast({
         title: "Agent Required",
@@ -136,6 +141,8 @@ export function AssignedPage() {
         assignmentRecord.id,
         selectedAgentName.trim(),
         selectedAgentCity.trim() || undefined,
+        activeAgentProfiles.find(a => a.name === selectedAgentName)?.id,
+        Number(agentRate),
       );
       toast({
         title: "Agent Assigned",
@@ -294,7 +301,8 @@ export function AssignedPage() {
                         <button type="button" onClick={() => goToRecord(r.id)} className="inline-flex items-center gap-1 border-2 border-[#0C0C0C] bg-white px-2 py-1 font-mono text-[9px] font-bold uppercase hover:bg-[#0C0C0C] hover:text-white" title="Open complete record detail">
                           <ExternalLink className="h-3 w-3" /> RECORD
                         </button>
-                        <button type="button" onClick={() => openAssignmentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-[9px] font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" title="Open assignment acceptance summary">
+                        <button type="button" onClick={() => openAssignmentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-[9px] font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" disabled={!canEdit}
+                          title="Open assignment acceptance summary">
                           <ClipboardCheck className="h-3 w-3" /> ASSIGNMENT
                         </button>
                       </div>
@@ -343,7 +351,7 @@ export function AssignedPage() {
             </div>
           </div>
         )}
-        {assignmentRecord && (
+        {assignmentRecord && canEdit && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4" onClick={() => setAssignmentRecord(null)}>
             <section className="w-full max-w-2xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-[8px_8px_0_#0C0C0C]" onClick={(event) => event.stopPropagation()}>
               <div className="flex items-start gap-3 border-b-2 border-[#0C0C0C] pb-3">
@@ -431,11 +439,12 @@ export function AssignedPage() {
                     </select>
                   </div>
                 </div>
+                <label className="block text-sm mt-3">Agreed case rate (Rs.)<input required type="number" min="0" step="0.01" value={agentRate} onChange={e=>setAgentRate(e.target.value)} className="block border px-3 py-2" /></label>
                 <div className="mt-3 flex justify-end">
                   <button
                     type="button"
                     onClick={handleAssignAgent}
-                    disabled={isAssigning || !selectedAgentName.trim()}
+                    disabled={!canEdit || isAssigning || !selectedAgentName.trim() || agentRate === "" || Number(agentRate) < 0}
                     className="inline-flex items-center gap-1.5 border-2 border-[#0A6B52] bg-[#0A6B52] px-4 py-1.5 font-mono text-xs font-bold uppercase text-white hover:bg-[#074F3C] disabled:opacity-50 transition-colors"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />

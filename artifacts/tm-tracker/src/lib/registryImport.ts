@@ -363,7 +363,7 @@ export async function getStaffRole(): Promise<"viewer" | "editor" | "admin" | nu
     .eq("user_id", auth.user.id)
     .maybeSingle();
   if (error || !data) return null;
-  return data.role as "viewer" | "editor" | "admin";
+  return data.role === "admin" ? "admin" : "viewer";
 }
 
 // ---------------------------------------------------------------------------

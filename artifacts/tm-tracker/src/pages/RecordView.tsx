@@ -1,3 +1,4 @@
+import { CaseEventsSection } from "@/components/CaseEventsSection";
 import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole } from "@/lib/api";
 import type { TrademarkRecord, TmMatches } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
@@ -79,7 +80,7 @@ export function RecordView() {
     queryFn: getStaffRole,
     staleTime: 5 * 60 * 1000,
   });
-  const canEdit = staffRole === "editor" || staffRole === "admin";
+  const canEdit = staffRole === "admin";
 
   const { data: record, isLoading, error } = useQuery({
     queryKey: ["trademark", params.id],
@@ -377,6 +378,7 @@ export function RecordView() {
             />
 
             {/* 4. Case Documents */}
+            <CaseEventsSection record={record} canEdit={canEdit} />
             <StageDocumentsSection
               trademarkId={record.id}
               currentStage={record.stage}

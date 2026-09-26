@@ -16,6 +16,7 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("wouter", () => ({ useParams: () => ({ id: "case-1" }), useLocation: () => ["/record/case-1", vi.fn()] }));
 vi.mock("@/hooks/useBranding", () => ({ useBranding: () => ({ branding: {} }) }));
 vi.mock("@/components/layout/AppShell", () => ({ AppShell: ({ children }: { children: ReactNode }) => children }));
+vi.mock("@/components/CaseEventsSection", () => ({ CaseEventsSection: () => null }));
 vi.mock("@/components/RecordModal", () => ({ RecordModal: () => null }));
 vi.mock("@/components/StageDocumentsSection", () => ({ StageDocumentsSection: () => null }));
 vi.mock("@/components/CaseWorkflowSection", () => ({

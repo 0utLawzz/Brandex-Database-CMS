@@ -46,8 +46,7 @@ export function validateLogoFile(file: File): { valid: boolean; error?: string }
 
   // Type validation
   const isValidType =
-    ALLOWED_LOGO_MIME_TYPES.includes(file.type) ||
-    /\.(png|jpe?g|svg)$/i.test(file.name);
+    ALLOWED_LOGO_MIME_TYPES.includes(file.type);
 
   if (!isValidType) {
     return {
@@ -102,55 +101,36 @@ export function sanitizeSvg(svgContent: string): { safe: boolean; error?: string
   return { safe: true, sanitized: svgContent };
 }
 
-/**
- * Fetches current branding configuration from Supabase app_settings table.
- * Falls back to localStorage and DEFAULT_BRANDING.
- */
+async function resolveBranding(config: BrandingConfig): Promise<BrandingConfig> {
+  const resolveAsset = async (value: string) => {
+    if (!value.startsWith("storage:")) return value;
+    const {data,error} = await supabase.storage.from(TRADEMARK_FILES_BUCKET).createSignedUrl(value.slice(8),3600);
+    if(error || !data?.signedUrl) throw new Error(error?.message || "Could not sign branding asset.");
+    return data.signedUrl;
+  };
+  return { ...config,
+    logoUrl: await resolveAsset(config.customLogoUrl || config.logoUrl),
+    markUrl: await resolveAsset(config.customMarkUrl || config.markUrl),
+    faviconUrl: await resolveAsset(config.customMarkUrl || config.faviconUrl),
+    watermarkUrl: await resolveAsset(config.customWatermarkUrl || config.customLogoUrl || config.watermarkUrl),
+  };
+}
+
+/** Read shared settings. Cache is not an alternative source of saved branding. */
 export async function getBrandingConfig(): Promise<BrandingConfig> {
-  try {
-    const { data, error } = await supabase
-      .from("app_settings")
-      .select("value, updated_at")
-      .eq("key", "branding")
-      .maybeSingle();
-
-    if (!error && data && data.value) {
-      const val = data.value as Partial<BrandingConfig>;
-      const config: BrandingConfig = {
-        logoUrl: val.customLogoUrl || val.logoUrl || DEFAULT_BRANDING.logoUrl,
-        markUrl: val.customMarkUrl || val.markUrl || DEFAULT_BRANDING.markUrl,
-        bannerUrl: val.bannerUrl || DEFAULT_BRANDING.bannerUrl,
-        faviconUrl: val.customMarkUrl || val.faviconUrl || DEFAULT_BRANDING.faviconUrl,
-        watermarkUrl: val.customWatermarkUrl || val.customLogoUrl || val.watermarkUrl || DEFAULT_BRANDING.watermarkUrl,
-        customLogoUrl: val.customLogoUrl ?? null,
-        customMarkUrl: val.customMarkUrl ?? null,
-        customWatermarkUrl: val.customWatermarkUrl ?? null,
-        updatedAt: data.updated_at,
-      };
-      // Cache to local storage
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(config));
-      } catch {
-        // Ignore localStorage write failures
-      }
-      return config;
-    }
-  } catch (err) {
-    console.warn("Could not load branding settings from Supabase, checking local cache", err);
+  const {data,error} = await supabase.from("app_settings").select("value, updated_at").eq("key","branding").maybeSingle();
+  if(error) throw new Error(error.message);
+  if(!data?.value) return {...DEFAULT_BRANDING};
+  const raw = data.value as Record<string, string | null>;
+  const fields = ["logoUrl","markUrl","bannerUrl","faviconUrl","watermarkUrl","customLogoUrl","customMarkUrl","customWatermarkUrl"] as const;
+  const config = {...DEFAULT_BRANDING};
+  for(const field of fields) {
+    const snake = field.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`);
+    const value = raw[field] ?? raw[snake];
+    if(value !== undefined) (config as any)[field] = value;
   }
-
-  // Check localStorage cache
-  try {
-    const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      return { ...DEFAULT_BRANDING, ...parsed };
-    }
-  } catch {
-    // Ignore parse errors
-  }
-
-  return { ...DEFAULT_BRANDING };
+  config.updatedAt = data.updated_at;
+  return resolveBranding(config);
 }
 
 /**
@@ -196,7 +176,7 @@ export async function updateBrandingConfig(
     }, { onConflict: "key" });
 
   if (error) {
-    console.warn("Supabase upsert failed, updating local storage only:", error.message);
+    throw new Error(error.message);
   }
 
   try {
@@ -208,7 +188,7 @@ export async function updateBrandingConfig(
   // Also apply favicon dynamically
   applyFavicon(merged.faviconUrl);
 
-  return merged;
+  return resolveBranding(merged);
 }
 
 /**
@@ -248,31 +228,9 @@ export async function uploadBrandingAsset(
       upsert: true,
     });
 
-  if (uploadError) {
-    console.warn("Storage upload failed, attempting fallback URL conversion", uploadError.message);
-    // Return base64/data URL fallback for local demonstration if storage is unreachable
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Failed to read file as fallback URL"));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // Create a 1-year signed URL or public URL
-  const { data: signedData, error: signError } = await supabase.storage
-    .from(TRADEMARK_FILES_BUCKET)
-    .createSignedUrl(storagePath, 60 * 60 * 24 * 365); // 1 year
-
-  if (signError || !signedData?.signedUrl) {
-    // Try public url
-    const { data: pubData } = supabase.storage
-      .from(TRADEMARK_FILES_BUCKET)
-      .getPublicUrl(storagePath);
-    return pubData.publicUrl;
-  }
-
-  return signedData.signedUrl;
+  if (uploadError) throw new Error(uploadError.message);
+  // Persist stable private object identity, never an expiring signed/public URL.
+  return `storage:${storagePath}`;
 }
 
 /**
@@ -288,7 +246,7 @@ export async function resetBrandingConfig(): Promise<BrandingConfig> {
     ...DEFAULT_BRANDING,
   };
 
-  await supabase
+  const { error } = await supabase
     .from("app_settings")
     .upsert({
       key: "branding",
@@ -305,6 +263,7 @@ export async function resetBrandingConfig(): Promise<BrandingConfig> {
       updated_at: new Date().toISOString(),
     }, { onConflict: "key" });
 
+  if (error) throw new Error(error.message);
   try {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
   } catch {

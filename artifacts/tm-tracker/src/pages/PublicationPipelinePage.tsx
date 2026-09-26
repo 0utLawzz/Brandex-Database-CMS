@@ -56,7 +56,7 @@ export function PublicationPipelinePage() {
     queryFn: getStaffRole,
     staleTime: 5 * 60_000,
   });
-  const isViewer = staffRole === "viewer";
+  const isViewer = staffRole !== "admin";
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["publication-pipeline"],
@@ -178,14 +178,14 @@ export function PublicationPipelinePage() {
                 <button
                   disabled
                   className="inline-flex items-center gap-2 border-2 border-[#0A6B52]/40 bg-[#D8F2E8]/40 px-4 py-2 font-mono text-xs font-bold uppercase text-[#0A6B52]/40 cursor-not-allowed"
-                  title="Editor or Admin role required"
+                  title="Admin role required"
                 >
                   <RefreshCw className="h-4 w-4" /> RUN MATCH ENGINE
                 </button>
                 <button
                   disabled
                   className="inline-flex items-center gap-2 border-2 border-[#6C1C1F]/40 bg-[#FFF0D0]/40 px-4 py-2 font-mono text-xs font-bold uppercase text-[#6C1C1F]/40 cursor-not-allowed"
-                  title="Editor or Admin role required"
+                  title="Admin role required"
                 >
                   <Upload className="h-4 w-4" /> JOURNAL IMPORT
                 </button>
