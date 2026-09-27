@@ -1,49 +1,44 @@
-# Active implementation — 25 September 2026
+# Brandex Database CMS Progress
 
-The owner authorized Phases 1–4 and incremental GitHub checkpoints after accepting the Phase 0 audit.
-Phase 0 is saved remotely at `8709cba` on `phase0-truth-cleanup`.
+**Last updated: 27 September 2026 — V2.1.0 release preparation**
 
-- Phase 1 checkpoint: explicit sub-stage graph, adjacent stages, completed-stage exits, no payment gate for eligible assignment, fail-closed record reads, no generic-editor STOPPED bypass, corrected workflow controls.
-- Historical opposition statuses remain readable; structured events and their migration are pending.
-- TM56 clarification: received opposition starts one calendar month; optional additional month without approval. Submission must meet the applicable deadline.
-- Owner confirmed: 25-day certificate timer starts on Demand Note Submitted.
-- Next checkpoint implements SQL workflow/role/document guards, opposition events, TM56 deadlines and extensions, agent FK/rate and automatic Accepted credit, auditable manual agent payments, plus case UI. Database tests execute all migrations in embedded PostgreSQL.
-- Branding shared save/read now agrees on persisted keys; upload errors propagate; stable private storage paths are signed for one hour and refreshed. Missing-table repair migration included.
-- Checkpoint validation: 204 tests / 7 files pass (including PostgreSQL migration/RLS tests); typecheck and build pass. Migrations are not yet applied live.
-- Workbench checkpoint: case/metadata screen text is 14px minimum in primary work views; lighter frames, wider Record View, next-action/payment summary, two-column publication cards with private thumbnails/enlargement and class links, display-only six-digit numeric TM formatting; timestamps now display without a journal match. Print sizing retained. Browser acceptance pending.
-- Ledger allocation decision pending. Connector access to the separate Ledger project is denied; no Ledger data or permissions changed.
-- This checkpoint is source/test work; production deployment and end-to-end acceptance have not occurred.
+This is the current project status. Historical batch notes below are archived context, not a current backlog or verification record. Release versions are recorded by Git tags and release notes; private workspace package manifests intentionally remain at `0.0.0`.
 
-# Current Phase 0 status — 25 September 2026
+## COMPLETED
 
-[Project Truth](docs/PROJECT_TRUTH.md) is the evidence-backed current status. [Workflow Business Rules](docs/WORKFLOW_BUSINESS_RULES.md) defines intended behavior. The historical work log below is preserved as context; its checkmarks, release/freeze claims, and test counts are not current acceptance evidence.
+- Staff-authenticated React/Vite CMS backed by Supabase, with server-side record pagination, search, filters, and CSV workflows.
+- Four-stage case workflow, status history, assignment controls, and workflow/database guards are implemented and covered by automated tests. Production migration state and authenticated end-to-end behavior are not claimed as verified here.
+- Agent directory, case assignment, fee tracking, and summary views are implemented. CMS payment flags remain manual and are not Ledger-verified.
+- Dashboard metrics and filters, database/search views, registry matching, publication pipeline, and trademark CSV import are implemented.
+- Private case documents use signed URLs; document controls, workflow history, and role checks are implemented. The production role matrix remains unverified, and Editor access remains active in the current implementation.
+- Existing branding settings and assets remain in the codebase; no branding/theme work is part of this release-preparation change.
+- Current local verification: `pnpm test` passed (207 tests across 7 files), `pnpm typecheck` passed, and `pnpm build` passed.
 
-- Scope: PHASE 0 = Truth Cleanup. No Phase 1–4 features, migration execution, production data changes, deployment or tag changes.
-- Baseline main/production: `727ec07775300cb22841a4748f1bfb4c1de58758`.
-- Date Created now maps `created_at` independently from filing and modification dates, with mapping and rendered-component tests.
-- TM headings corrected; filter/matching logic preserved. Payment label now explicitly identifies manual CMS flags.
-- Five baseline Stage Document failures traced to queued mock responses leaking between tests. Resetting mocks restores isolation without changing expected results or application upload behavior.
-- Local validation: 178 tests pass across 6 files; typecheck passes; production build passes. These are not live database integration tests.
-- Authenticated admin production navigation, case display, unpaid Stage 4 gate, missing STOPPED reason rejection, document upload selector and historical document visibility inspected. Viewer, successful writes/uploads and deployed corrections remain unverified.
-- Major contradictions: stage skipping and sub-stage reversals are not prevented; STOPPED can retain a sub-stage and general update lacks its reason gate; Editor is actively authorized; DB workflow constraints absent; branding persistence table absent on live CMS.
-- Missing: automatic Accepted agent payable, Ledger integration, multiple opposition events, TM56 response/extension tracking and Demand Note 25-day counter.
-- CASE DATA FIRST. UI FURNITURE SECOND. Live 1440×900 inspection and source confirm tiny metadata and dominant borders; Phase 4 remains pending.
-- Acceptance/release checks remain open. No project completion percentage or full V2 completion claim is made.
+## IN PROGRESS / NEXT
 
-Established phases only: Phase 0 Truth Cleanup → Phase 1 Business Workflow Completion → Phase 2 Payment Architecture → Phase 3 Workflow Hardening → Phase 4 UI / Workbench Transformation.
+- Separate follow-up: branding/theme refinement, logo update, and social preview image update.
+- Authenticated production role/document smoke tests, production migration confirmation, and dashboard/environment review still require the appropriate production access. This task does not deploy or mutate production.
 
-## Historical work log — superseded as current status
+## FUTURE / PARKED
 
-# Brandex Datasheet Progress
+- Deeper CMS ↔ Ledger integration remains deferred. No connector, Ledger data access, or verified payment read path is included; do not represent CMS payment flags as Ledger truth.
+- No other historical unchecked item is promoted to active work by this release task.
 
-**Last updated: 24 September 2026 (Batch 6B: Branding + Logo System)**
+## V2.1.0 RELEASE
 
-The following is a historical work log. Current status is the Phase 0 section above and docs/PROJECT_TRUTH.md.
-**Any AI agent or contributor must read this file first** before making changes, suggesting work, or starting a new task.
+- Release: `v2.1.0`, a minor release for the implemented changes accumulated since `v2.0.1`.
+- Release notes: [RELEASE_NOTES_V2.1.0.md](RELEASE_NOTES_V2.1.0.md).
+- Release verification passed locally; the `v2.1.0` tag points to the verified release commit.
 
----
+## Historical work log — archived, not current status
 
-## Production foundation (Complete)
+The sections below preserve prior implementation notes. Their old checkboxes, pending lists, release claims, and test counts must not be treated as current state or new TODOs.
+
+### Earlier implementation notes
+
+The following sections are preserved history. Their checkboxes and status labels are not current release acceptance evidence.
+
+## Production foundation (Historical)
 
 - [x] React/Vite web application (`artifacts/tm-tracker`)
 - [x] Supabase Postgres primary database
