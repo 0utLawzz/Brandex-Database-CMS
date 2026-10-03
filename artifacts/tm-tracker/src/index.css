@@ -51,40 +51,38 @@
 }
 
 :root {
-  --background: 45 47% 88%;
+  --background: 45 52% 88%;
   --foreground: 0 0% 5%;
   --border: 0 0% 5%;
-  --input: 44 43% 84%;
-  --ring: 358 59% 27%;
-  --card: 45 47% 88%;
+  --input: 40 14% 96%;
+  --ring: 22 100% 39.4%;
+  --card: 40 14% 96%;
   --card-foreground: 0 0% 5%;
   --card-border: 0 0% 5%;
-  --popover: 44 43% 84%;
+  --popover: 40 14% 96%;
   --popover-foreground: 0 0% 5%;
   --popover-border: 0 0% 5%;
-  --primary: 358 59% 27%;
-  --primary-foreground: 45 47% 88%;
+  --primary: 22 100% 39.4%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 164 83% 23%;
   --secondary-foreground: 45 47% 88%;
-  --muted: 44 43% 84%;
+  --muted: 44 42% 84.5%;
   --muted-foreground: 0 0% 35%;
-  --accent: 38 85% 37%;
+  --accent: 47.5 100% 41.6%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 100% 50%;
   --destructive-foreground: 45 47% 88%;
-  
-  --radius: 0px;
 
+  --radius: 0px;
   --nb-cream: #F0E8D0;
   --nb-cream-alt: #E8DFC7;
   --nb-black: #0C0C0C;
-  --nb-orange: #6C1C1F;
-  --brand-maroon: #6C1C1F;
-  --brand-gold: #B0740E;
+  --nb-orange: #C94A00;
+  --brand-maroon: #C94A00;
+  --brand-gold: #D4A800;
   --nb-teal-dark: #0A6B52;
   --nb-teal: #0D9970;
-  --nb-yellow: #B0740E;
-
+  --nb-yellow: #D4A800;
   --shadow-nb: 5px 5px 0px 0px var(--nb-black);
   --shadow-nb-hover: 8px 8px 0px 0px var(--nb-black);
 }
@@ -94,24 +92,23 @@
   --foreground: 45 47% 88%;
   --border: 45 47% 88%;
   --input: 0 0% 12%;
-  --ring: 358 59% 27%;
+  --ring: 22 100% 39.4%;
   --card: 0 0% 5%;
   --card-foreground: 45 47% 88%;
   --card-border: 45 47% 88%;
   --popover: 0 0% 10%;
   --popover-foreground: 45 47% 88%;
   --popover-border: 45 47% 88%;
-  --primary: 358 59% 27%;
+  --primary: 22 100% 39.4%;
   --primary-foreground: 45 47% 88%;
   --secondary: 164 83% 23%;
   --secondary-foreground: 45 47% 88%;
   --muted: 0 0% 15%;
   --muted-foreground: 0 0% 70%;
-  --accent: 38 85% 37%;
+  --accent: 47.5 100% 41.6%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 100% 50%;
   --destructive-foreground: 45 47% 88%;
-
   --shadow-nb: 5px 5px 0px 0px var(--nb-cream);
   --shadow-nb-hover: 8px 8px 0px 0px var(--nb-cream);
 }
@@ -159,7 +156,25 @@
   outline-offset: 2px;
 }
 
-/* Legacy utility compatibility while the UI adopts the official brand palette. */
+/* Re-map existing page-level utility colors to the restrained Brandex palette. */
+[class~="bg-[#6C1C1F]"] { background-color: var(--brand-maroon) !important; }
+[class~="text-[#6C1C1F]"] { color: var(--brand-maroon) !important; }
+[class~="border-[#6C1C1F]"] { border-color: var(--brand-maroon) !important; }
+[class~="hover:bg-[#6C1C1F]"]:hover { background-color: var(--brand-maroon) !important; }
+[class~="hover:border-[#6C1C1F]"]:hover { border-color: var(--brand-maroon) !important; }
+[class~="focus:outline-[#6C1C1F]"]:focus { outline-color: var(--brand-maroon) !important; }
+[class~="bg-[#B0740E]"] { background-color: var(--brand-gold) !important; }
+[class~="text-[#B0740E]"] { color: var(--brand-gold) !important; }
+[class~="border-[#B0740E]"] { border-color: var(--brand-gold) !important; }
+[class~="hover:bg-[#B0740E]"]:hover { background-color: var(--brand-gold) !important; }
+[class~="text-[#D6A64B]"] { color: var(--brand-gold) !important; }
+[class~="bg-[#F0E8D0]"] { background-color: #F0E8D0 !important; }
+[class~="bg-[#E8DFC7]"] { background-color: #E8DFC7 !important; }
+[class~="bg-[#F8F6F1]"] { background-color: #F0E8D0 !important; }
+[class~="bg-[#FFF9F0]"] { background-color: #FAF6EE !important; }
+[class~="text-[#6d6658]"] { color: #6d6658 !important; }
+
+/* Legacy utility compatibility for older components. */
 .bg-\[\#C94A00\] { background-color: var(--brand-maroon) !important; }
 .text-\[\#C94A00\] { color: var(--brand-maroon) !important; }
 .border-\[\#C94A00\] { border-color: var(--brand-maroon) !important; }
@@ -371,7 +386,6 @@
     height: auto !important;
     opacity: 0.09 !important;
     object-fit: contain !important;
-    filter: grayscale(100%) !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

@@ -178,11 +178,11 @@ describe("Batch 6B: Branding & Logo System", () => {
 
   describe("C. Branding Configuration & Defaults", () => {
     it("provides complete DEFAULT_BRANDING constants", () => {
-      expect(DEFAULT_BRANDING.logoUrl).toBe("/brandex-wordmark.svg");
-      expect(DEFAULT_BRANDING.markUrl).toBe("/brandex-mark.svg");
-      expect(DEFAULT_BRANDING.bannerUrl).toBe("/brandex-banner.png");
-      expect(DEFAULT_BRANDING.faviconUrl).toBe("/brandex-mark.svg");
-      expect(DEFAULT_BRANDING.watermarkUrl).toBe("/brandex-wordmark.svg");
+      expect(DEFAULT_BRANDING.logoUrl).toBe("/branding/brandex-logo-20.png");
+      expect(DEFAULT_BRANDING.markUrl).toBe("/branding/brandex-logo-12.png");
+      expect(DEFAULT_BRANDING.bannerUrl).toBe("/branding/brandex-logo-20.png");
+      expect(DEFAULT_BRANDING.faviconUrl).toBe("/branding/brandex-logo-15.png");
+      expect(DEFAULT_BRANDING.watermarkUrl).toBe("/branding/brandex-logo-14.png");
     });
 
     it("getBrandingConfig returns default branding when no custom settings are stored", async () => {

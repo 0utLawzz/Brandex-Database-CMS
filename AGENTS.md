@@ -57,7 +57,7 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 
 - Keep RLS enabled. Active roles are Admin + User/Viewer only. The historical `editor` enum value is retained, but active Editor profiles were converted to Viewer and a database constraint prevents re-assignment. Do not reintroduce Editor authorization.
 - Production is private and staff-authenticated. Do not add public Viewer access; it is future consideration only.
-- Ledger integration remains deferred. Branding/theme/logo/social-preview and Record View design are separate follow-up work.
+- Ledger integration remains deferred. Record View/workbench redesign remains a separate follow-up.
 - Do not implement bulk permanent deletion. Single-record deletion remains admin-controlled by RLS.
 - Database schema changes require a new ordered migration in `supabase/migrations`.
 - Every completed change must pass tests, typecheck and production build before push.
@@ -65,11 +65,11 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 
 ## Brand system
 
-- Maroon: `#6C1C1F`
-- Gold: `#B0740E`
-- Cream: `#F0E8D0`
-- Green is reserved for successful/active status indications.
-- Use transparent `brandex-wordmark.svg` and `brandex-mark.svg` assets.
+- Near-black: `#0C0C0C`; warm cream: `#F0E8D0`; deep cream: `#E8DFC7`; off-white panels: `#FAF6EE`.
+- Burnt orange: `#C94A00`; dark teal: `#0A6B52`; bright teal: `#0D9970`; bold yellow: `#D4A800`.
+- Use Bebas Neue for headings, Space Grotesk for body text, and DM Mono for labels and code.
+- Preserve the permanent dark navbar, hard offset shadows, square inputs, and 6px maximum radius for cards/buttons.
+- Use the palette-matched `public/branding/brandex-logo-*.png` assets; numbered `Logo_*.PNG` source variants are ignored.
 
 ## Status awareness
 

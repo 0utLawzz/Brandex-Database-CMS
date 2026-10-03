@@ -12,8 +12,13 @@ export function AppShell({ children }: AppShellProps) {
       <main className="flex-1 flex flex-col w-full h-[calc(100vh-6rem)] overflow-hidden">
         {children}
       </main>
-      <footer className="min-h-8 shrink-0 bg-[#6C1C1F] text-[#FFF9F0] px-4 flex items-center justify-center font-mono text-xs uppercase tracking-wider text-center print:hidden">
-        <span>BRANDEX LAW ASSOCIATES · WWW.BRANDEX.PK · INFO@BRANDEX.PK · +92 336 0015009 · ISLAMABAD · KARACHI · LAHORE · MULTAN · RAWALPINDI · XI'AN</span>
+      <footer className="shrink-0 bg-[#6C1C1F] text-[#FFF9F0] px-4 py-2 font-mono text-xs uppercase tracking-normal print:hidden">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center">
+          <span>BRANDEX LAW ASSOCIATES</span>
+          <a href="https://brandex.pk" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-white">BRANDEX.PK</a>
+          <a href="https://facebook.com/brandex.pk" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-white">FACEBOOK.COM/BRANDEX.PK</a>
+          <span>INFO@BRANDEX.PK · +92 336 0015009 · ISLAMABAD · KARACHI · LAHORE · MULTAN · RAWALPINDI · XI'AN</span>
+        </div>
       </footer>
     </div>
   );

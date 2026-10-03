@@ -31,7 +31,7 @@ These checks verify database catalogs and automated tests, not authenticated pro
 ## Deferred Follow-Up
 
 - Ledger integration remains deferred; CMS payment indicators are manual and are not Ledger-verified.
-- Finalize and replace the logo/branding; social-preview and Record View/workbench design remain follow-up work.
+- The logo/theme/social-preview refresh is implemented locally; verify it after deployment. Record View/workbench redesign remains separate follow-up work.
 - Public Viewer access remains future consideration only.
 
 ## Historical Phase 0 Observations (25 September)

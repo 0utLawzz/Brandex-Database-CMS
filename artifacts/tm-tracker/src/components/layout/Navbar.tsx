@@ -15,7 +15,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useBranding } from "@/hooks/useBranding";
 import { getStaffRole } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { BrandingSettingsModal } from "@/components/BrandingSettingsModal";
@@ -37,7 +36,6 @@ export function Navbar() {
   const [refreshing, setRefreshing] = useState(false);
   const [brandingModalOpen, setBrandingModalOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { branding } = useBranding();
 
   const { data: staffRole } = useQuery({
     queryKey: ["staff-role"],
@@ -62,12 +60,12 @@ export function Navbar() {
           {/* Logo & Brand */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
             <img
-              src={branding.markUrl || "/brandex-mark.svg"}
+              src="/branding/brandex-logo-12.png"
               alt="Brandex Law Associates Logo"
               className="w-10 h-10 object-contain"
               onError={(e) => {
                 // Fallback icon if custom logo fails to load
-                (e.target as HTMLImageElement).src = "/brandex-mark.svg";
+                (e.target as HTMLImageElement).src = "/branding/brandex-logo-12.png";
               }}
             />
             <div className="hidden sm:block">

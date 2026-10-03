@@ -41,6 +41,9 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Ignore the numbered source set; deploy only the theme-matched logo copies.
+artifacts/tm-tracker/public/branding/Logo_*.PNG
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 

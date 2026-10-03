@@ -15,11 +15,11 @@ export interface BrandingConfig {
 }
 
 export const DEFAULT_BRANDING: BrandingConfig = {
-  logoUrl: "/brandex-wordmark.svg",
-  markUrl: "/brandex-mark.svg",
-  bannerUrl: "/brandex-banner.png",
-  faviconUrl: "/brandex-mark.svg",
-  watermarkUrl: "/brandex-wordmark.svg",
+  logoUrl: "/branding/brandex-logo-20.png",
+  markUrl: "/branding/brandex-logo-12.png",
+  bannerUrl: "/branding/brandex-logo-20.png",
+  faviconUrl: "/branding/brandex-logo-15.png",
+  watermarkUrl: "/branding/brandex-logo-14.png",
   customLogoUrl: null,
   customMarkUrl: null,
   customWatermarkUrl: null,

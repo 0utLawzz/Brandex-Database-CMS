@@ -1,12 +1,14 @@
 # Brandex Database CMS Progress
 
-**Last updated: 3 October 2026 — production smoke-test update**
+**Last updated: 3 October 2026 — branding refresh**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
 ## COMPLETED
 
 - Fixed the relative-age calendar regression surfaced during the final verification pass; month/day borrowing now uses the correct month length when dates cross a month boundary.
+- Applied the user-provided BrandEx Neo-Brutalism guide across the shared theme: cream surfaces, burnt-orange actions, teal statuses, Bebas Neue / Space Grotesk / DM Mono typography, and hard offset shadows.
+- Recolored and wired the selected logo variants: Logo 12 in the header, Logo 15 as favicon, Logo 14 on login/dashboard/print watermark, and Logo 20 for branding and social preview. Added Brandex.pk and Facebook links to the responsive footer. Numbered source variants are ignored; deployable palette-matched copies are tracked candidates.
 - Staff-authenticated React/Vite CMS backed by Supabase, with server-side record pagination, search, filters, and CSV workflows.
 - Admin + User/Viewer is the only active role model. The existing legacy Editor profile was converted to Viewer; the enum value remains for historical compatibility, and a database constraint prevents assigning it to profiles.
 - Database write policies are Admin-only; Viewer reads remain authenticated. Anonymous access and `TRUNCATE` were removed from exposed `public` tables/RPCs. The private Storage bucket uses authenticated RLS with Admin-only writes; raw `storage.objects` grants are managed by its separate `supabase_storage_admin` owner and were not revokable by the project migration actor.
@@ -15,7 +17,7 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - On 3 October, user-provided dashboard screenshots showed public sign-up and anonymous sign-in disabled, leaked-password protection toggled on, and only `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY` listed in Vercel. Reopen/save confirmation and deployment behavior are not independently verified.
 - Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. CMS payment flags are manual and are not Ledger-verified.
 - The ordered closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, and `20260929213046`; matching files are in `supabase/migrations`.
-- Local verification: `pnpm test` passed (207 tests across 7 files). Typecheck and production build are listed below after the final documentation edits.
+- Local verification after the branding refresh: `pnpm test` passed (207 tests across 7 files), typecheck passed, and production build passed.
 
 ## IN PROGRESS / NEXT
 
@@ -25,7 +27,7 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - Confirm the leaked-password setting was saved and stays enabled. The user screenshot shows it on, while the earlier Supabase advisor report flagged it disabled; reconcile this difference after saving/rechecking.
 - Vercel's screenshot shows only the two expected browser variables, with values masked. Confirm deployment behavior.
 - Rotate the service-role credential present in ignored local environment files; those files are not tracked and no service-role value is configured as a `VITE_*` variable. The credential was exposed in an inspection result during this pass.
-- Logo and branding need to be finalized and replaced. Social preview and Record View/workbench design also remain separate follow-up items. No design work was done here.
+- Record View/workbench redesign remains a separate follow-up. The branding refresh is local and still requires a production deployment check.
 
 ## FUTURE / PARKED
 

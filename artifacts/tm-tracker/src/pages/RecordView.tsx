@@ -172,11 +172,11 @@ export function RecordView() {
           {/* Full-Page Print Watermark (10% opacity, centered behind content, print-only) */}
           <div className="print-watermark-container" aria-hidden="true">
             <img
-              src={branding.watermarkUrl || branding.logoUrl || "/brandex-wordmark.svg"}
+              src={branding.watermarkUrl || "/branding/brandex-logo-14.png"}
               alt=""
               className="print-watermark-image"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "/brandex-wordmark.svg";
+                (e.target as HTMLImageElement).src = "/branding/brandex-logo-14.png";
               }}
             />
           </div>
@@ -188,11 +188,11 @@ export function RecordView() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
-                    src={branding.logoUrl || "/brandex-wordmark.svg"}
+                    src="/branding/brandex-logo-14.png"
                     alt="Brandex Law Associates"
                     className="h-9 max-w-[160px] object-contain"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/brandex-wordmark.svg";
+                      (e.target as HTMLImageElement).src = "/branding/brandex-logo-14.png";
                     }}
                   />
                   <div>
