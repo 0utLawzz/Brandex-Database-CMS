@@ -1616,6 +1616,16 @@ export async function listFeesForTrademark(trademarkId: string): Promise<AgentFe
   return (data ?? []).map(mapFeeRow);
 }
 
+/** Record an Admin-authorized payment against an existing agent payable. */
+export async function recordAgentPayment(feeId: string, amount: number): Promise<void> {
+  ensureConfigured();
+  const { error } = await supabase.rpc("record_agent_payment", {
+    p_fee_id: feeId,
+    p_amount: amount,
+  });
+  throwIfError(error);
+}
+
 /** Fetch all fee entries for a specific agent (for AgentsPage detail view) */
 export async function listFeesForAgent(agentId: string): Promise<AgentFee[]> {
   ensureConfigured();

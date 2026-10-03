@@ -10,6 +10,26 @@ import {
 } from "lucide-react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
+export function GeneralSearchError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return (
+    <div className="px-6 py-12 text-center space-y-3" role="alert">
+      <div className="font-mono font-bold text-[#CC0000] uppercase tracking-widest">
+        Search failed
+      </div>
+      <div className="font-mono text-sm text-[#6d6658]">
+        {error.message || "Unable to complete the search. Please try again."}
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="border-2 border-[#6C1C1F] bg-[#6C1C1F] px-4 py-2 font-mono text-sm font-bold uppercase text-white hover:bg-[#0C0C0C]"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
 const STAGE_BADGE: Record<string, string> = {
   "STAGE 1": "bg-[#0D9970] text-white",
   "STAGE 2": "bg-[#B0740E] text-white",
@@ -86,13 +106,105 @@ function SearchRecordIdentity({ record }: { record: TrademarkRecord }) {
   );
 }
 
-// ── TM Result Card ────────────────────────────────────────────────────────────
+// ── Result card body shared between TM lookup and general search ─────────────
 
-function TmCard({ result, onViewRecord }: {
+function ResultCardBody({
+  record,
+  ttMatches,
+  journal,
+  showViewButton,
+  onViewRecord,
+}: {
+  record: TrademarkRecord;
+  ttMatches?: Record<string, any> | undefined;
+  journal?: Record<string, any> | null;
+  showViewButton?: boolean;
+  onViewRecord?: (id: string) => void;
+}) {
+  const matches = (ttMatches ?? {}) as Record<string, any>;
+
+  return (
+    <div className="px-4 pb-4 space-y-2 border-t border-[#0C0C0C]/10 pt-3">
+      <div className="font-mono text-sm text-[#6d6658] flex flex-wrap gap-x-3">
+        <span>CITY: <strong className="text-[#0C0C0C]">{record.city || "—"}</strong></span>
+        <span>AGENT: <strong className="text-[#0C0C0C]">{record.agent || <span className="italic">unassigned</span>}</strong></span>
+      </div>
+
+      <div>
+        <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658] mb-1">
+          TM FORM IPO (REGISTRY MATCHES)
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
+            const hasForm = Boolean(matches[s]);
+            const formDate = getFormDate(matches, s);
+            const formattedDate = formDate ? formatDateLong(formDate) : null;
+            const relativeAge = formDate ? getRelativeAge(formDate) : null;
+
+            return hasForm ? (
+              <div key={s} className="flex flex-col gap-0.5">
+                <span className="flex items-center gap-1 px-2 py-0.5 font-mono text-sm font-bold border-2 border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10">
+                  <CheckCircle2 className="w-2.5 h-2.5" /> {s}
+                </span>
+                {formattedDate && (
+                  <div className="font-mono text-sm text-[#6d6658]">
+                    {formattedDate} · {relativeAge}
+                  </div>
+                )}
+                {!formattedDate && (
+                  <div className="font-mono text-sm text-[#6d6658]">
+                    Date not available
+                  </div>
+                )}
+              </div>
+            ) : null;
+          })}
+          {(!matches.TM5 && !matches.TM6 && !matches.TM11 && !matches.TM16 && !matches.TM56) && (
+            <span className="font-mono text-sm text-[#9d9488] italic">No forms found</span>
+          )}
+        </div>
+      </div>
+
+      {journal ? (
+        <div className="border-2 border-[#0A6B52] bg-[#0D9970]/5 px-3 py-2">
+          <div className="flex items-center gap-2 font-mono text-sm font-bold text-[#0A6B52] mb-1">
+            <CheckCircle2 className="w-3 h-3" /> JOURNAL
+          </div>
+          <div className="font-mono text-sm text-[#0C0C0C] space-x-3">
+            <span>NO: <strong>{String(journal["Journal No"] || "")}</strong></span>
+            <span>DATE: <strong>{journal["Journal Date"] ? formatDateShort(journal["Journal Date"] as string) : "—"}</strong></span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 font-mono text-sm text-[#9d9488]">
+          <MinusCircle className="w-3 h-3" /> No published journal record found.
+        </div>
+      )}
+
+      <div className="font-mono text-sm text-[#6d6658]">
+        FILED: <strong className="text-[#0C0C0C]">{record.date || "—"}</strong>
+      </div>
+
+      {showViewButton && onViewRecord && (
+        <div className="pt-1">
+          <button
+            onClick={() => onViewRecord(record.id)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#6C1C1F] text-white font-mono font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all border-2 border-[#6C1C1F]"
+          >
+            VIEW RECORD <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TmCard({ result, onViewRecord }: {
   result: TmSearchResult;
   onViewRecord: (id: string) => void;
 }) {
   const { records, tmMatches, journal } = result;
+  const safeMatches = (tmMatches ?? {}) as Record<string, any>;
 
   if (records.length === 0) {
     return (
@@ -104,11 +216,10 @@ function TmCard({ result, onViewRecord }: {
         <div className="font-mono text-sm text-[#9d9488]">
           The TM number was not found in the DATABASE.
         </div>
-        {/* Still show TM sheet matches */}
         <div className="mt-2 flex flex-wrap gap-2 justify-center">
           {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
-            const hasForm = tmMatches[s];
-            const formDate = getFormDate(tmMatches, s);
+            const hasForm = safeMatches[s];
+            const formDate = getFormDate(safeMatches, s);
             const formattedDate = formDate ? formatDateLong(formDate) : null;
             const relativeAge = formDate ? getRelativeAge(formDate) : null;
             return (
@@ -146,78 +257,17 @@ function TmCard({ result, onViewRecord }: {
       {records.map((rec) => (
         <div
           key={rec.id}
-          className="border border-stone-300 bg-white shadow-none"
+          onClick={() => onViewRecord(rec.id)}
+          className="border border-stone-300 bg-white shadow-none hover:shadow-[5px_5px_0_#0C0C0C] transition-shadow cursor-pointer"
         >
           <SearchRecordIdentity record={rec} />
-
-          {/* Card Body extras */}
-          <div className="px-4 pb-4 space-y-3 border-t border-[#0C0C0C]/10 pt-3">
-            {/* TM Sheet Matches */}
-            <div>
-              <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658] mb-1.5">
-                TM FORM IPO (REGISTRY MATCHES)
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
-                  const hasForm = tmMatches[s];
-                  const formDate = getFormDate(tmMatches, s);
-                  const formattedDate = formDate ? formatDateLong(formDate) : null;
-                  const relativeAge = formDate ? getRelativeAge(formDate) : null;
-                  return (
-                    <div key={s} className="flex flex-col gap-0.5">
-                      <span
-                        className={`flex items-center gap-1 px-2.5 py-1 font-mono text-sm font-bold border-2 ${
-                          hasForm
-                            ? "border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10"
-                            : "border-[#0C0C0C]/20 text-[#9d9488] bg-[#F0E8D0]"
-                        }`}
-                      >
-                        {hasForm ? <CheckCircle2 className="w-3 h-3" /> : <MinusCircle className="w-3 h-3" />}
-                        {s}
-                      </span>
-                      {hasForm && formattedDate && (
-                        <div className="font-mono text-sm text-[#6d6658]">
-                          {formattedDate} · {relativeAge}
-                        </div>
-                      )}
-                      {hasForm && !formattedDate && (
-                        <div className="font-mono text-sm text-[#6d6658]">
-                          Date not available
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Journal */}
-            {journal ? (
-              <div className="border-2 border-[#0A6B52] bg-[#0D9970]/5 px-3 py-2">
-                <div className="flex items-center gap-2 font-mono text-sm font-bold text-[#0A6B52] mb-1">
-                  <CheckCircle2 className="w-3 h-3" /> JOURNAL FOUND
-                </div>
-                <div className="font-mono text-sm text-[#0C0C0C] space-x-3">
-                  <span>Journal No: <strong>{String(journal["Journal No"] || "")}</strong></span>
-                  <span>Date: <strong>{journal["Journal Date"] ? formatDateShort(journal["Journal Date"] as string) : ""}</strong></span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 font-mono text-sm text-[#9d9488]">
-                <MinusCircle className="w-3 h-3" /> No published journal record found.
-              </div>
-            )}
-
-            {/* View Record button */}
-            <div className="pt-1">
-              <button
-                onClick={() => onViewRecord(rec.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#6C1C1F] text-white font-mono font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all border-2 border-[#6C1C1F]"
-              >
-                VIEW RECORD <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+          <ResultCardBody
+            record={rec}
+            ttMatches={tmMatches}
+            journal={journal}
+            showViewButton
+            onViewRecord={onViewRecord}
+          />
         </div>
       ))}
     </div>
@@ -266,7 +316,13 @@ export function SearchPage() {
   });
 
   // General search query with pagination
-  const { data: generalPage, isLoading: genLoading, isFetching: genFetching } = useQuery<TrademarkPage>({
+  const {
+    data: generalPage,
+    isLoading: genLoading,
+    isFetching: genFetching,
+    error: genError,
+    refetch: retryGeneralSearch,
+  } = useQuery<TrademarkPage>({
     queryKey: ["trademarks-search", page, debouncedQuery, typeFilter, stageFilter, cityFilter, caseTypeFilter, agentFilter],
     queryFn: () =>
       listTrademarkPage({
@@ -430,6 +486,8 @@ export function SearchPage() {
                 <div className="px-6 py-12 text-center font-bold font-mono text-[#6d6658] animate-pulse">
                   SEARCHING…
                 </div>
+              ) : genError ? (
+                <GeneralSearchError error={genError} onRetry={() => void retryGeneralSearch()} />
               ) : generalResults.length === 0 ? (
                 <div className="px-6 py-12 text-center space-y-2">
                   <div className="font-mono font-bold text-[#6d6658] uppercase tracking-widest">No results found.</div>
@@ -446,67 +504,11 @@ export function SearchPage() {
                       className="border border-stone-300 bg-white shadow-none hover:shadow-[5px_5px_0_#0C0C0C] transition-shadow cursor-pointer"
                     >
                       <SearchRecordIdentity record={tm} />
-
-                      {/* Supporting info */}
-                      <div className="px-4 pb-4 space-y-2 border-t border-[#0C0C0C]/10 pt-3">
-                        <div className="font-mono text-sm text-[#6d6658] flex flex-wrap gap-x-3">
-                          <span>CITY: <strong className="text-[#0C0C0C]">{tm.city || "—"}</strong></span>
-                          <span>AGENT: <strong className="text-[#0C0C0C]">{tm.agent || <span className="italic">unassigned</span>}</strong></span>
-                        </div>
-
-                        {/* TM Forms */}
-                        <div>
-                          <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658] mb-1">
-                            TM FORM IPO (REGISTRY MATCHES)
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(["TM5", "TM6", "TM11", "TM16", "TM56"] as const).map((s) => {
-                              const hasForm = tm[s.toLowerCase() as keyof typeof tm] === "YES";
-                              const formDate = getFormDate(tm.tmMatches, s);
-                              const formattedDate = formDate ? formatDateLong(formDate) : null;
-                              const relativeAge = formDate ? getRelativeAge(formDate) : null;
-                              return hasForm ? (
-                                <div key={s} className="flex flex-col gap-0.5">
-                                  <span className="flex items-center gap-1 px-2 py-0.5 font-mono text-sm font-bold border-2 border-[#0A6B52] text-[#0A6B52] bg-[#0D9970]/10">
-                                    <CheckCircle2 className="w-2.5 h-2.5" /> {s}
-                                  </span>
-                                  {formattedDate && (
-                                    <div className="font-mono text-sm text-[#6d6658]">
-                                      {formattedDate} · {relativeAge}
-                                    </div>
-                                  )}
-                                  {!formattedDate && (
-                                    <div className="font-mono text-sm text-[#6d6658]">
-                                      Date not available
-                                    </div>
-                                  )}
-                                </div>
-                              ) : null;
-                            })}
-                            {![tm.tm5, tm.tm6, tm.tm11, tm.tm16, tm.tm56].some(v => v === "YES") && (
-                              <span className="font-mono text-sm text-[#9d9488] italic">No forms found</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Journal */}
-                        {tm.journalNumber ? (
-                          <div className="border-2 border-[#0A6B52] bg-[#0D9970]/5 px-3 py-2">
-                            <div className="flex items-center gap-2 font-mono text-sm font-bold text-[#0A6B52] mb-1">
-                              <CheckCircle2 className="w-3 h-3" /> JOURNAL
-                            </div>
-                            <div className="font-mono text-sm text-[#0C0C0C] space-x-3">
-                              <span>NO: <strong>{tm.journalNumber}</strong></span>
-                              <span>DATE: <strong>{tm.journalDate ? formatDateShort(tm.journalDate) : "—"}</strong></span>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* Filing Date */}
-                        <div className="font-mono text-sm text-[#6d6658]">
-                          FILED: <strong className="text-[#0C0C0C]">{tm.date || "—"}</strong>
-                        </div>
-                      </div>
+                      <ResultCardBody
+                        record={tm}
+                        ttMatches={tm.tmMatches}
+                        journal={tm.journal ? { "Journal No": tm.journalNumber, "Journal Date": tm.journalDate } : null}
+                      />
                     </div>
                   ))}
                 </div>

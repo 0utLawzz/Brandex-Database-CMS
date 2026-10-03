@@ -1,6 +1,6 @@
 # Brandex Database CMS Progress
 
-**Last updated: 3 October 2026 — TM uniqueness and search fix**
+**Last updated: 3 October 2026 — release fixes and workflow truth alignment**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
@@ -17,19 +17,22 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - Database write policies are Admin-only; Viewer reads remain authenticated. Anonymous access and `TRUNCATE` were removed from exposed `public` tables/RPCs. The private Storage bucket uses authenticated RLS with Admin-only writes; raw `storage.objects` grants are managed by its separate `supabase_storage_admin` owner and were not revokable by the project migration actor.
 - The two existing Auth users were retained and labelled `Admin / IT` and `User / Viewer`. No account was deleted or created. The user emails and account purposes are recorded in the closure report, not hard-coded in migrations.
 - Workflow guards, history, assignment, stage-payment gates and supporting RPCs are deployed and covered by PostgreSQL-backed tests. On 3 October, the user reported a live login test: Dashboard, Database record viewing/upload, Stage 2 payment unlocking assignment, Assigned, Agents, and Publication worked. This is a single-session user report, not a full Admin/Viewer acceptance test.
+- The owner confirms production Admin and User/Viewer tests passed. Logout behavior is expected: protected application content is hidden and only the login screen is shown.
+- ASSIGNED now has separate Assigned and Accepted / Agent Payments queues. Admins can record partial or full payments against Accepted-case payables there; payment entry is intentionally not part of Case Events.
+- General search failures show an explicit error and Retry action; a successful zero-result search continues to show the empty-results state.
+- Workflow rules in `docs/WORKFLOW_BUSINESS_RULES.md` are final and reflect the implemented database-enforced flow. The 25 September findings in `docs/PROJECT_TRUTH.md` are historical.
 - On 3 October, user-provided dashboard screenshots showed public sign-up and anonymous sign-in disabled, leaked-password protection toggled on, and only `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY` listed in Vercel. Reopen/save confirmation and deployment behavior are not independently verified.
 - Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. CMS payment flags are manual and are not Ledger-verified.
 - The closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, `20260929213046`, and `20261003121144` for TM-number cleanup and uniqueness.
-- Local verification after the TM/search fixes: `pnpm test` passed (209 tests across 7 files), typecheck passed, and production build passed.
+- Local verification after the current fixes: `pnpm test` 211 tests / 8 files; typecheck, production build, and `git diff --check` passed. No commit or push was made.
 
 ## IN PROGRESS / NEXT
 
-- Complete a separate Viewer login/permission test and remaining production checks in [SMOKE_TEST_CHECKLIST.md](SMOKE_TEST_CHECKLIST.md). User reports logout hides protected content and requires login again.
-- Test CSV import in Publication. Admin/Viewer role-specific access and complete document/workflow rules still need dedicated verification.
+- Verify the new Accepted / Agent Payments queue against a production Accepted case after deployment.
+- Test CSV import in Publication and complete the remaining specific document/URL and TM uniqueness checks in [SMOKE_TEST_CHECKLIST.md](SMOKE_TEST_CHECKLIST.md).
 - Verify TM-number duplicate rejection and both search layouts against the deployed production app.
-- Confirm the leaked-password setting was saved and stays enabled. The user screenshot shows it on, while the earlier Supabase advisor report flagged it disabled; reconcile this difference after saving/rechecking.
-- Vercel's screenshot shows only the two expected browser variables, with values masked. Confirm deployment behavior.
-- Rotate the service-role credential present in ignored local environment files; those files are not tracked and no service-role value is configured as a `VITE_*` variable. The credential was exposed in an inspection result during this pass.
+- Verify deployment of these local changes, private access, Auth password settings, and browser-safe environment variables; masked settings screenshots do not independently verify values.
+- Rotate the service-role credential present in ignored local environment files as a separate security action. Do not expose or commit it.
 - Record View/workbench redesign remains a separate follow-up. The branding refresh is local and still requires a production deployment check.
 
 ## FUTURE / PARKED
@@ -178,7 +181,7 @@ The following sections are preserved history. Their checkboxes and status labels
 - [x] Automated tests
 - [x] TypeScript typecheck
 - [x] Production build
-- [ ] Authenticated browser smoke test (Admin and User/Viewer flows only) → see SMOKE_TEST_CHECKLIST.md
+- [x] Authenticated browser smoke test (Admin and User/Viewer flows only; owner-reported pass) → see SMOKE_TEST_CHECKLIST.md
 - [ ] Verify Vercel deployment, private access, Auth sign-up/password settings, and browser-safe environment variables → see SMOKE_TEST_CHECKLIST.md
 
 ## Medium-priority improvements
@@ -1071,8 +1074,6 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
   - `pnpm test` → 93/93 tests passed across 3 test suites.
   - `pnpm typecheck` → 0 errors.
   - `pnpm build` → production bundle compiled cleanly in 25.33s.
-
-
 
 
 

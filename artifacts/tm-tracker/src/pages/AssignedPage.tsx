@@ -1,11 +1,11 @@
-import { getStaffRole, listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, CITIES, formatWorkflowLabel } from "@/lib/api";
-import type { TrademarkPage } from "@/lib/api";
+import { getStaffRole, listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, listFeesForTrademark, recordAgentPayment, CITIES, formatWorkflowLabel } from "@/lib/api";
+import type { AgentFee, TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Users2, ChevronLeft, ChevronRight, ExternalLink, ClipboardCheck, X, AlertCircle, CheckCircle2 } from "lucide-react";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 const PAGE_SIZE = 50;
@@ -25,6 +25,15 @@ interface Filters {
 }
 
 const EMPTY: Filters = { agent: "", city: "", appClass: "" };
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-PK", {
+    style: "currency",
+    currency: "PKR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
 function FilterSelect({
   label,
@@ -63,25 +72,34 @@ export function AssignedPage() {
   const { toast } = useToast();
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [page, setPage] = useState(1);
+  const [queueView, setQueueView] = useState<"assigned" | "accepted">("assigned");
   const [assignmentRecord, setAssignmentRecord] = useState<TrademarkPage["records"][number] | null>(null);
+  const [paymentRecord, setPaymentRecord] = useState<TrademarkPage["records"][number] | null>(null);
+  const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
   const [selectedAgentName, setSelectedAgentName] = useState("");
   const [selectedAgentCity, setSelectedAgentCity] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
 
   // Assigned page only shows STAGE 2 + Sub-status Assigned
-  const { data, isLoading } = useQuery<TrademarkPage>({
-    queryKey: ["assigned-page", page, filters],
+  const { data, isLoading, isFetching } = useQuery<TrademarkPage>({
+    queryKey: ["assigned-page", queueView, page, filters],
     queryFn: () => listTrademarkPage({
       page,
       pageSize: PAGE_SIZE,
       stage: "STAGE 2",
-      subStage: "Assigned",
+      subStage: queueView === "assigned" ? "Assigned" : "Accepted",
       agent: filters.agent || undefined,
       city: filters.city || undefined,
       appClass: filters.appClass || undefined,
     }),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+  });
+  const paymentFeesQuery = useQuery<AgentFee[]>({
+    queryKey: ["case-fees", paymentRecord?.id],
+    queryFn: () => listFeesForTrademark(paymentRecord!.id),
+    enabled: !!paymentRecord,
+    staleTime: 0,
   });
   const { data: agents = [] } = useQuery({ queryKey: ["agents"], queryFn: listAgents, staleTime: 5 * 60_000 });
   const { data: agentProfiles = [] } = useQuery({
@@ -170,6 +188,39 @@ export function AssignedPage() {
     }
   };
 
+  const paymentMutation = useMutation({
+    mutationFn: async ({ feeId, amount }: { feeId: string; amount: number; trademarkId: string }) =>
+      recordAgentPayment(feeId, amount),
+    onSuccess: async (_data, variables) => {
+      setPaymentAmounts((current) => ({ ...current, [variables.feeId]: "" }));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["case-fees", variables.trademarkId] }),
+        queryClient.invalidateQueries({ queryKey: ["agent-profiles"] }),
+        queryClient.invalidateQueries({ queryKey: ["agents"] }),
+        queryClient.invalidateQueries({ queryKey: ["agent-summary"] }),
+      ]);
+      toast({ title: "Agent payment recorded" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Agent payment failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openPaymentModal = (record: TrademarkPage["records"][number]) => {
+    if (!canEdit) return;
+    setPaymentRecord(record);
+  };
+
+  const handleRecordPayment = (fee: AgentFee, rawAmount: string) => {
+    const amount = Number(rawAmount);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > fee.balanceDue) return;
+    paymentMutation.mutate({ feeId: fee.id, amount, trademarkId: fee.trademarkId });
+  };
+
 
   return (
     <AppShell>
@@ -179,11 +230,32 @@ export function AssignedPage() {
             <Users2 className="w-5 h-5 text-[#0A6B52]" />
             <h1 className="font-serif text-2xl uppercase tracking-widest text-[#0C0C0C] leading-none">ASSIGNED</h1>
             <span className="ml-2 font-mono text-sm text-[#6d6658] uppercase tracking-widest">
-              STAGE 2 · SUB-STATUS: ASSIGNED
+              STAGE 2 · {queueView === "assigned" ? "ASSIGNED" : "ACCEPTED"}
             </span>
             <span className="ml-auto font-mono text-sm text-[#6d6658] font-bold uppercase tracking-widest">
               {isLoading ? "LOADING…" : `${total} RECORDS`}
             </span>
+          </div>
+
+          <div className="mt-4 flex gap-2 border-b border-stone-300" role="tablist" aria-label="Stage 2 case queues">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={queueView === "assigned"}
+              onClick={() => { setQueueView("assigned"); setPage(1); }}
+              className={`border border-b-0 px-4 py-2 font-mono text-sm font-bold uppercase ${queueView === "assigned" ? "bg-[#0C0C0C] text-[#F0E8D0]" : "bg-white text-[#6d6658]"}`}
+            >
+              ASSIGNED QUEUE
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={queueView === "accepted"}
+              onClick={() => { setQueueView("accepted"); setPage(1); }}
+              className={`border border-b-0 px-4 py-2 font-mono text-sm font-bold uppercase ${queueView === "accepted" ? "bg-[#0C0C0C] text-[#F0E8D0]" : "bg-white text-[#6d6658]"}`}
+            >
+              ACCEPTED / AGENT PAYMENTS
+            </button>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
@@ -218,20 +290,20 @@ export function AssignedPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
+              {isLoading || isFetching ? (
                 <tr>
                   <td colSpan={14} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">
-                    LOADING ASSIGNED RECORDS…
+                    LOADING {queueView === "assigned" ? "ASSIGNED" : "ACCEPTED"} RECORDS…
                   </td>
                 </tr>
               ) : paged.length === 0 ? (
                 <tr>
                   <td colSpan={14} className="px-6 py-16 text-center">
                     <div className="font-mono font-bold text-[#6d6658] uppercase tracking-widest mb-1">
-                      No assigned records found.
+                      No {queueView === "assigned" ? "assigned" : "accepted"} records found.
                     </div>
                     <div className="font-mono text-sm text-[#9d9488]">
-                      Only Stage 2 with Sub-status Assigned are listed here.
+                      Only Stage 2 / {queueView === "assigned" ? "Assigned" : "Accepted"} cases are listed here.
                     </div>
                   </td>
                 </tr>
@@ -301,10 +373,17 @@ export function AssignedPage() {
                         <button type="button" onClick={() => goToRecord(r.id)} className="inline-flex items-center gap-1 border border-stone-300 bg-white px-2 py-1 font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white" title="Open complete record detail">
                           <ExternalLink className="h-3 w-3" /> RECORD
                         </button>
-                        <button type="button" onClick={() => openAssignmentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" disabled={!canEdit}
-                          title="Open assignment acceptance summary">
-                          <ClipboardCheck className="h-3 w-3" /> ASSIGNMENT
-                        </button>
+                        {queueView === "assigned" ? (
+                          <button type="button" onClick={() => openAssignmentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" disabled={!canEdit}
+                            title="Open assignment acceptance summary">
+                            <ClipboardCheck className="h-3 w-3" /> ASSIGNMENT
+                          </button>
+                        ) : (
+                          <button type="button" onClick={() => openPaymentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" disabled={!canEdit}
+                            title="Record a payment against this accepted case payable">
+                            <CheckCircle2 className="h-3 w-3" /> AGENT PAYMENT
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -454,6 +533,65 @@ export function AssignedPage() {
               </div>
               <p className="mt-4 border-l-4 border-[#6C1C1F] bg-[#FFF0D0] p-3 font-mono text-sm uppercase leading-relaxed">This view reports the current assignment queue from the trusted trademark status fields. Complete acceptance workflow history is available in the case detail record.</p>
               <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => goToRecord(assignmentRecord.id)} className="inline-flex items-center gap-2 border-2 border-[#6C1C1F] bg-[#6C1C1F] px-3 py-2 font-mono text-sm font-bold uppercase text-white"><ExternalLink className="h-4 w-4" /> OPEN RECORD</button></div>
+            </section>
+          </div>
+        )}
+        {paymentRecord && canEdit && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4" onClick={() => setPaymentRecord(null)}>
+            <section className="w-full max-w-2xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none" onClick={(event) => event.stopPropagation()} aria-labelledby="agent-payment-title">
+              <div className="flex items-start gap-3 border-b border-stone-300 pb-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">ACCEPTED CASE · AGENT PAYABLE</div>
+                  <h2 id="agent-payment-title" className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]">{paymentRecord.appName || "UNTITLED CASE"}</h2>
+                  <div className="mt-2 font-mono text-sm font-bold uppercase">CLIENT CODE: {paymentRecord.clientCode || "—"} · CASE NO: {paymentRecord.caseNumber || "—"}</div>
+                </div>
+                <button type="button" onClick={() => setPaymentRecord(null)} className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white" aria-label="Close agent payment form"><X className="h-4 w-4" /></button>
+              </div>
+
+              {paymentFeesQuery.isLoading ? (
+                <p className="mt-4 p-4 text-center font-mono text-sm font-bold">LOADING PAYABLES…</p>
+              ) : paymentFeesQuery.error ? (
+                <div className="mt-4 border border-[#CC0000] bg-white p-4" role="alert">
+                  <p className="font-mono text-sm text-[#CC0000]">{paymentFeesQuery.error.message}</p>
+                  <button type="button" onClick={() => void paymentFeesQuery.refetch()} className="mt-3 border border-stone-300 bg-white px-3 py-2 font-mono text-sm font-bold uppercase">RETRY</button>
+                </div>
+              ) : paymentFeesQuery.data?.length ? (
+                <div className="mt-4 space-y-3">
+                  {paymentFeesQuery.data.map((fee) => (
+                    <article key={fee.id} className="border border-stone-300 bg-white p-3">
+                      <div className="font-mono text-sm font-bold uppercase">{fee.description}</div>
+                      <p className="mt-1 font-mono text-sm">Billed {formatCurrency(fee.amountBilled)} · Paid {formatCurrency(fee.amountPaid)} · Balance <strong>{formatCurrency(fee.balanceDue)}</strong></p>
+                      {fee.balanceDue > 0 ? (
+                        <form className="mt-3 flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); handleRecordPayment(fee, paymentAmounts[fee.id] ?? ""); }}>
+                          <label className="block font-mono text-sm font-bold">
+                            PAYMENT AMOUNT (PKR)
+                            <input
+                              type="number"
+                              min="0.01"
+                              max={fee.balanceDue}
+                              step="0.01"
+                              required
+                              value={paymentAmounts[fee.id] ?? ""}
+                              onChange={(event) => setPaymentAmounts((current) => ({ ...current, [fee.id]: event.target.value }))}
+                              className="mt-1 block border border-stone-300 bg-white px-3 py-2 font-mono"
+                              disabled={paymentMutation.isPending}
+                            />
+                          </label>
+                          <button type="submit" disabled={paymentMutation.isPending || !paymentAmounts[fee.id] || Number(paymentAmounts[fee.id]) <= 0 || Number(paymentAmounts[fee.id]) > fee.balanceDue} className="border-2 border-[#0A6B52] bg-[#0A6B52] px-4 py-2 font-mono text-sm font-bold uppercase text-white disabled:opacity-50">
+                            {paymentMutation.isPending ? "RECORDING…" : "RECORD PAYMENT"}
+                          </button>
+                        </form>
+                      ) : (
+                        <p className="mt-2 font-mono text-sm font-bold uppercase text-[#0A6B52]">PAID IN FULL</p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 border border-stone-300 bg-white p-4 font-mono text-sm" role="status">
+                  No payable is recorded for this case yet. Payables are created when an eligible case reaches Accepted with an assigned agent and agreed rate.
+                </div>
+              )}
             </section>
           </div>
         )}

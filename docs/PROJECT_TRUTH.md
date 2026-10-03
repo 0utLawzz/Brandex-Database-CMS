@@ -8,6 +8,21 @@ Verified 25 September 2026 against source, Git, mocked tests, live Supabase cata
 Intended rules: [WORKFLOW_BUSINESS_RULES.md](WORKFLOW_BUSINESS_RULES.md).
 This document supersedes historical completion/freeze claims; no percentage is assigned.
 
+## Current implementation update — 3 October 2026
+
+The detailed tables and findings below are a historical 25 September baseline, not current
+implementation status. The final workflow rules are implemented in
+[WORKFLOW_BUSINESS_RULES.md](WORKFLOW_BUSINESS_RULES.md) and enforced by the ordered Supabase
+migrations, including database transitions/payment gates, STOPPED terminal behavior, accepted-case
+agent payables, Agent Payment RPC, Stage 3 opposition/TM56 counters, and the Demand Note certificate
+counter. Do not carry forward historical “not implemented” statements below as current findings.
+
+The owner reports that production Admin and User/Viewer tests passed. Logout behavior is expected:
+protected content is hidden and only the login screen remains. These are owner-reported production
+flows; the local verification for this change is recorded in [Progress](../Progress.md).
+Service-role credential rotation remains a separate security action; credentials must not be
+committed or exposed through browser environment variables.
+
 ## Evidence standard
 
 SOURCE VERIFIED means inspected implementation, not executed behavior.
@@ -255,4 +270,3 @@ test accounts and disposable cases. No production case was transitioned or file 
 Then PHASE 1 = Business Workflow Completion for the established missing workflow requirements.
 PHASE 2 = Payment Architecture; PHASE 3 = Workflow Hardening; PHASE 4 = UI / Workbench Transformation.
 This preserves the established phases and is not a new roadmap.
-

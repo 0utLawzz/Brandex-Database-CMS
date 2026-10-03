@@ -145,7 +145,6 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
 
   return (
     <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
-      {/* Section Header */}
       <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
         <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
           <Workflow className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
@@ -166,13 +165,33 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
       </div>
 
       <div className="p-4 print:p-2 space-y-3 print:space-y-1.5">
-        <div className="rounded-md bg-[#F8F6F1] p-4 text-base space-y-2">
-          <p><strong>Current:</strong> {record.stage} / {formatWorkflowLabel(record.subStage) || "No sub-stage"}</p>
+        <div className="rounded-md border border-stone-300 bg-[#F8F6F1] p-4 text-base space-y-2 shadow-none print:shadow-none">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658]">
+            <span>Current:</span>
+            <span className={`px-2 py-1 border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}>
+              {record.stage}
+            </span>
+            <span className="border border-[#0C0C0C]/30 bg-white px-2 py-1 text-[#0C0C0C]">
+              {formatWorkflowLabel(record.subStage) || "No sub-stage"}
+            </span>
+          </div>
           <p><strong>Next workflow action:</strong> {isStopped ? "None — this case is terminal" : availableWorkflowSubStages(record.stage, record.subStage, record.stage).filter(s=>s!==record.subStage).map(formatWorkflowLabel).join(" or ") || (validTargetStages.find(s=>s!==record.stage && s!=="STOPPED") ? `Enter ${validTargetStages.find(s=>s!==record.stage && s!=="STOPPED")} after payment clears` : "No further progression available")}</p>
-          <p><strong>Manual payment flags:</strong> {[1,2,3,4].map(n=>`Stage ${n}: ${(record as any)[`stage${n}Paid`] ? "cleared" : "unpaid"}`).join(" · ")}</p>
+          <div className="flex flex-wrap gap-2">
+            {[1,2,3,4].map((n) => {
+              const active = record.stage === STAGE_ORDER[n - 1];
+              return (
+                <span
+                  key={n}
+                  aria-current={active ? "step" : undefined}
+                  className={`px-2.5 py-1.5 border border-stone-300 font-mono text-xs font-bold uppercase ${active ? "bg-[#0A6B52] text-white" : "bg-white text-[#9d9488]"}`}
+                >
+                  STAGE {n} {active ? "ACTIVE" : "INACTIVE"}
+                </span>
+              );
+            })}
+          </div>
           {record.stage === "STAGE 2" && record.subStage === "Assigned" && <p>Set an agent and agreed rate before Accepted. Stage 2 payment is not needed for assignment.</p>}
         </div>
-        {/* Lifecycle Progression Track */}
         <div className="border border-stone-300 bg-[#FFF9F0] p-3 print:p-1.5 shadow-none print:shadow-none">
           <div className="text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
             Workflow Progression
@@ -210,7 +229,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                       ) : null}
                     </div>
                     <div className="font-mono text-sm print:text-[8px] text-[#6d6658]">
-                      {isCurrent ? "● ACTIVE" : isPast ? "✓ COMPLETED" : "UPCOMING"}
+                      {isCurrent ? "ACTIVE" : isPast ? "COMPLETED" : "UPCOMING"}
                     </div>
                   </div>
                 );
@@ -648,6 +667,14 @@ interface WorkflowHistorySectionProps {
 }
 
 export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySectionProps) {
+  const grouped = STAGE_ORDER.reduce((acc, stage) => {
+    acc[stage] = workflowHistory.filter((event) => {
+      const targetStage = event.toStatus || event.fromStatus;
+      return targetStage === stage || event.toStatus === stage || event.fromStatus === stage;
+    });
+    return acc;
+  }, {} as Record<typeof STAGE_ORDER[number], TrademarkWorkflowEvent[]>);
+
   return (
     <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
       <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
@@ -660,29 +687,40 @@ export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySecti
         </span>
       </div>
 
-      <div className="p-4 print:p-2 space-y-2.5 print:space-y-1">
+      <div className="p-4 print:p-2">
         {workflowHistory.length === 0 ? (
           <div className="p-3 print:p-1.5 border border-dashed border-[#0C0C0C]/30 bg-[#FFF9F0] font-mono text-sm print:text-[9px] text-[#6d6658] italic text-center">
             No workflow history recorded.
           </div>
         ) : (
-          <div className="space-y-2.5 print:space-y-1 max-h-60 print:max-h-none overflow-y-auto print:overflow-visible pr-1">
-            {workflowHistory.map((event) => {
-              const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
-              const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
-
-              return (
-                <div key={event.id} className="border-l-2 border-[#0A6B52] pl-3 print:pl-2 py-1 print:py-0.5 bg-[#FFF9F0]/60">
-                  <div className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
-                    {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
-                  </div>
-                  <div className="font-mono text-sm print:text-[8px] text-[#6d6658] flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                    <span>{formatDateShort(event.eventAt)}</span>
-                    <span>Changed by: <strong className="text-[#0C0C0C]">{event.changedByName}</strong></span>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 print:gap-1.5">
+            {STAGE_ORDER.map((stage) => (
+              <div key={stage} className="border border-stone-300 bg-[#FFF9F0] p-2.5 print:p-1.5 min-h-[120px]">
+                <div className={`inline-flex items-center justify-center px-2 py-1 font-mono text-[10px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[stage] ?? "bg-white text-[#0C0C0C]"}`}>
+                  {stage}
                 </div>
-              );
-            })}
+                <div className="mt-2 space-y-2 print:space-y-1">
+                  {grouped[stage].length === 0 ? (
+                    <div className="font-mono text-[10px] text-[#9d9488] uppercase tracking-widest">No events</div>
+                  ) : (
+                    grouped[stage].map((event) => {
+                      const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
+                      const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
+                      return (
+                        <div key={event.id} className="border-l-2 border-[#0A6B52] pl-2 py-1 bg-white/70 print:bg-white">
+                          <div className="font-mono text-[10px] font-bold text-[#0C0C0C] leading-tight">
+                            {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
+                          </div>
+                          <div className="font-mono text-[10px] text-[#6d6658] mt-1">
+                            {formatDateShort(event.eventAt)}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

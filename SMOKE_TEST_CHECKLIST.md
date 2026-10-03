@@ -12,21 +12,26 @@ Updated 3 October 2026. Active roles are Admin and User/Viewer only. Production 
 - [x] Anonymous access to exposed `public` tables/security-definer RPCs and authenticated `TRUNCATE` on those tables are revoked.
 - [x] The `trademark-files` bucket is private and its RLS policies restrict storage reads to authenticated staff and all writes to Admin. Raw `storage.objects` grants are Supabase-owner-managed and remain outside project migration authority.
 - [x] `trademark-files` is private, limited to 10 MiB, and retains the configured file-type allowlist.
-- [x] Ordered closure migrations are applied and recorded in Supabase as `20260929212118`, `20260929212404`, and `20260929213046`.
-- [x] Local PostgreSQL-backed and unit tests pass (207 tests across 7 files).
+- [x] Ordered closure migrations are applied and recorded in Supabase, including workflow enforcement and later TM-number uniqueness (`20260929212118`, `20260929212404`, `20260929213046`, and `20261003121144`).
+- [x] Local PostgreSQL-backed and unit tests pass (211 tests across 8 files on 3 October 2026).
 
 These checks verify database catalogs and automated tests, not authenticated production browser flows.
 
-## Remaining Production Checks
+## Production Flow Checks
 
-- [ ] Sign in as Admin and verify authorized record/workflow/assignment/import/registry/agent/document actions on disposable test data. User-reported single-session checks on 3 October: Dashboard statistics/buttons, Database record viewing/upload, Stage 2 payment unlocking assignment, Assigned, Agents and Publication worked; CSV import remains untested.
-- [ ] Sign in as User/Viewer and verify permitted read views plus disabled UI mutations; confirm direct writes remain rejected by RLS. A separate Viewer login was not tested/reported.
+- [x] Owner-reported production Admin test passed on 3 October.
+- [x] Owner-reported production User/Viewer test passed on 3 October.
+- [x] Logout behavior is expected: protected application content is hidden and the login screen is shown.
+- [ ] Test CSV import in Publication.
 - [ ] Verify signed document access, current-stage upload rules, STOPPED restrictions, and URL expiry in an authenticated browser session.
 - [ ] In production, confirm TM `121212` returns the retained record with its image; verify create/import rejects `12-12-12`, while different TM numbers may reuse case references.
 - [ ] Verify the current Vercel deployment. User screenshot on 3 October showed only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; values were masked, so their contents were not inspected.
-- [x] User screenshots on 3 October showed Supabase public sign-ups and anonymous sign-ins disabled, and “Prevent use of leaked passwords” enabled. Reopen settings to confirm the leaked-password toggle was saved; the prior security-advisor result reported it disabled.
-- [ ] Rotate the service-role credential found in ignored local environment files; the files are not tracked, but the credential was exposed during inspection.
-- [ ] Test logout/login protection and complete the Admin/Viewer checks above before claiming full production browser acceptance. User reports protected pages/content are not visible after logout and login is required.
+- [ ] Reopen Supabase Auth settings and confirm public sign-ups and anonymous sign-ins remain disabled and leaked-password protection is saved.
+- [ ] After deployment, verify the ASSIGNED page's Accepted / Agent Payments queue with disposable data.
+
+## Separate Security Action
+
+- [ ] Rotate the service-role credential found in ignored local environment files. Do not expose it in chat, commit it, or place it in a `VITE_*` variable.
 
 ## Deferred Follow-Up
 
