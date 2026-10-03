@@ -27,6 +27,65 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+function SearchRecordIdentity({ record }: { record: TrademarkRecord }) {
+  return (
+    <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 sm:grid-cols-[5rem_minmax(0,1fr)_minmax(12rem,0.8fr)] sm:gap-4 sm:p-4">
+      <div className="row-span-2 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-stone-300 bg-[#F0E8D0] sm:row-span-1 sm:h-20 sm:w-20">
+        {record.image ? (
+          <img src={record.image} alt={record.appName || "Trademark record"} className="h-full w-full object-contain" />
+        ) : (
+          <span className="font-mono text-[10px] uppercase text-[#9d9488]">No Img</span>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <div className="truncate font-serif text-xl font-bold uppercase leading-snug text-[#0C0C0C] sm:text-2xl">
+          {record.appName || "—"}
+        </div>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs text-[#6d6658] sm:text-sm">
+          <span>CLASS: <strong className="text-[#0C0C0C]">{record.appClass || "—"}</strong></span>
+          <span>TM: <strong className="text-[#0C0C0C]">{record.tmCprNo || "—"}</strong></span>
+        </div>
+      </div>
+
+      <div className="col-start-2 flex min-w-0 flex-col gap-2 sm:col-start-3 sm:row-start-1 sm:items-end">
+        <div className="flex w-full items-center justify-between gap-2 sm:flex-col sm:items-end">
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span className="font-mono text-[10px] font-bold uppercase text-[#6d6658]">Type (Series)</span>
+            <strong className="font-serif text-2xl leading-none text-[#C94A00] sm:text-3xl">{record.type || "—"}</strong>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs font-bold uppercase text-[#0A6B52]">
+            <CheckCircle2 className="h-3.5 w-3.5" /> FOUND
+          </span>
+        </div>
+        <div className="grid w-full grid-cols-2 gap-2">
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] uppercase text-[#6d6658]">Client Code</div>
+            <strong className="block truncate font-mono text-xs text-[#0C0C0C] sm:text-sm">{record.clientCode || "—"}</strong>
+          </div>
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] uppercase text-[#6d6658]">Case Number</div>
+            <strong className="block truncate font-mono text-xs text-[#0C0C0C] sm:text-sm">{record.caseNumber || "—"}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-span-2 flex flex-wrap items-center gap-2 border-t border-[#0C0C0C]/10 pt-2 sm:col-span-3">
+        {record.stage && (
+          <span className={`inline-block border border-stone-300 px-3 py-1.5 font-mono text-sm font-bold uppercase tracking-wider shadow-none ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
+            {record.stage}
+          </span>
+        )}
+        {record.subStage && (
+          <span className="inline-block border border-[#0C0C0C]/40 bg-[#F0E8D0] px-2 py-0.5 font-mono text-sm font-bold uppercase tracking-wider text-[#0C0C0C]">
+            {formatWorkflowLabel(record.subStage)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── TM Result Card ────────────────────────────────────────────────────────────
 
 function TmCard({ result, onViewRecord }: {
@@ -89,59 +148,7 @@ function TmCard({ result, onViewRecord }: {
           key={rec.id}
           className="border border-stone-300 bg-white shadow-none"
         >
-          {/* Card: thumbnail | name/class/tm/case | type X right | stage badges */}
-          <div className="flex gap-3 p-3 sm:p-4">
-            {/* Thumbnail */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 border border-stone-300 bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
-              {rec.image ? (
-                <img src={rec.image} alt={rec.appName || ""} className="w-full h-full object-contain" />
-              ) : (
-                <span className="font-mono text-sm text-[#9d9488] uppercase">No Img</span>
-              )}
-            </div>
-
-            {/* Main content */}
-            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-serif text-xl sm:text-2xl uppercase tracking-wide leading-snug text-[#0C0C0C] font-bold truncate">
-                    {rec.appName || "—"}
-                  </div>
-                  <div className="font-mono text-sm text-[#6d6658] mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                    {rec.appClass && <span className="font-bold text-[#0C0C0C]">CLASS: {rec.appClass}</span>}
-                    {rec.tmCprNo && <span>TM: <strong className="text-[#0C0C0C]">{rec.tmCprNo}</strong></span>}
-                  </div>
-                  <div className="font-mono text-sm text-[#6d6658] mt-0.5 flex flex-wrap gap-x-3">
-                    <span>CASE: <strong className="text-[#0A6B52]">{rec.caseNumber || "—"}</strong></span>
-                    <span>CLIENT: <strong className="text-[#0C0C0C]">{rec.clientCode || "—"}</strong></span>
-                  </div>
-                </div>
-                {/* Type big on right */}
-                <div className="shrink-0 flex flex-col items-end gap-1">
-                  <span className="font-serif text-3xl sm:text-4xl font-bold leading-none text-[#6C1C1F]">
-                    {rec.type || "—"}
-                  </span>
-                  <span className="font-mono text-sm font-bold text-[#0D9970] uppercase tracking-wider">
-                    ✓ FOUND
-                  </span>
-                </div>
-              </div>
-
-              {/* Stage larger, Sub-stage smaller */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {rec.stage && (
-                  <span className={`inline-block px-3 py-1.5 font-mono text-sm font-bold uppercase tracking-wider border border-stone-300 shadow-none ${STAGE_BADGE[rec.stage] ?? "bg-[#E8DFC7]"}`}>
-                    {rec.stage}
-                  </span>
-                )}
-                {rec.subStage && (
-                  <span className="inline-block px-2 py-0.5 font-mono text-sm font-bold uppercase tracking-wider border border-[#0C0C0C]/40 text-[#0C0C0C] bg-[#F0E8D0]">
-                    {formatWorkflowLabel(rec.subStage)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+          <SearchRecordIdentity record={rec} />
 
           {/* Card Body extras */}
           <div className="px-4 pb-4 space-y-3 border-t border-[#0C0C0C]/10 pt-3">
@@ -438,52 +445,7 @@ export function SearchPage() {
                       onClick={() => goToRecord(tm.id)}
                       className="border border-stone-300 bg-white shadow-none hover:shadow-[5px_5px_0_#0C0C0C] transition-shadow cursor-pointer"
                     >
-                      {/* Primary: Status / Sub-Status */}
-                      <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7]">
-                        <div className="flex items-center gap-2">
-                          {tm.stage && (
-                            <span className={`inline-block px-3 py-1.5 font-mono text-sm font-bold uppercase tracking-wider border border-stone-300 shadow-none ${STAGE_BADGE[tm.stage] ?? "bg-[#E8DFC7]"}`}>
-                              {tm.stage}
-                            </span>
-                          )}
-                          {tm.subStage && (
-                            <span className="inline-block px-2 py-0.5 font-mono text-sm font-bold uppercase tracking-wider border border-[#0C0C0C]/40 text-[#0C0C0C] bg-[#F0E8D0]">
-                              {formatWorkflowLabel(tm.subStage)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Image + Identity */}
-                      <div className="flex gap-3 p-4">
-                        {/* Thumbnail */}
-                        <div className="w-16 h-16 shrink-0 border border-stone-300 bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
-                          {tm.image ? (
-                            <img src={tm.image} alt={tm.appName || ""} className="w-full h-full object-contain" />
-                          ) : (
-                            <span className="font-mono text-sm text-[#9d9658] uppercase">No Img</span>
-                          )}
-                        </div>
-
-                        {/* Main content */}
-                        <div className="flex-1 min-w-0 flex flex-col gap-1">
-                          <div className="font-serif text-lg uppercase tracking-wide leading-snug text-[#0C0C0C] font-bold truncate">
-                            {tm.appName || "—"}
-                          </div>
-                          <div className="font-mono text-sm text-[#6d6658] flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <span className="font-bold text-[#6C1C1F]">{tm.type || "—"}</span>
-                            <span>·</span>
-                            <span>CLIENT: <strong className="text-[#0C0C0C]">{tm.clientCode || "—"}</strong></span>
-                            <span>·</span>
-                            <span>CASE: <strong className="text-[#0A6B52]">{tm.caseNumber || "—"}</strong></span>
-                          </div>
-                          <div className="font-mono text-sm text-[#6d6658] flex flex-wrap gap-x-2">
-                            <span>TM: <strong className="text-[#0C0C0C]">{tm.tmCprNo || "—"}</strong></span>
-                            <span>·</span>
-                            <span>CLASS: <strong className="text-[#0C0C0C]">{tm.appClass || "—"}</strong></span>
-                          </div>
-                        </div>
-                      </div>
+                      <SearchRecordIdentity record={tm} />
 
                       {/* Supporting info */}
                       <div className="px-4 pb-4 space-y-2 border-t border-[#0C0C0C]/10 pt-3">

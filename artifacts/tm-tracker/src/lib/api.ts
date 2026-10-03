@@ -424,6 +424,27 @@ function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
+export class DuplicateTmNumberError extends Error {
+  constructor() {
+    super("A record with this TM/CPR number already exists. Search the number and open the existing record.");
+    this.name = "DuplicateTmNumberError";
+  }
+}
+
+function throwIfDuplicateTmNumberError(error: { message: string; code?: string; constraint?: string } | null) {
+  if (error?.code === "23505" && (
+    error.constraint === "trademarks_tm_cpr_number_norm_unique_idx"
+    || error.message.includes("trademarks_tm_cpr_number_norm_unique_idx")
+  )) {
+    throw new DuplicateTmNumberError();
+  }
+  throwIfError(error);
+}
+
+export function normalizeTmNumber(value: string | null | undefined): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
 function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkRecord {
   const matches: TmMatches = {
     TM5: row.tm5,
@@ -733,13 +754,21 @@ export async function getTrademark(id: string): Promise<TrademarkRecord | null> 
 
 export async function searchTm(tmNo: string): Promise<TmSearchResult> {
   ensureConfigured();
+  const normalizedNumber = normalizeTmNumber(tmNo);
+  if (!normalizedNumber) {
+    return {
+      records: [],
+      tmMatches: { TM5: false, TM6: false, TM11: false, TM16: false, TM56: false },
+      journal: null,
+    };
+  }
   const { data, error } = await supabase
     .from("trademarks")
     .select("*")
-    .ilike("tm_cpr_number", tmNo.trim())
+    .eq("tm_cpr_number_norm", normalizedNumber)
     .order("updated_at", { ascending: false });
   throwIfError(error);
-  const records = await mapRows((data ?? []) as SupabaseTrademarkRow[]);
+  const records = await mapRows((data ?? []) as SupabaseTrademarkRow[], true);
   const recordsWithDates = await mergeRegistryMatches(records);
   const first = recordsWithDates[0];
   return {
@@ -918,7 +947,7 @@ export async function createTrademark(input: TrademarkInput): Promise<{ id: stri
     .insert({ ...rowPayload, created_by: authData.user?.id, updated_by: authData.user?.id })
     .select("id,case_number")
     .single();
-  throwIfError(error);
+  throwIfDuplicateTmNumberError(error);
   if (!data) throw new Error("Supabase did not return the created record.");
   return { id: data.id, caseNumber: data.case_number };
 }
@@ -1072,7 +1101,7 @@ export async function updateTrademark(
     query = query.eq("version", expectedVersion);
   }
   const { data, error } = await query.select("id,version").maybeSingle();
-  throwIfError(error);
+  throwIfDuplicateTmNumberError(error);
   if (!data) {
     if (expectedVersion !== undefined) {
       throw new ConflictError();

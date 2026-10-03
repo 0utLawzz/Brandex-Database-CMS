@@ -10,10 +10,8 @@
  *   The schema supports this (DEFAULT false, nullable date). No migration needed.
  *
  * DUPLICATE KEY:
- *   Business duplicate key: (type, client_code, case_number).
- *   No DB unique constraint exists; detection is application-level against:
- *     A. Existing database records.
- *     B. Duplicate rows within the uploaded CSV itself.
+ *   Non-empty TM/CPR numbers are unique after digits-only normalization.
+ *   Repeated case references are valid and are not duplicate keys.
  *
  * BLOCKED FIELDS:
  *   id, created_by, updated_by, created_at, updated_at, version,
@@ -27,7 +25,7 @@
 
 import { supabase } from "./supabase";
 import { parseCsv, parseFlexibleDate } from "./registryImport";
-import { STAGES, STATUS_WORKFLOW, normalizeWorkflowValue } from "./api";
+import { STAGES, STATUS_WORKFLOW, normalizeWorkflowValue, normalizeTmNumber } from "./api";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -187,9 +185,8 @@ function upperRequired(val: string, fallback = ""): string {
   return s ? s.toUpperCase() : fallback;
 }
 
-/** Composite business duplicate key. */
-export function tmDupKey(type: string, clientCode: string, caseNumber: string): string {
-  return `${type.toUpperCase()}|${clientCode.toUpperCase()}|${caseNumber.toUpperCase()}`;
+export function tmNumberDupKey(tmCprNumber: string | null | undefined): string {
+  return normalizeTmNumber(tmCprNumber);
 }
 
 // ---------------------------------------------------------------------------
@@ -373,32 +370,29 @@ export async function dryRunTmImport(csvText: string): Promise<TmImportDryRunRes
     };
   }
 
-  // --- Within-CSV duplicate detection (first occurrence wins) ---
-  const firstSeen = new Map<string, number>(); // key -> sourceRow of first occurrence
+  // --- Within-CSV TM-number duplicate detection (first occurrence wins) ---
+  const firstTmSeen = new Map<string, number>();
   for (const row of rows) {
-    const key = tmDupKey(row.type, row.clientCode, row.caseNumber);
-    if (!firstSeen.has(key)) firstSeen.set(key, row.sourceRow);
+    const tmNumber = tmNumberDupKey(row.tmCprNumber);
+    if (tmNumber && !firstTmSeen.has(tmNumber)) firstTmSeen.set(tmNumber, row.sourceRow);
   }
 
   // --- Database duplicate detection ---
-  const dbExisting = new Set<string>();
-  const allClientCodes = [...new Set(rows.map((r) => r.clientCode))];
-
-  for (let i = 0; i < allClientCodes.length; i += 200) {
-    const chunk = allClientCodes.slice(i, i + 200);
+  const dbExistingTmNumbers = new Set<string>();
+  const tmNumbers = [...new Set(rows.map((row) => tmNumberDupKey(row.tmCprNumber)).filter(Boolean))];
+  for (let i = 0; i < tmNumbers.length; i += 200) {
+    const chunk = tmNumbers.slice(i, i + 200);
     const { data, error } = await supabase
       .from("trademarks")
-      .select("type, client_code, case_number")
-      .in("client_code", chunk);
+      .select("tm_cpr_number_norm")
+      .in("tm_cpr_number_norm", chunk);
     if (error) {
-      errors.push(`DB lookup failed: ${error.message}`);
+      errors.push(`TM number lookup failed: ${error.message}`);
       break;
     }
-    (data ?? []).forEach(
-      (row: { type: string; client_code: string; case_number: string }) => {
-        dbExisting.add(tmDupKey(row.type, row.client_code, row.case_number));
-      },
-    );
+    (data ?? []).forEach((row: { tm_cpr_number_norm: string | null }) => {
+      if (row.tm_cpr_number_norm) dbExistingTmNumbers.add(row.tm_cpr_number_norm);
+    });
   }
 
   // --- Classify each row ---
@@ -408,27 +402,28 @@ export async function dryRunTmImport(csvText: string): Promise<TmImportDryRunRes
   let wouldInsert = 0;
 
   for (const row of rows) {
-    const key = tmDupKey(row.type, row.clientCode, row.caseNumber);
+    const tmNumber = tmNumberDupKey(row.tmCprNumber);
 
-    // CSV duplicate: not the first occurrence of this key
-    if (firstSeen.get(key) !== row.sourceRow) {
+    // Blank TM/CPR values are allowed; only repeated non-empty numbers are duplicates.
+    const tmDuplicateInCsv = Boolean(tmNumber && firstTmSeen.get(tmNumber) !== row.sourceRow);
+    if (tmDuplicateInCsv) {
       csvDuplicates += 1;
       items.push({
         action: "skip_csv_dup",
         sourceRow: row.sourceRow,
-        message: `Duplicate within CSV (first at row ${firstSeen.get(key)}): ${row.type} / ${row.clientCode} / ${row.caseNumber}`,
+        message: `Duplicate within CSV (first at row ${firstTmSeen.get(tmNumber)}): TM/CPR ${tmNumber}`,
         row,
       });
       continue;
     }
 
     // DB duplicate
-    if (dbExisting.has(key)) {
+    if (tmNumber && dbExistingTmNumbers.has(tmNumber)) {
       dbDuplicates += 1;
       items.push({
         action: "skip_db_dup",
         sourceRow: row.sourceRow,
-        message: `Already in database: ${row.type} / ${row.clientCode} / ${row.caseNumber}`,
+        message: `TM/CPR ${tmNumber} already exists in database.`,
         row,
       });
       continue;

@@ -7,6 +7,7 @@ import {
   listClients,
   uploadImage,
   ConflictError,
+  DuplicateTmNumberError,
   STAGES,
   STATUS_WORKFLOW,
   CITIES,
@@ -317,10 +318,12 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
           onSaved?.();
           onClose();
         },
-        onError: () =>
+        onError: (err: unknown) =>
           toast({
             title: "⚠ Save Failed",
-            description: "Unable to save record. Please check your connection and try again.",
+            description: err instanceof DuplicateTmNumberError
+              ? err.message
+              : "Unable to save record. Please check your connection and try again.",
             variant: "destructive",
           }),
       });
@@ -341,6 +344,10 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               description: err.message,
               variant: "destructive",
             });
+            return;
+          }
+          if (err instanceof DuplicateTmNumberError) {
+            toast({ title: "⚠ Duplicate TM Number", description: err.message, variant: "destructive" });
             return;
           }
           toast({

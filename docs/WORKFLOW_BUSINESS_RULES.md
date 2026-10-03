@@ -102,6 +102,13 @@ Preserve TM5/TM6/TM11/TM16/TM56 matching and
 Flags and registry dates are matching data, not workflow events or TM56 response tracking.
 Form matching must not fabricate workflow history.
 
+## TM number uniqueness
+
+Every non-empty `tm_cpr_number` is unique by its digits-only normalized value. Formatting marks may differ,
+but `121212`, `12-12-12`, and `TM 121212` identify the same number. Preserve the originally stored legal
+identifier exactly; normalization is only for matching and uniqueness. Repeated `(type, client_code,
+case_number)` references are valid when their TM numbers differ.
+
 ## Publication display and workbench
 
 Required publication model: thumbnail/enlargement where available, journal number/date,

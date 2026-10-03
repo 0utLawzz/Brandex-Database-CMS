@@ -22,7 +22,7 @@ These checks verify database catalogs and automated tests, not authenticated pro
 - [ ] Sign in as Admin and verify authorized record/workflow/assignment/import/registry/agent/document actions on disposable test data. User-reported single-session checks on 3 October: Dashboard statistics/buttons, Database record viewing/upload, Stage 2 payment unlocking assignment, Assigned, Agents and Publication worked; CSV import remains untested.
 - [ ] Sign in as User/Viewer and verify permitted read views plus disabled UI mutations; confirm direct writes remain rejected by RLS. A separate Viewer login was not tested/reported.
 - [ ] Verify signed document access, current-stage upload rules, STOPPED restrictions, and URL expiry in an authenticated browser session.
-- [ ] Reconcile the Search results layout (client prefix appears on the right; case/number on the left) and investigate the missing Search result image.
+- [ ] In production, confirm TM `121212` returns the retained record with its image; verify create/import rejects `12-12-12`, while different TM numbers may reuse case references.
 - [ ] Verify the current Vercel deployment. User screenshot on 3 October showed only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; values were masked, so their contents were not inspected.
 - [x] User screenshots on 3 October showed Supabase public sign-ups and anonymous sign-ins disabled, and “Prevent use of leaked passwords” enabled. Reopen settings to confirm the leaked-password toggle was saved; the prior security-advisor result reported it disabled.
 - [ ] Rotate the service-role credential found in ignored local environment files; the files are not tracked, but the credential was exposed during inspection.

@@ -20,6 +20,7 @@ vi.mock("./supabase", () => ({
 
 import {
   ConflictError,
+  DuplicateTmNumberError,
   createTrademark,
   deleteTrademark,
   getRecord,
@@ -49,6 +50,7 @@ import {
   getWorkflowReminders,
   listAuditLogs,
   getStats,
+  searchTm,
 } from "./api";
 
 function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
@@ -237,6 +239,27 @@ describe("Brandex Supabase access patterns", () => {
     expect(record?.image).toBe("https://signed.example/logo.png");
   });
 
+  it("normalizes TM lookups and signs private result images", async () => {
+    const trademarkQuery = createQuery({
+      data: [{ ...baseSupabaseRow, tm_cpr_number: "123-45" }],
+      error: null,
+    });
+    const registryQuery = createQuery({ data: [], error: null });
+    const createSignedUrls = vi.fn().mockResolvedValue({
+      data: [{ signedUrl: "https://signed.example/logo.png" }],
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(trademarkQuery)
+      .mockReturnValue(registryQuery);
+    supabaseMock.storage.from.mockReturnValue({ createSignedUrls });
+
+    const result = await searchTm("TM 123 45");
+
+    expect(trademarkQuery.eq).toHaveBeenCalledWith("tm_cpr_number_norm", "12345");
+    expect(createSignedUrls).toHaveBeenCalledWith(["logos/bx-1.png"], 3600);
+    expect(result.records[0].image).toBe("https://signed.example/logo.png");
+  });
+
   it("routes create, update, and delete through RLS-protected trademark mutations", async () => {
     const createQueryMock = createQuery({ data: { id: "BX-2", case_number: "CASE-10" }, error: null });
     const selectBeforeUpdateMock = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true }, error: null });
@@ -257,6 +280,27 @@ describe("Brandex Supabase access patterns", () => {
     expect(updateQueryMock.eq).toHaveBeenCalledWith("version", 3);
     expect(deleteQueryMock.delete).toHaveBeenCalled();
     expect(deleteQueryMock.eq).toHaveBeenCalledWith("id", "BX-2");
+  });
+
+  it("turns a database TM-number uniqueness conflict into a clear error", async () => {
+    supabaseMock.from.mockReturnValue(createQuery({
+      data: null,
+      error: {
+        code: "23505",
+        constraint: "trademarks_tm_cpr_number_norm_unique_idx",
+        message: "duplicate key value violates unique constraint \"trademarks_tm_cpr_number_norm_unique_idx\"",
+      },
+    }));
+
+    await expect(createTrademark({
+      type: "X",
+      clientCode: "C-7",
+      caseNumber: "CASE-11",
+      appName: "DUPLICATE",
+      tmCprNo: "121-212",
+      city: "Lahore",
+      stage: "STAGE 1",
+    })).rejects.toBeInstanceOf(DuplicateTmNumberError);
   });
 
   it("raises a conflict when optimistic locking updates no row", async () => {

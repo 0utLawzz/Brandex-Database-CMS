@@ -29,7 +29,7 @@ import {
   REQUIRED_IMPORT_FIELDS,
   OPTIONAL_IMPORT_FIELDS,
   BLOCKED_IMPORT_FIELDS,
-  tmDupKey,
+  tmNumberDupKey,
   type TmImportRow,
 } from "./trademarkImport";
 
@@ -240,30 +240,13 @@ describe("parseTmImportCsv", () => {
 });
 
 // ---------------------------------------------------------------------------
-// tmDupKey — unit test
+// TM-number duplicate key — unit test
 // ---------------------------------------------------------------------------
 
-describe("tmDupKey", () => {
-  it("uses exactly (type, client_code, case_number) as duplicate key", () => {
-    expect(tmDupKey("X", "ACME", "CASE-001")).toBe("X|ACME|CASE-001");
-  });
-
-  it("is case-insensitive", () => {
-    expect(tmDupKey("x", "acme", "case-001")).toBe(
-      tmDupKey("X", "ACME", "CASE-001"),
-    );
-  });
-
-  it("distinguishes different composite keys", () => {
-    expect(tmDupKey("X", "ACME", "CASE-001")).not.toBe(
-      tmDupKey("A", "ACME", "CASE-001"),
-    );
-    expect(tmDupKey("X", "ACME", "CASE-001")).not.toBe(
-      tmDupKey("X", "OTHER", "CASE-001"),
-    );
-    expect(tmDupKey("X", "ACME", "CASE-001")).not.toBe(
-      tmDupKey("X", "ACME", "CASE-002"),
-    );
+describe("tmNumberDupKey", () => {
+  it("normalizes TM/CPR numbers for duplicate checks", () => {
+    expect(tmNumberDupKey("TM 12-12/12")).toBe("121212");
+    expect(tmNumberDupKey("")).toBe("");
   });
 });
 
@@ -286,21 +269,23 @@ describe("dryRunTmImport", () => {
 
   it("DRY RUN SAFETY: makes NO database inserts or mutations", async () => {
     supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
-    const result = await dryRunTmImport(csv(CSV_ROW_VALID));
+    const result = await dryRunTmImport(
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "X,ACME,CASE-001,SUPER BRAND,Islamabad,TM-12345",
+    );
     expect(result.wouldInsert).toBe(1);
     // Confirm supabase.from was called only for SELECT, never insert/update/delete/upsert
     const q = supabaseMock.from.mock.results[0].value;
     expect((q.insert as ReturnType<typeof vi.fn>).mock?.calls?.length ?? 0).toBe(0);
   });
 
-  it("detects within-CSV duplicate rows with exact duplicate key", async () => {
+  it("detects within-CSV duplicate normalized TM numbers", async () => {
     supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
-    const result = await dryRunTmImport(
-      csv(
-        CSV_ROW_VALID,
-        CSV_ROW_VALID, // exact duplicate
-      ),
-    );
+    const csvContent =
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "X,ACME,CASE-001,BRAND ONE,Islamabad,TM-121212\n" +
+      "A,OTHER,CASE-002,BRAND TWO,Karachi,12-12-12";
+    const result = await dryRunTmImport(csvContent);
     expect(result.valid).toBe(2);
     expect(result.csvDuplicates).toBe(1);
     expect(result.wouldInsert).toBe(1);
@@ -309,7 +294,34 @@ describe("dryRunTmImport", () => {
     expect(skips[0].message).toMatch(/duplicate within csv/i);
   });
 
-  it("DUPLICATE KEY SAFETY: detects within-CSV duplicates when TM/CPR numbers differ", async () => {
+  it("detects within-CSV duplicate TM numbers across different case references", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
+    const csvContent =
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "X,ACME,CASE-001,BRAND ONE,Islamabad,121212\n" +
+      "A,OTHER,CASE-002,BRAND TWO,Karachi,12-12-12";
+
+    const result = await dryRunTmImport(csvContent);
+
+    expect(result.csvDuplicates).toBe(1);
+    expect(result.wouldInsert).toBe(1);
+    expect(result.items.find((item) => item.action === "skip_csv_dup")?.message).toMatch(/TM\/CPR 121212/i);
+  });
+
+  it("detects database TM duplicates by normalized number", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [{ tm_cpr_number_norm: "121212" }], error: null }));
+    const csvContent =
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "A,OTHER,CASE-002,BRAND TWO,Karachi,12-12-12";
+
+    const result = await dryRunTmImport(csvContent);
+
+    expect(result.dbDuplicates).toBe(1);
+    expect(result.wouldInsert).toBe(0);
+    expect(result.items.find((item) => item.action === "skip_db_dup")?.message).toMatch(/TM\/CPR 121212/i);
+  });
+
+  it("allows repeated case references when TM/CPR numbers differ", async () => {
     supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
     const csvContent =
       "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
@@ -317,13 +329,11 @@ describe("dryRunTmImport", () => {
       "X,ACME,CASE-001,BRAND TWO,Islamabad,99999";
     const result = await dryRunTmImport(csvContent);
     expect(result.valid).toBe(2);
-    expect(result.csvDuplicates).toBe(1);
-    expect(result.wouldInsert).toBe(1);
-    const skips = result.items.filter((i) => i.action === "skip_csv_dup");
-    expect(skips).toHaveLength(1);
+    expect(result.csvDuplicates).toBe(0);
+    expect(result.wouldInsert).toBe(2);
   });
 
-  it("DUPLICATE KEY SAFETY: detects within-CSV duplicates when one TM/CPR number is blank", async () => {
+  it("allows repeated case references when one TM/CPR number is blank", async () => {
     supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
     const csvContent =
       "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
@@ -331,38 +341,31 @@ describe("dryRunTmImport", () => {
       "X,ACME,CASE-001,BRAND TWO,Islamabad,54321";
     const result = await dryRunTmImport(csvContent);
     expect(result.valid).toBe(2);
-    expect(result.csvDuplicates).toBe(1);
-    expect(result.wouldInsert).toBe(1);
+    expect(result.csvDuplicates).toBe(0);
+    expect(result.wouldInsert).toBe(2);
   });
 
-  it("detects DB duplicate rows based on (type, client_code, case_number)", async () => {
-    supabaseMock.from.mockReturnValue(
-      makeQuery({
-        data: [{ type: "X", client_code: "ACME", case_number: "CASE-001" }],
-        error: null,
-      }),
+  it("detects database duplicate TM numbers after normalization", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [{ tm_cpr_number_norm: "12345" }], error: null }));
+    const result = await dryRunTmImport(
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "X,ACME,CASE-001,SUPER BRAND,Islamabad,TM-12345",
     );
-    const result = await dryRunTmImport(csv(CSV_ROW_VALID));
     expect(result.dbDuplicates).toBe(1);
     expect(result.wouldInsert).toBe(0);
     const skip = result.items.find((i) => i.action === "skip_db_dup");
     expect(skip).toBeDefined();
-    expect(skip!.message).toMatch(/already in database/i);
+    expect(skip!.message).toMatch(/exists in database/i);
   });
 
-  it("DUPLICATE KEY SAFETY: detects DB duplicate even when CSV has different or blank TM/CPR number", async () => {
-    supabaseMock.from.mockReturnValue(
-      makeQuery({
-        data: [{ type: "X", client_code: "ACME", case_number: "CASE-001" }],
-        error: null,
-      }),
-    );
+  it("allows an existing case reference when its TM/CPR number differs", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [{ tm_cpr_number_norm: "121212" }], error: null }));
     const csvContent =
       "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
       "X,ACME,CASE-001,BRAND ONE,Islamabad,DIFFERENT-TM-999";
     const result = await dryRunTmImport(csvContent);
-    expect(result.dbDuplicates).toBe(1);
-    expect(result.wouldInsert).toBe(0);
+    expect(result.dbDuplicates).toBe(0);
+    expect(result.wouldInsert).toBe(1);
   });
 
   it("correctly separates valid, invalid, and would-insert rows", async () => {
@@ -384,8 +387,11 @@ describe("dryRunTmImport", () => {
     supabaseMock.from.mockReturnValue(
       makeQuery({ data: null, error: { message: "connection refused" } }),
     );
-    const result = await dryRunTmImport(csv(CSV_ROW_VALID));
-    expect(result.errors.some((e) => /db lookup failed/i.test(e))).toBe(true);
+    const result = await dryRunTmImport(
+      "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
+      "X,ACME,CASE-001,SUPER BRAND,Islamabad,TM-12345",
+    );
+    expect(result.errors.some((e) => /tm number lookup failed/i.test(e))).toBe(true);
   });
 });
 
@@ -689,7 +695,7 @@ describe("Functional QA — Realistic CSV Scenarios A through F", () => {
     expect(r.notes).toBe("Keep This Note Mixed Case (Do Not Uppercase!)");
   });
 
-  it("Scenario C: CSV duplicate rows with same (type, client_code, case_number)", async () => {
+  it("Scenario C: repeated case references with different TM numbers are both insertable", async () => {
     supabaseMock.from.mockReturnValue(makeQuery({ data: [], error: null }));
     const csvContent =
       "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
@@ -698,27 +704,21 @@ describe("Functional QA — Realistic CSV Scenarios A through F", () => {
 
     const dryRun = await dryRunTmImport(csvContent);
     expect(dryRun.valid).toBe(2);
-    expect(dryRun.csvDuplicates).toBe(1);
+    expect(dryRun.csvDuplicates).toBe(0);
     expect(dryRun.dbDuplicates).toBe(0);
-    expect(dryRun.wouldInsert).toBe(1);
+    expect(dryRun.wouldInsert).toBe(2);
 
     expect(dryRun.items[0].action).toBe("insert");
     expect(dryRun.items[0].row.applicationName).toBe("FIRST APPLICATION");
 
-    expect(dryRun.items[1].action).toBe("skip_csv_dup");
-    expect(dryRun.items[1].message).toMatch(/duplicate within csv/i);
+    expect(dryRun.items[1].action).toBe("insert");
   });
 
-  it("Scenario D: Existing database duplicate skipped with no update or upsert", async () => {
-    supabaseMock.from.mockReturnValue(
-      makeQuery({
-        data: [{ type: "X", client_code: "EXISTING-CLIENT", case_number: "CASE-EX" }],
-        error: null,
-      }),
-    );
+  it("Scenario D: Existing TM number is skipped with no update or upsert", async () => {
+    supabaseMock.from.mockReturnValue(makeQuery({ data: [{ tm_cpr_number_norm: "121212" }], error: null }));
     const csvContent =
       "type,client_code,case_number,application_name,city,tm_cpr_number\n" +
-      "X,EXISTING-CLIENT,CASE-EX,Brand From CSV,Karachi,TM-DIFFERENT";
+      "X,NEW-CLIENT,CASE-NEW,Brand From CSV,Karachi,12-12-12";
 
     const dryRun = await dryRunTmImport(csvContent);
     expect(dryRun.valid).toBe(1);
@@ -727,7 +727,7 @@ describe("Functional QA — Realistic CSV Scenarios A through F", () => {
 
     const item = dryRun.items[0];
     expect(item.action).toBe("skip_db_dup");
-    expect(item.message).toMatch(/already in database/i);
+    expect(item.message).toMatch(/exists in database/i);
   });
 
   it("Scenario E: Invalid rows flagged while valid rows continue processing", () => {

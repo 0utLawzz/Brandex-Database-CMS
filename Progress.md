@@ -1,6 +1,6 @@
 # Brandex Database CMS Progress
 
-**Last updated: 3 October 2026 — branding refresh**
+**Last updated: 3 October 2026 — TM uniqueness and search fix**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
@@ -10,6 +10,8 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - Applied the user-provided BrandEx Neo-Brutalism guide across the shared theme: cream surfaces, burnt-orange actions, teal statuses, Bebas Neue / Space Grotesk / DM Mono typography, and hard offset shadows.
 - Recolored and wired the selected logo variants: Logo 12 in the header, Logo 15 as favicon, Logo 14 on login/dashboard/print watermark, and Logo 20 for branding and social preview. Added Brandex.pk and Facebook links to the responsive footer. Numbered source variants are ignored; deployable palette-matched copies are tracked candidates.
 - Updated SEO metadata for the private app: search engines receive `noindex`, social crawlers receive a cache-busted 1200×630 preview card, and the new favicon has a versioned URL to avoid browser caching. Production crawler/share behavior still needs post-deployment verification.
+- TM lookup now normalizes formatted input and signs private result images. TM and general search share one responsive record identity layout; CSV dry-run detects duplicate TM numbers rather than treating repeated case references as duplicates.
+- Added generated digits-only TM normalization and a unique database index; removed the older dummy `ZAHRA` record for TM 121212 and cleared its 35 stale pending Sheet updates. The `NAME` record remains, with one asynchronous Sheet deletion queued. Repeated case references remain valid when TM numbers differ.
 - Staff-authenticated React/Vite CMS backed by Supabase, with server-side record pagination, search, filters, and CSV workflows.
 - Admin + User/Viewer is the only active role model. The existing legacy Editor profile was converted to Viewer; the enum value remains for historical compatibility, and a database constraint prevents assigning it to profiles.
 - Database write policies are Admin-only; Viewer reads remain authenticated. Anonymous access and `TRUNCATE` were removed from exposed `public` tables/RPCs. The private Storage bucket uses authenticated RLS with Admin-only writes; raw `storage.objects` grants are managed by its separate `supabase_storage_admin` owner and were not revokable by the project migration actor.
@@ -17,14 +19,14 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - Workflow guards, history, assignment, stage-payment gates and supporting RPCs are deployed and covered by PostgreSQL-backed tests. On 3 October, the user reported a live login test: Dashboard, Database record viewing/upload, Stage 2 payment unlocking assignment, Assigned, Agents, and Publication worked. This is a single-session user report, not a full Admin/Viewer acceptance test.
 - On 3 October, user-provided dashboard screenshots showed public sign-up and anonymous sign-in disabled, leaked-password protection toggled on, and only `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY` listed in Vercel. Reopen/save confirmation and deployment behavior are not independently verified.
 - Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. CMS payment flags are manual and are not Ledger-verified.
-- The ordered closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, and `20260929213046`; matching files are in `supabase/migrations`.
-- Local verification after the branding refresh: `pnpm test` passed (207 tests across 7 files), typecheck passed, and production build passed.
+- The closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, `20260929213046`, and `20261003121144` for TM-number cleanup and uniqueness.
+- Local verification after the TM/search fixes: `pnpm test` passed (209 tests across 7 files), typecheck passed, and production build passed.
 
 ## IN PROGRESS / NEXT
 
 - Complete a separate Viewer login/permission test and remaining production checks in [SMOKE_TEST_CHECKLIST.md](SMOKE_TEST_CHECKLIST.md). User reports logout hides protected content and requires login again.
-- Resolve the reported Search result layout issue (client prefix on the right; case/number placement on the left) and investigate why the record image does not display in Search.
 - Test CSV import in Publication. Admin/Viewer role-specific access and complete document/workflow rules still need dedicated verification.
+- Verify TM-number duplicate rejection and both search layouts against the deployed production app.
 - Confirm the leaked-password setting was saved and stays enabled. The user screenshot shows it on, while the earlier Supabase advisor report flagged it disabled; reconcile this difference after saving/rechecking.
 - Vercel's screenshot shows only the two expected browser variables, with values masked. Confirm deployment behavior.
 - Rotate the service-role credential present in ignored local environment files; those files are not tracked and no service-role value is configured as a `VITE_*` variable. The credential was exposed in an inspection result during this pass.

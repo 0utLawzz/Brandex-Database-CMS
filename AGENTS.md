@@ -47,6 +47,7 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 ## Data rules
 
 - Preserve legal identifiers exactly: `type`, `client_code`, `case_number`, and `tm_cpr_number`.
+- Non-empty `tm_cpr_number` values are unique after digits-only normalization; keep the stored identifier unchanged. Repeated case references are valid when TM numbers differ.
 - The canonical Datasheet order is Type, then Client Code, then Case Number.
 - Use server-side filtering and pagination for record lists. Never download the full trademark table for a dashboard or paginated screen.
 - Fetch full notes, journal JSON and signed images only when a record is opened.
