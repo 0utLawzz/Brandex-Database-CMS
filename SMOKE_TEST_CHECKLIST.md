@@ -1,6 +1,6 @@
 # Authenticated Smoke Test — Release Closure
 
-Updated 30 September 2026. Active roles are Admin and User/Viewer only. Production remains private and staff-authenticated; public Viewer access is not enabled.
+Updated 3 October 2026. Active roles are Admin and User/Viewer only. Production remains private and staff-authenticated; public Viewer access is not enabled.
 [Progress](Progress.md) is the current status; the 25 September observations below are historical, not current acceptance evidence.
 
 ## Verified Database State
@@ -19,18 +19,19 @@ These checks verify database catalogs and automated tests, not authenticated pro
 
 ## Remaining Production Checks
 
-- [ ] Sign in as Admin and verify authorized record/workflow/assignment/import/registry/agent/document actions on disposable test data.
-- [ ] Sign in as User/Viewer and verify permitted read views plus disabled UI mutations; confirm direct writes remain rejected by RLS.
+- [ ] Sign in as Admin and verify authorized record/workflow/assignment/import/registry/agent/document actions on disposable test data. User-reported single-session checks on 3 October: Dashboard statistics/buttons, Database record viewing/upload, Stage 2 payment unlocking assignment, Assigned, Agents and Publication worked; CSV import remains untested.
+- [ ] Sign in as User/Viewer and verify permitted read views plus disabled UI mutations; confirm direct writes remain rejected by RLS. A separate Viewer login was not tested/reported.
 - [ ] Verify signed document access, current-stage upload rules, STOPPED restrictions, and URL expiry in an authenticated browser session.
-- [ ] Verify the current Vercel deployment and its environment inventory; only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` may reach the browser.
-- [ ] Confirm Supabase public sign-ups are disabled and enable/verify leaked-password protection.
+- [ ] Reconcile the Search results layout (client prefix appears on the right; case/number on the left) and investigate the missing Search result image.
+- [ ] Verify the current Vercel deployment. User screenshot on 3 October showed only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; values were masked, so their contents were not inspected.
+- [x] User screenshots on 3 October showed Supabase public sign-ups and anonymous sign-ins disabled, and “Prevent use of leaked passwords” enabled. Reopen settings to confirm the leaked-password toggle was saved; the prior security-advisor result reported it disabled.
 - [ ] Rotate the service-role credential found in ignored local environment files; the files are not tracked, but the credential was exposed during inspection.
-- [ ] Complete these checks before claiming production browser acceptance. No browser workflow or production business-record mutation was performed during this closure.
+- [ ] Test logout/login protection and complete the Admin/Viewer checks above before claiming full production browser acceptance. User reports protected pages/content are not visible after logout and login is required.
 
 ## Deferred Follow-Up
 
 - Ledger integration remains deferred; CMS payment indicators are manual and are not Ledger-verified.
-- Branding/theme/logo/social-preview and Record View/workbench design remain a separate follow-up.
+- Finalize and replace the logo/branding; social-preview and Record View/workbench design remain follow-up work.
 - Public Viewer access remains future consideration only.
 
 ## Historical Phase 0 Observations (25 September)

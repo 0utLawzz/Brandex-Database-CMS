@@ -1,6 +1,6 @@
 # Brandex Database CMS Progress
 
-**Last updated: 3 October 2026 — verification closure**
+**Last updated: 3 October 2026 — production smoke-test update**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
@@ -11,17 +11,21 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - Admin + User/Viewer is the only active role model. The existing legacy Editor profile was converted to Viewer; the enum value remains for historical compatibility, and a database constraint prevents assigning it to profiles.
 - Database write policies are Admin-only; Viewer reads remain authenticated. Anonymous access and `TRUNCATE` were removed from exposed `public` tables/RPCs. The private Storage bucket uses authenticated RLS with Admin-only writes; raw `storage.objects` grants are managed by its separate `supabase_storage_admin` owner and were not revokable by the project migration actor.
 - The two existing Auth users were retained and labelled `Admin / IT` and `User / Viewer`. No account was deleted or created. The user emails and account purposes are recorded in the closure report, not hard-coded in migrations.
-- Workflow guards, history, assignment, stage-payment gates and supporting RPCs are deployed and covered by PostgreSQL-backed tests. Production browser workflows have not been exercised in this closure.
+- Workflow guards, history, assignment, stage-payment gates and supporting RPCs are deployed and covered by PostgreSQL-backed tests. On 3 October, the user reported a live login test: Dashboard, Database record viewing/upload, Stage 2 payment unlocking assignment, Assigned, Agents, and Publication worked. This is a single-session user report, not a full Admin/Viewer acceptance test.
+- On 3 October, user-provided dashboard screenshots showed public sign-up and anonymous sign-in disabled, leaked-password protection toggled on, and only `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY` listed in Vercel. Reopen/save confirmation and deployment behavior are not independently verified.
 - Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. CMS payment flags are manual and are not Ledger-verified.
 - The ordered closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, and `20260929213046`; matching files are in `supabase/migrations`.
 - Local verification: `pnpm test` passed (207 tests across 7 files). Typecheck and production build are listed below after the final documentation edits.
 
 ## IN PROGRESS / NEXT
 
-- Production remains private and staff-authenticated. No public Viewer access or public data endpoint was added. Confirm public sign-ups remain disabled and complete authenticated Admin/Viewer browser smoke tests.
-- Supabase's security advisor reports leaked-password protection is disabled; enable/verify it in Auth settings. Vercel environment inventory and deployed frontend verification also require dashboard access.
+- Complete a separate Viewer login/permission test and remaining production checks in [SMOKE_TEST_CHECKLIST.md](SMOKE_TEST_CHECKLIST.md). User reports logout hides protected content and requires login again.
+- Resolve the reported Search result layout issue (client prefix on the right; case/number placement on the left) and investigate why the record image does not display in Search.
+- Test CSV import in Publication. Admin/Viewer role-specific access and complete document/workflow rules still need dedicated verification.
+- Confirm the leaked-password setting was saved and stays enabled. The user screenshot shows it on, while the earlier Supabase advisor report flagged it disabled; reconcile this difference after saving/rechecking.
+- Vercel's screenshot shows only the two expected browser variables, with values masked. Confirm deployment behavior.
 - Rotate the service-role credential present in ignored local environment files; those files are not tracked and no service-role value is configured as a `VITE_*` variable. The credential was exposed in an inspection result during this pass.
-- Separate design follow-up remains pending: branding/theme refinement, logo update, social preview, and Record View/workbench design. No design work was done here.
+- Logo and branding need to be finalized and replaced. Social preview and Record View/workbench design also remain separate follow-up items. No design work was done here.
 
 ## FUTURE / PARKED
 
