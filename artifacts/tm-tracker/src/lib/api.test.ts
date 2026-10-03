@@ -1527,7 +1527,7 @@ describe("Canonical workflow enforcement", () => {
     await expect(updateTrademark("BX-1", { appName: "Changed" })).rejects.toThrow("Read denied");
     expect(query.update).not.toHaveBeenCalled();
   });
-  it("blocks general-editor STOPPED bypass", async () => {
+  it("blocks general STOPPED bypass", async () => {
     const query = createQuery({ data: { status: "STAGE 1", sub_status: "Filing" }, error: null });
     supabaseMock.from.mockReturnValue(query);
     await expect(updateTrademark("BX-1", { stage: "STOPPED" })).rejects.toThrow("mandatory reason");

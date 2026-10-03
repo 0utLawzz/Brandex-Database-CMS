@@ -49,7 +49,7 @@ vi.mock("./supabase", () => {
   };
 });
 
-let mockStaffRole: "admin" | "editor" | "viewer" | null = "admin";
+let mockStaffRole: "admin" | "viewer" | null = "admin";
 
 const storageMap = new Map<string, string>();
 const localStorageMock = {
@@ -209,8 +209,8 @@ describe("Batch 6B: Branding & Logo System", () => {
       ).rejects.toThrow("Permission denied: Only administrators can update branding configuration.");
     });
 
-    it("rejects Editor role from updating branding configuration", async () => {
-      mockStaffRole = "editor";
+    it("rejects unauthenticated sessions from updating branding configuration", async () => {
+      mockStaffRole = null;
       await expect(
         updateBrandingConfig({ customLogoUrl: "/hacked.png" })
       ).rejects.toThrow("Permission denied: Only administrators can update branding configuration.");

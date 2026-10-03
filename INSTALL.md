@@ -1,4 +1,4 @@
-> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
 
 # Brandex Datasheet Installation
 
@@ -45,7 +45,7 @@ set role = 'admin'
 where user_id = (select id from auth.users where email = 'owner@example.com');
 ```
 
-Use Admin + Viewer for the intended application model. Do not provision new Editor roles as the target model. Existing editor profiles, enum values and RLS permissions require compatibility-aware reconciliation; do not delete them blindly.
+The active model is Admin + User/Viewer. Production is private and staff-authenticated; keep public sign-ups disabled. Do not provision Editor roles. The historical enum value remains for compatibility, but the database rejects active Editor profiles. Public read-only access is future consideration only.
 
 ## One-time Sheet import
 

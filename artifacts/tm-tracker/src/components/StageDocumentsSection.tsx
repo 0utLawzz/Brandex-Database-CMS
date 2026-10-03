@@ -68,7 +68,7 @@ export function StageDocumentsSection({ trademarkId, currentStage }: StageDocume
     };
   }, []);
 
-  // 1. Staff role (Viewer vs Editor/Admin)
+  // 1. Staff role (Viewer vs Admin)
   const { data: staffRole } = useQuery({
     queryKey: ["staff-role"],
     queryFn: getStaffRole,

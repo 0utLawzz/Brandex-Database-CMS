@@ -109,8 +109,8 @@ export function getRelativeAge(d: string | Date | null | undefined): string {
     // Adjust for negative days
     if (days < 0) {
       months--;
-      const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-      days += prevMonth.getDate();
+      const borrowMonthYear = new Date(target.getFullYear(), target.getMonth() + 1, 0);
+      days += borrowMonthYear.getDate();
     }
 
     // Adjust for negative months

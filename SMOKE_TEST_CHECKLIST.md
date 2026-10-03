@@ -1,10 +1,41 @@
-# Authenticated Smoke Test — Phase 0
+# Authenticated Smoke Test — Release Closure
 
-25 September 2026. Current source/deployment: `727ec07775300cb22841a4748f1bfb4c1de58758`.
-[Project Truth](docs/PROJECT_TRUTH.md) records implementation contradictions;
-[canonical rules](docs/WORKFLOW_BUSINESS_RULES.md) define acceptance. These are separate.
+Updated 30 September 2026. Active roles are Admin and User/Viewer only. Production remains private and staff-authenticated; public Viewer access is not enabled.
+[Progress](Progress.md) is the current status; the 25 September observations below are historical, not current acceptance evidence.
 
-## Completed production observations
+## Verified Database State
+
+- [x] Exactly two Auth users remain: `Admin / IT` and `User / Viewer`; no user was deleted or created.
+- [x] The legacy Editor profile is now stored as Viewer; the enum value remains only for compatibility and cannot be assigned to a profile.
+- [x] Admin write policies cover records, clients, agents, fees, file metadata, storage, registries, opposition events, settings and workflow RPCs.
+- [x] Viewer role resolution returns read-only; database tests reject record, agent, storage and Admin RPC mutations.
+- [x] Anonymous access to exposed `public` tables/security-definer RPCs and authenticated `TRUNCATE` on those tables are revoked.
+- [x] The `trademark-files` bucket is private and its RLS policies restrict storage reads to authenticated staff and all writes to Admin. Raw `storage.objects` grants are Supabase-owner-managed and remain outside project migration authority.
+- [x] `trademark-files` is private, limited to 10 MiB, and retains the configured file-type allowlist.
+- [x] Ordered closure migrations are applied and recorded in Supabase as `20260929212118`, `20260929212404`, and `20260929213046`.
+- [x] Local PostgreSQL-backed and unit tests pass (207 tests across 7 files).
+
+These checks verify database catalogs and automated tests, not authenticated production browser flows.
+
+## Remaining Production Checks
+
+- [ ] Sign in as Admin and verify authorized record/workflow/assignment/import/registry/agent/document actions on disposable test data.
+- [ ] Sign in as User/Viewer and verify permitted read views plus disabled UI mutations; confirm direct writes remain rejected by RLS.
+- [ ] Verify signed document access, current-stage upload rules, STOPPED restrictions, and URL expiry in an authenticated browser session.
+- [ ] Verify the current Vercel deployment and its environment inventory; only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` may reach the browser.
+- [ ] Confirm Supabase public sign-ups are disabled and enable/verify leaked-password protection.
+- [ ] Rotate the service-role credential found in ignored local environment files; the files are not tracked, but the credential was exposed during inspection.
+- [ ] Complete these checks before claiming production browser acceptance. No browser workflow or production business-record mutation was performed during this closure.
+
+## Deferred Follow-Up
+
+- Ledger integration remains deferred; CMS payment indicators are manual and are not Ledger-verified.
+- Branding/theme/logo/social-preview and Record View/workbench design remain a separate follow-up.
+- Public Viewer access remains future consideration only.
+
+## Historical Phase 0 Observations (25 September)
+
+The following observations predate the workflow and Admin/Viewer closure migrations and must not be used as evidence of current behavior.
 
 - [x] Sign-in screen renders; user supplied an authenticated Admin session.
 - [x] Dashboard, Database, Search, Assigned, Agents and Publication navigation load.
@@ -24,23 +55,4 @@
 
 No successful production case/payment/agent/branding mutation, import or document upload was made.
 
-## Remaining acceptance checks
-
-- [ ] Review local Phase 0 corrections and verify them after an authorized deployment.
-- [ ] Viewer session: all read views work; create/edit/delete/payment/assignment/upload/match/import controls obey read-only rules. AssignedPage currently lacks a role gate.
-- [ ] Admin session on disposable test cases: validate complete workflows and rejection at each sub-stage boundary.
-- [ ] Stage 1: Filing→Acknowledgement OR Filing→Examination→Acknowledgement; no reverse; payment before Stage 2.
-- [ ] Stage 2: Assigned→Accepted OR Assigned→Hearing; assignment works without Stage 2 payment; Stage 2 payment before Stage 3.
-- [ ] Stage 3: Publication→Demand Note Received→Demand Note Submitted.
-- [ ] Stage 4: CER Acknowledge→CER Received→CER Dispatch, forward only.
-- [ ] STOPPED: mandatory timestamped reason on every entry path, terminal, no sub-stage or reactivation.
-- [ ] Attempt same invalid transitions through direct authenticated data access in a safe test environment; current DB does not enforce workflow.
-- [ ] Upload current-stage files and reject other stages/STOPPED; historical files remain readable; verify MIME limits and URL expiry.
-- [ ] Manual agent fee/payment arithmetic with actual test data; do not claim automatic Accepted credits.
-- [ ] Legacy Editor regression: measure current permissions before any migration. Do not treat Editor as an approved target role.
-- [ ] Check Vercel environment inventory separately; connector metadata did not expose it.
-- [ ] Reconcile migration history and branding schema on a controlled environment; do not replay existing migrations blindly.
-- [ ] Normal desktop task readability and print output require acceptance beyond responsive classes.
-
-These boxes are requirements, not claims that implementation can pass them today. Known failing requirements
-remain documented; no tests were weakened to manufacture acceptance. No verified legal deadlines are implied.
+These are retained historical observations only. Later workflow rules, migration confirmation, role closure, and production checks are documented above.

@@ -18,14 +18,16 @@ beforeAll(async () => {
   `);
   const directory = resolve(process.cwd(), '../../supabase/migrations');
   for (const file of readdirSync(directory).filter(f => f.endsWith('.sql')).sort()) {
+    if (file === '20260929212118_admin_viewer_role_closure.sql') {
+      await db.exec(`insert into auth.users(id) values ('00000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000000002');
+        update public.profiles set role='admin' where user_id='00000000-0000-4000-8000-000000000001';
+        update public.profiles set role='editor' where user_id='00000000-0000-4000-8000-000000000002';`);
+    }
     // PGlite provides gen_random_uuid in core; pgcrypto is not needed by these tests.
     await db.exec(readFileSync(resolve(directory,file),'utf8').replace(/create extension if not exists pgcrypto;/i,''));
   }
   await db.exec(`grant select,insert,update,delete on all tables in schema public,storage to authenticated;
     grant usage,select on all sequences in schema public to authenticated;
-    insert into auth.users(id) values ('00000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000000002');
-    update public.profiles set role='admin' where user_id='00000000-0000-4000-8000-000000000001';
-    update public.profiles set role='editor' where user_id='00000000-0000-4000-8000-000000000002';
     set request.uid='00000000-0000-4000-8000-000000000001';
     set role authenticated;`);
 }, 60000);
@@ -82,11 +84,22 @@ it('supports independent oppositions, calendar-month extension and timely TM56',
   await expect(db.exec(`update opposition_events set tm56_submitted_date='2026-03-29' where description='First'`)).rejects.toThrow('deadline');
   await db.exec(`update opposition_events set tm56_submitted_date='2026-03-28' where description='First'`);
 });
-it('treats legacy Editor as read-only without deleting the profile or enum', async () => {
+it('converts legacy Editor profiles to Viewer and prevents active Editor assignments', async () => {
+  expect((await db.query(`select role::text from profiles where user_id='00000000-0000-4000-8000-000000000002'`)).rows).toEqual([{role:'viewer'}]);
+  expect((await db.query(`select enumlabel from pg_enum join pg_type on pg_type.oid=enumtypid where typname='brandex_role' and enumlabel='editor'`)).rows).toHaveLength(1);
+  await db.exec(`reset role`);
+  await expect(db.exec(`update profiles set role='editor' where user_id='00000000-0000-4000-8000-000000000002'`)).rejects.toThrow('profiles_active_role_not_editor');
+  await db.exec(`set role authenticated`);
   await db.exec(`set request.uid='00000000-0000-4000-8000-000000000002'`);
   try {
     expect((await db.query(`select current_brandex_role()::text as role`)).rows).toEqual([{role:'viewer'}]);
+    expect((await db.query(`select has_table_privilege('authenticated','public.trademarks','truncate') as can_truncate, has_table_privilege('anon','public.trademarks','select') as anon_can_read`)).rows).toEqual([{can_truncate:false,anon_can_read:false}]);
+    expect((await db.query(`select has_function_privilege('authenticated','public.audit_and_queue_trademark()','execute') as can_call_trigger, has_function_privilege('authenticated','public.run_form_match()','execute') as can_call_admin_rpc, has_function_privilege('anon','public.run_form_match()','execute') as anon_can_call_admin_rpc`)).rows).toEqual([{can_call_trigger:false,can_call_admin_rpc:true,anon_can_call_admin_rpc:false}]);
     await expect(newCase('forbidden')).rejects.toThrow('row-level security');
+    await expect(db.exec(`insert into agents(name) values('VIEWER WRITE TEST')`)).rejects.toThrow('row-level security');
+    await expect(db.exec(`insert into storage.objects(bucket_id,name) values('trademark-files','flow/STAGE_1/forbidden.pdf')`)).rejects.toThrow('row-level security');
+    await expect(db.query(`select run_form_match()`)).rejects.toThrow('Access denied');
+    await expect(db.query(`select record_agent_payment(gen_random_uuid(),1)`)).rejects.toThrow('Admin required');
     expect((await db.query(`select id from trademarks where id='flow'`)).rows).toHaveLength(1);
     expect((await db.query(`update trademarks set notes='forbidden' where id='flow' returning id`)).rows).toHaveLength(0);
   } finally { await db.exec(`set request.uid='00000000-0000-4000-8000-000000000001'`); }

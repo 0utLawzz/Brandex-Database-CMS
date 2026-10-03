@@ -1,4 +1,4 @@
-> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
 
 # Developer Notes
 
@@ -9,6 +9,12 @@
 3. Record View fetches the full row and signs its private image only when opened.
 4. Database triggers audit writes and enqueue Google Sheet mirror operations.
 5. The Edge Function processes the outbox without exposing its secrets to the browser.
+
+## Authorization contract
+
+- Active roles are Admin and User/Viewer only. Admin-only mutations are enforced by Postgres RLS and guarded RPCs, not just hidden controls.
+- Viewers can read authenticated staff data but cannot write records, workflow, assignments, imports, registry matches, agent data, documents, or settings.
+- Production remains private; do not add public Viewer access. Ledger integration is deferred, and branding/theme/logo/social-preview work is a separate follow-up.
 
 ## Performance contract
 

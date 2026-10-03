@@ -55,7 +55,9 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 
 ## Security and changes
 
-- Keep RLS enabled. Intended active roles are Admin + Viewer. Editor remains active in existing UI/RLS and has live data; preserve enum/data compatibility until a deliberate migration. Do not call it legacy-only.
+- Keep RLS enabled. Active roles are Admin + User/Viewer only. The historical `editor` enum value is retained, but active Editor profiles were converted to Viewer and a database constraint prevents re-assignment. Do not reintroduce Editor authorization.
+- Production is private and staff-authenticated. Do not add public Viewer access; it is future consideration only.
+- Ledger integration remains deferred. Branding/theme/logo/social-preview and Record View design are separate follow-up work.
 - Do not implement bulk permanent deletion. Single-record deletion remains admin-controlled by RLS.
 - Database schema changes require a new ordered migration in `supabase/migrations`.
 - Every completed change must pass tests, typecheck and production build before push.

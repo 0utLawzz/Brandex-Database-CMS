@@ -78,11 +78,9 @@ Existing fee totals must not be called automatic Accepted credits.
 
 ## Roles and security
 
-Intended active model: Admin + Viewer. Viewer is read-only; Admin follows the same workflow.
-Preserve legacy enum/data compatibility until a deliberate migration.
-Editor is currently ACTIVE in UI checks, RLS and match RPCs, not merely a legacy enum.
-A live editor profile exists. See the role inventory in PROJECT_TRUTH.md.
-Do not silently remove that account, rewrite historical migrations or claim admin-only RLS already exists.
+Active model: Admin + User/Viewer. Viewer is read-only; Admin follows the same workflow.
+The legacy `editor` enum member and historical migrations are preserved, but the live Editor profile was converted to Viewer and a profile constraint prevents assigning Editor. Current write policies and storage mutations are Admin-only; role-guarded RPCs reject Viewer. No account or historical data was deleted.
+Production remains private and staff-authenticated. Public read-only access is future consideration only.
 
 Keep RLS enabled. Private case files use signed URLs (3600 seconds in document/image code).
 Current storage policies are role-based and do not enforce case stage or STOPPED rules.

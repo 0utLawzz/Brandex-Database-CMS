@@ -354,7 +354,7 @@ export function parseJournalCsv(text: string): { rows: JournalRegistryRow[]; err
 // Role gate
 // ---------------------------------------------------------------------------
 
-export async function getStaffRole(): Promise<"viewer" | "editor" | "admin" | null> {
+export async function getStaffRole(): Promise<"viewer" | "admin" | null> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
   const { data, error } = await supabase

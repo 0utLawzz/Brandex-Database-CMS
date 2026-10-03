@@ -68,7 +68,7 @@ export function DatabasePage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [staffRole, setStaffRole] = useState<"viewer" | "editor" | "admin" | null>(null);
+  const [staffRole, setStaffRole] = useState<"viewer" | "admin" | null>(null);
 
   useEffect(() => { const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim()), 300); return () => window.clearTimeout(timer); }, [filters.search]);
   useEffect(() => {

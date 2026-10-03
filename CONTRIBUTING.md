@@ -1,4 +1,4 @@
-> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
 
 # Contributing to Brandex Datasheet
 
@@ -68,9 +68,10 @@ The main application lives in `artifacts/tm-tracker`. All development commands a
 2. Preserve legal identifiers exactly: `type`, `client_code`, `case_number`, and `tm_cpr_number`.
 3. Use server-side filtering and pagination. Never download the full trademark table for list or dashboard screens.
 4. Keep Supabase as the source of truth. Google Sheets is only an asynchronous mirror.
-5. Test your changes thoroughly.
-6. Ensure `pnpm typecheck`, `pnpm test`, and `pnpm build` pass.
-7. Commit with a clear, descriptive message.
+5. Preserve the active Admin + User/Viewer role model. Do not reintroduce Editor authorization or public Viewer access.
+6. Test your changes thoroughly.
+7. Ensure `pnpm typecheck`, `pnpm test`, and `pnpm build` pass.
+8. Commit with a clear, descriptive message.
 
 ### Commit Guidelines
 

@@ -1,6 +1,8 @@
 > Phase 0 audit snapshot. Later implementation is tracked at the top of Progress.md; this table records the audited baseline, not later fixes.
 
-# Project Truth — Phase 0 verification
+# Project Truth — Historical Phase 0 snapshot
+
+This is a historical snapshot verified 25 September 2026. Subsequent workflow and Admin/Viewer closure changes supersede its current-state claims. Use [Progress](../Progress.md), the current migration ledger, and [Smoke Test Checklist](../SMOKE_TEST_CHECKLIST.md) for current status; do not present this audit as current completion evidence.
 
 Verified 25 September 2026 against source, Git, mocked tests, live Supabase catalogs and authenticated admin UI.
 Intended rules: [WORKFLOW_BUSINESS_RULES.md](WORKFLOW_BUSINESS_RULES.md).

@@ -1,4 +1,4 @@
-> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
 
 # Security Policy
 
@@ -24,11 +24,11 @@ Never commit `.env`, paste secrets into source code, or expose server-only value
 
 ## Authorization
 
-- `viewer`: read access
-- `editor`: existing active compatibility debt; current RLS still permits writes, including deletion on some tables. Not the intended application role.
-- `admin`: application management, subject to the same workflow rules; enforcement gaps are listed in Project Truth.
+- `admin`: record and administrative mutations, subject to database workflow guards.
+- `viewer` (User/Viewer): authenticated read-only access; database RLS rejects writes.
+- `editor`: historical enum value only. Existing Editor profiles are migrated to Viewer; the database prevents assigning Editor to a profile.
 
-Keep public sign-up disabled and create staff accounts through the Supabase dashboard. Review staff accounts and roles periodically.
+Production is private and staff-authenticated. Keep public sign-up disabled; public Viewer access is a future consideration only. Create staff accounts through the Supabase dashboard and review roles periodically. Verify leaked-password protection is enabled in Auth settings before production sign-off.
 
 ## Stored files
 

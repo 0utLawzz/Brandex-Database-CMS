@@ -1,34 +1,39 @@
 # Brandex Database CMS Progress
 
-**Last updated: 27 September 2026 — V2.1.0 release preparation**
+**Last updated: 3 October 2026 — verification closure**
 
-This is the current project status. Historical batch notes below are archived context, not a current backlog or verification record. Release versions are recorded by Git tags and release notes; private workspace package manifests intentionally remain at `0.0.0`.
+This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
 ## COMPLETED
 
+- Fixed the relative-age calendar regression surfaced during the final verification pass; month/day borrowing now uses the correct month length when dates cross a month boundary.
 - Staff-authenticated React/Vite CMS backed by Supabase, with server-side record pagination, search, filters, and CSV workflows.
-- Four-stage case workflow, status history, assignment controls, and workflow/database guards are implemented and covered by automated tests. Production migration state and authenticated end-to-end behavior are not claimed as verified here.
-- Agent directory, case assignment, fee tracking, and summary views are implemented. CMS payment flags remain manual and are not Ledger-verified.
-- Dashboard metrics and filters, database/search views, registry matching, publication pipeline, and trademark CSV import are implemented.
-- Private case documents use signed URLs; document controls, workflow history, and role checks are implemented. The production role matrix remains unverified, and Editor access remains active in the current implementation.
-- Existing branding settings and assets remain in the codebase; no branding/theme work is part of this release-preparation change.
-- Current local verification: `pnpm test` passed (207 tests across 7 files), `pnpm typecheck` passed, and `pnpm build` passed.
+- Admin + User/Viewer is the only active role model. The existing legacy Editor profile was converted to Viewer; the enum value remains for historical compatibility, and a database constraint prevents assigning it to profiles.
+- Database write policies are Admin-only; Viewer reads remain authenticated. Anonymous access and `TRUNCATE` were removed from exposed `public` tables/RPCs. The private Storage bucket uses authenticated RLS with Admin-only writes; raw `storage.objects` grants are managed by its separate `supabase_storage_admin` owner and were not revokable by the project migration actor.
+- The two existing Auth users were retained and labelled `Admin / IT` and `User / Viewer`. No account was deleted or created. The user emails and account purposes are recorded in the closure report, not hard-coded in migrations.
+- Workflow guards, history, assignment, stage-payment gates and supporting RPCs are deployed and covered by PostgreSQL-backed tests. Production browser workflows have not been exercised in this closure.
+- Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. CMS payment flags are manual and are not Ledger-verified.
+- The ordered closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, and `20260929213046`; matching files are in `supabase/migrations`.
+- Local verification: `pnpm test` passed (207 tests across 7 files). Typecheck and production build are listed below after the final documentation edits.
 
 ## IN PROGRESS / NEXT
 
-- Separate follow-up: branding/theme refinement, logo update, and social preview image update.
-- Authenticated production role/document smoke tests, production migration confirmation, and dashboard/environment review still require the appropriate production access. This task does not deploy or mutate production.
+- Production remains private and staff-authenticated. No public Viewer access or public data endpoint was added. Confirm public sign-ups remain disabled and complete authenticated Admin/Viewer browser smoke tests.
+- Supabase's security advisor reports leaked-password protection is disabled; enable/verify it in Auth settings. Vercel environment inventory and deployed frontend verification also require dashboard access.
+- Rotate the service-role credential present in ignored local environment files; those files are not tracked and no service-role value is configured as a `VITE_*` variable. The credential was exposed in an inspection result during this pass.
+- Separate design follow-up remains pending: branding/theme refinement, logo update, social preview, and Record View/workbench design. No design work was done here.
 
 ## FUTURE / PARKED
 
-- Deeper CMS ↔ Ledger integration remains deferred. No connector, Ledger data access, or verified payment read path is included; do not represent CMS payment flags as Ledger truth.
-- No other historical unchecked item is promoted to active work by this release task.
+- CMS ↔ Ledger integration remains deferred. No connector, Ledger data access, or verified payment read path is included; CMS payment flags are not Ledger truth.
+- Public read-only access is a future consideration only and is not enabled.
+- No workflow expansion or other speculative feature was started during closure.
 
 ## V2.1.0 RELEASE
 
-- Release: `v2.1.0`, a minor release for the implemented changes accumulated since `v2.0.1`.
-- Release notes: [RELEASE_NOTES_V2.1.0.md](RELEASE_NOTES_V2.1.0.md).
-- Release verification passed locally; the `v2.1.0` tag points to the verified release commit.
+- Existing release tag `v2.1.0` remains unchanged at the V2.1.0 release commit. This closure is later work and has not been retagged or published as a GitHub release.
+- Release notes: [RELEASE_NOTES_V2.1.0.md](RELEASE_NOTES_V2.1.0.md). Its Editor statement describes the tagged release state and is superseded by the later closure migrations.
+- GitHub currently has no published release entry for this repository.
 
 ## Historical work log — archived, not current status
 
@@ -164,12 +169,12 @@ The following sections are preserved history. Their checkboxes and status labels
 - [x] Automated tests
 - [x] TypeScript typecheck
 - [x] Production build
-- [ ] Authenticated browser smoke test (viewer / editor / admin flows) → see SMOKE_TEST_CHECKLIST.md
-- [ ] Vercel production verification (deployment and runtime entry point verified; dashboard environment-variable inventory not exposed in the available project API) → see SMOKE_TEST_CHECKLIST.md
+- [ ] Authenticated browser smoke test (Admin and User/Viewer flows only) → see SMOKE_TEST_CHECKLIST.md
+- [ ] Verify Vercel deployment, private access, Auth sign-up/password settings, and browser-safe environment variables → see SMOKE_TEST_CHECKLIST.md
 
 ## Medium-priority improvements
 
-- [ ] Expand unit and integration tests around the outbox processor and role gates (API boundary coverage expanded; Edge Function/RLS integration coverage still pending)
+- [x] Add database-backed Admin/Viewer RLS, Editor migration, storage, RPC, and privilege assertions; Edge Function integration coverage remains pending
 - [x] Add structured logging / observability to the Edge Function (`supabase/functions/sync-google-sheet`)
 - [x] Document backup and restore procedures for the private storage bucket (`trademark-files`) → see STORAGE_BACKUP.md
 

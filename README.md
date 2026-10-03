@@ -1,4 +1,4 @@
-> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Admin + Viewer is intended; existing Editor permissions are active compatibility debt, not the target model.
+> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
 
 # Brandex Database CMS
 
@@ -40,6 +40,7 @@ Brandex Datasheet is the primary operational system for managing trademark recor
 - Supabase is the source of truth.
 - The browser never receives service-role keys or Google Apps Script secrets.
 - Every mutation is audited and queued for Sheet synchronization.
+- Production is private and staff-authenticated. Active roles are Admin and User/Viewer; public Viewer access is not enabled.
 
 ---
 
@@ -49,7 +50,7 @@ Brandex Datasheet is the primary operational system for managing trademark recor
 |-------|------------|------|
 | Frontend | React + Vite (artifacts/tm-tracker) | Staff UI on Vercel |
 | Database | Supabase Postgres | Primary record store + audit log |
-| Auth | Supabase Auth + RLS | Intended Admin + Viewer; legacy Editor still actively authorized |
+| Auth | Supabase Auth + RLS | Admin + User/Viewer; legacy Editor enum retained but not assignable |
 | Storage | Supabase Storage (private) | Trademark logos & files (signed URLs) |
 | Mirror | Google Sheets + Apps Script | Async operational backup |
 | Sync | Supabase Edge Function | Retryable outbox processor |
@@ -66,7 +67,7 @@ Browser (staff) → Vercel (Vite app) → Supabase (Auth + Postgres + Storage)
 
 | Feature | Description |
 |---------|-------------|
-| Role-based access | Intended Admin + Viewer; active Editor authorization remains a verified gap |
+| Role-based access | Admin mutations; authenticated User/Viewer read-only access |
 | Trademark records | Full case data with search and filtering |
 | Private file storage | Logos and documents via short-lived signed URLs |
 | Audit trail | Every change recorded in Postgres |
@@ -120,8 +121,8 @@ See [INSTALL.md](INSTALL.md) for the complete installation and import guide.
 
 1. Create a Supabase project.
 2. Apply migrations from `supabase/migrations/` (starting with `202608280001_brandex_datasheet.sql`).
-3. Create staff users in **Authentication → Users**. New users receive the `viewer` role.
-4. Promote approved users:
+3. Keep the production project private and disable public sign-ups. Create staff users in **Authentication → Users**; new profiles receive the `viewer` role.
+4. Promote the approved Admin account:
 
 ```sql
 update public.profiles
@@ -129,7 +130,7 @@ set role = 'admin'
 where user_id = (select id from auth.users where email = 'owner@example.com');
 ```
 
-Intended roles: Admin + Viewer. Current database policies also allow Editor writes; see the Project Truth role inventory. Disable public sign-ups.
+Active roles are Admin + User/Viewer. The legacy Editor enum value is preserved only for migration/history compatibility; the database rejects active Editor profiles. Public read-only access is future consideration only.
 
 ---
 

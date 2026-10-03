@@ -600,7 +600,7 @@ export function PublicationPipelinePage() {
                     </div>
                   ) : (
                     <div className="font-mono text-sm text-[#9d9488] uppercase italic">
-                      Read-only mode — Editor or Admin required to update
+                      Read-only mode — Admin required to update
                     </div>
                   )}
                 </div>

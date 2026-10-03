@@ -1,5 +1,7 @@
 # Brandex Database CMS V2.1.0 Release Notes
 
+> Historical release record for the `v2.1.0` tag. Its Editor-authorization statement describes the tagged release state and is superseded by the later Admin/Viewer closure migrations; see [current Progress](Progress.md).
+
 **Release date:** 27 September 2026 | **Release type:** Minor release | **Previous release:** v2.0.1
 
 ## Overview

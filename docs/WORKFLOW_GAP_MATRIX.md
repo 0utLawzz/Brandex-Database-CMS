@@ -1,6 +1,6 @@
-# Workflow Gap Matrix — 25 September 2026
+# Historical Workflow Gap Matrix — 25 September 2026
 
-This replaces the stale 24 September matrix. Canonical requirements are in
+This is a historical Phase 0 snapshot, not current implementation evidence. Later workflow migrations and the 30 September role closure supersede its status rows. Current status is in [Progress](../Progress.md) and authenticated checks remain in [Smoke Test Checklist](../SMOKE_TEST_CHECKLIST.md). Canonical requirements are in
 [WORKFLOW_BUSINESS_RULES.md](WORKFLOW_BUSINESS_RULES.md); source, test, live database and flow evidence
 are separated in [PROJECT_TRUTH.md](PROJECT_TRUTH.md).
 
