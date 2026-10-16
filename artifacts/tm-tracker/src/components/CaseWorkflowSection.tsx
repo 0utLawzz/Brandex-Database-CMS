@@ -1,8 +1,19 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Workflow, ArrowRight, CheckCircle2, Clock, User, MapPin,
-  AlertCircle, Loader2, X, Edit3, ShieldAlert, Check, CreditCard,
+  Workflow,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  User,
+  MapPin,
+  AlertCircle,
+  Loader2,
+  X,
+  Edit3,
+  ShieldAlert,
+  Check,
+  CreditCard,
 } from "lucide-react";
 import {
   STATUS_WORKFLOW,
@@ -28,7 +39,7 @@ const STAGE_BADGE: Record<string, string> = {
   "STAGE 2": "bg-[#B0740E] text-white",
   "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
-  "STOPPED": "bg-[#CC0000] text-white",
+  STOPPED: "bg-[#CC0000] text-white",
 };
 
 // ── 1. CASE WORKFLOW & STATUS CONTROL ────────────────────────────────────────
@@ -38,7 +49,10 @@ interface CaseWorkflowSectionProps {
   canEdit: boolean;
 }
 
-export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProps) {
+export function CaseWorkflowSection({
+  record,
+  canEdit,
+}: CaseWorkflowSectionProps) {
   const queryClient = useQueryClient();
 
   // Modals state
@@ -46,15 +60,23 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const [agentModalOpen, setAgentModalOpen] = useState(false);
 
   // Status form state
-  const [targetStage, setTargetStage] = useState<string>(record.stage || "STAGE 1");
-  const [targetSubStage, setTargetSubStage] = useState<string>(record.subStage || "");
+  const [targetStage, setTargetStage] = useState<string>(
+    record.stage || "STAGE 1",
+  );
+  const [targetSubStage, setTargetSubStage] = useState<string>(
+    record.subStage || "",
+  );
   const [statusError, setStatusError] = useState<string | null>(null);
   const [stoppedReason, setStoppedReason] = useState<string>("");
 
   // Agent form state
-  const [selectedAgent, setSelectedAgent] = useState<string>(record.agent || "");
-  const [selectedCity, setSelectedCity] = useState<string>(record.city || "Islamabad");
-  const [agentRate, setAgentRate] = useState(String(record.agentRate ?? ""));
+  const [selectedAgent, setSelectedAgent] = useState<string>(
+    record.agent || "",
+  );
+  const [selectedCity, setSelectedCity] = useState<string>(
+    record.city || "Islamabad",
+  );
+  const [agentRate, setAgentRate] = useState(String(record.agentRate ?? 1000));
   const [agentError, setAgentError] = useState<string | null>(null);
 
   // Agents list for assignment
@@ -68,11 +90,18 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   // Status Transition mutation
   const statusMutation = useMutation({
     mutationFn: async () => {
-      await updateTrademarkStatus(record.id, targetStage, targetSubStage || null, targetStage === "STOPPED" ? stoppedReason : undefined);
+      await updateTrademarkStatus(
+        record.id,
+        targetStage,
+        targetSubStage || null,
+        targetStage === "STOPPED" ? stoppedReason : undefined,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
-      queryClient.invalidateQueries({ queryKey: ["trademark-workflow-history", record.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["trademark-workflow-history", record.id],
+      });
       setStatusModalOpen(false);
       setStatusError(null);
     },
@@ -84,7 +113,13 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   // Agent Assignment mutation
   const agentMutation = useMutation({
     mutationFn: async () => {
-      await updateTrademarkAgent(record.id, selectedAgent.trim(), selectedCity.trim() || undefined, agents.find(a => a.name === selectedAgent)?.id, Number(agentRate));
+      await updateTrademarkAgent(
+        record.id,
+        selectedAgent.trim(),
+        selectedCity.trim() || undefined,
+        agents.find((a) => a.name === selectedAgent)?.id,
+        Number(agentRate),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
@@ -109,26 +144,15 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
     setSelectedAgent(record.agent || "");
     setSelectedCity(record.city || "Islamabad");
     setAgentError(null);
-    setAgentRate(String(record.agentRate ?? ""));
+    setAgentRate(String(record.agentRate ?? 1000));
     setAgentModalOpen(true);
   };
 
   const currentStageIndex = STAGE_ORDER.indexOf(record.stage as any);
   const isStopped = record.stage === "STOPPED";
 
-  const getPaymentGateWarning = (target: string): string | null => {
-    if (target === record.stage) return null;
-    if (target === "STAGE 2" && !record.stage1Paid) {
-      return "Stage 2 cannot be started until Stage 1 payment is cleared.";
-    }
-    if (target === "STAGE 3" && !record.stage2Paid) {
-      return "Stage 3 cannot be started until Stage 2 payment is cleared.";
-    }
-    if (target === "STAGE 4" && !record.stage3Paid) {
-      return "Stage 4 cannot be started until Stage 3 payment is cleared.";
-    }
-    return null;
-  };
+  // Final client terms are enforced atomically by the database. Manual paid flags are not evidence.
+  const getPaymentGateWarning = (_target: string): string | null => null;
 
   const getStoppedWarning = (): string | null => {
     if (targetStage === "STOPPED" && !stoppedReason.trim()) {
@@ -140,8 +164,19 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const paymentGateWarning = getPaymentGateWarning(targetStage);
   const stoppedWarning = getStoppedWarning();
   const targetStageRequiresPayment = Boolean(paymentGateWarning);
-  const validTargetStages = STAGES.filter((s) => isValidStageTransition(record.stage, s) && (s === "STOPPED" || s === record.stage || availableWorkflowSubStages(record.stage, record.subStage, s).length > 0));
-  const availableSubStages = availableWorkflowSubStages(record.stage, record.subStage, targetStage);
+  const validTargetStages = STAGES.filter(
+    (s) =>
+      isValidStageTransition(record.stage, s) &&
+      (s === "STOPPED" ||
+        s === record.stage ||
+        availableWorkflowSubStages(record.stage, record.subStage, s).length >
+          0),
+  );
+  const availableSubStages = availableWorkflowSubStages(
+    record.stage,
+    record.subStage,
+    targetStage,
+  );
 
   return (
     <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
@@ -168,16 +203,35 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
         <div className="rounded-md border border-stone-300 bg-[#F8F6F1] p-4 text-base space-y-2 shadow-none print:shadow-none">
           <div className="flex flex-wrap items-center gap-2 text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658]">
             <span>Current:</span>
-            <span className={`px-2 py-1 border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}>
+            <span
+              className={`px-2 py-1 border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-white text-[#0C0C0C]"}`}
+            >
               {record.stage}
             </span>
             <span className="border border-[#0C0C0C]/30 bg-white px-2 py-1 text-[#0C0C0C]">
               {formatWorkflowLabel(record.subStage) || "No sub-stage"}
             </span>
           </div>
-          <p><strong>Next workflow action:</strong> {isStopped ? "None — this case is terminal" : availableWorkflowSubStages(record.stage, record.subStage, record.stage).filter(s=>s!==record.subStage).map(formatWorkflowLabel).join(" or ") || (validTargetStages.find(s=>s!==record.stage && s!=="STOPPED") ? `Enter ${validTargetStages.find(s=>s!==record.stage && s!=="STOPPED")} after payment clears` : "No further progression available")}</p>
+          <p>
+            <strong>Next workflow action:</strong>{" "}
+            {isStopped
+              ? "None — timers paused; use TM-57 reactivation"
+              : availableWorkflowSubStages(
+                  record.stage,
+                  record.subStage,
+                  record.stage,
+                )
+                  .filter((s) => s !== record.subStage)
+                  .map(formatWorkflowLabel)
+                  .join(" or ") ||
+                (validTargetStages.find(
+                  (s) => s !== record.stage && s !== "STOPPED",
+                )
+                  ? `Enter ${validTargetStages.find((s) => s !== record.stage && s !== "STOPPED")} subject to client payment terms`
+                  : "No further progression available")}
+          </p>
           <div className="flex flex-wrap gap-2">
-            {[1,2,3,4].map((n) => {
+            {[1, 2, 3, 4].map((n) => {
               const active = record.stage === STAGE_ORDER[n - 1];
               return (
                 <span
@@ -190,7 +244,12 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               );
             })}
           </div>
-          {record.stage === "STAGE 2" && record.subStage === "Assigned" && <p>Set an agent and agreed rate before Accepted. Stage 2 payment is not needed for assignment.</p>}
+          {record.stage === "STAGE 2" && record.subStage === "Assigned" && (
+            <p>
+              Set a Service Associate and agreed fee. Assignment creates the
+              payable. Client Payment Terms control progression.
+            </p>
+          )}
         </div>
         <div className="border border-stone-300 bg-[#FFF9F0] p-3 print:p-1.5 shadow-none print:shadow-none">
           <div className="text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658] mb-2 print:mb-1">
@@ -260,13 +319,17 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               </div>
               <div className="space-y-1 print:space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">Stage:</span>
+                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">
+                    Stage:
+                  </span>
                   <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                     {record.stage || "—"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">Sub-status:</span>
+                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">
+                    Sub-status:
+                  </span>
                   <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
                     {formatWorkflowLabel(record.subStage) || "—"}
                   </span>
@@ -282,37 +345,45 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 <span className="text-sm font-mono font-bold uppercase tracking-widest text-[#6d6658] flex items-center gap-1">
                   <User className="w-3 h-3" /> Agent Details
                 </span>
-                {canEdit && record.stage === "STAGE 2" && record.subStage === "Assigned" && (
-                  <button
-                    type="button"
-                    onClick={openAgentModal}
-                    className="print:hidden text-sm font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-none"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    <span>{record.agent ? "Change Agent" : "Assign Agent"}</span>
-                  </button>
-                )}
+                {canEdit &&
+                  record.stage === "STAGE 2" &&
+                  record.subStage === "Assigned" && (
+                    <button
+                      type="button"
+                      onClick={openAgentModal}
+                      className="print:hidden text-sm font-mono font-bold uppercase px-2 py-0.5 border border-[#0C0C0C] bg-white hover:bg-[#0C0C0C] hover:text-white transition-colors flex items-center gap-1 shadow-none"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>
+                        {record.agent ? "Change Agent" : "Assign Agent"}
+                      </span>
+                    </button>
+                  )}
               </div>
               <div className="space-y-1 print:space-y-0.5">
                 <div className="flex items-center gap-2">
-                <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">Agent:</span>
-                <span className={`font-mono text-sm print:text-xs font-bold text-[#0C0C0C] ${!record.agent ? "italic text-[#9d9488]" : ""}`}>
-                  {record.agent || "Unassigned"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm print:text-[10px] text-[#6d6658] flex items-center gap-0.5">
-                  <MapPin className="w-3 h-3" /> City:
-                </span>
-                <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
-                  {record.city || "—"}
-                </span>
+                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658]">
+                    Agent:
+                  </span>
+                  <span
+                    className={`font-mono text-sm print:text-xs font-bold text-[#0C0C0C] ${!record.agent ? "italic text-[#9d9488]" : ""}`}
+                  >
+                    {record.agent || "Unassigned"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm print:text-[10px] text-[#6d6658] flex items-center gap-0.5">
+                    <MapPin className="w-3 h-3" /> City:
+                  </span>
+                  <span className="font-mono text-sm print:text-xs font-bold text-[#0C0C0C]">
+                    {record.city || "—"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
       {/* Status Transition Modal */}
       {statusModalOpen && (
@@ -380,7 +451,11 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   value={targetStage}
                   onChange={(e) => {
                     setTargetStage(e.target.value);
-                    const validSubs = availableWorkflowSubStages(record.stage, record.subStage, e.target.value);
+                    const validSubs = availableWorkflowSubStages(
+                      record.stage,
+                      record.subStage,
+                      e.target.value,
+                    );
                     if (!validSubs.includes(targetSubStage)) {
                       setTargetSubStage(validSubs[0] || "");
                     }
@@ -403,10 +478,14 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 <select
                   value={targetSubStage}
                   onChange={(e) => setTargetSubStage(e.target.value)}
-                  disabled={statusMutation.isPending || targetStage === "STOPPED"}
+                  disabled={
+                    statusMutation.isPending || targetStage === "STOPPED"
+                  }
                   className="w-full h-9 px-2.5 border border-stone-300 bg-white font-mono text-sm text-[#0C0C0C]"
                 >
-                  {targetStage === "STOPPED" && <option value="">No sub-stage</option>}
+                  {targetStage === "STOPPED" && (
+                    <option value="">No sub-stage</option>
+                  )}
                   {availableSubStages.map((s) => (
                     <option key={s} value={s}>
                       {formatWorkflowLabel(s)}
@@ -442,7 +521,11 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                 </button>
                 <button
                   type="submit"
-                  disabled={targetStageRequiresPayment || Boolean(stoppedWarning) || statusMutation.isPending}
+                  disabled={
+                    targetStageRequiresPayment ||
+                    Boolean(stoppedWarning) ||
+                    statusMutation.isPending
+                  }
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0A6B52] text-white font-mono text-sm font-bold uppercase border border-stone-300 shadow-none hover:brightness-110 disabled:opacity-50 transition-all"
                 >
                   {statusMutation.isPending ? (
@@ -468,7 +551,9 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-[#6C1C1F]" />
                 <div className="font-serif text-lg font-bold uppercase text-[#0C0C0C]">
-                  {record.agent ? "Change Agent Assignment" : "Assign Case Agent"}
+                  {record.agent
+                    ? "Change Agent Assignment"
+                    : "Assign Case Agent"}
                 </div>
               </div>
               <button
@@ -568,8 +653,19 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
                   )}
                 </button>
               </div>
-            <label className="block text-sm">Agreed case rate (Rs.)<input required type="number" min="0" step="0.01" value={agentRate} onChange={e=>setAgentRate(e.target.value)} className="block w-full border px-3 py-2" /></label>
-</form>
+              <label className="block text-sm">
+                Agreed case rate (Rs.)
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={agentRate}
+                  onChange={(e) => setAgentRate(e.target.value)}
+                  className="block w-full border px-3 py-2"
+                />
+              </label>
+            </form>
           </div>
         </div>
       )}
@@ -584,7 +680,10 @@ interface StagePaymentsSectionProps {
   canEdit: boolean;
 }
 
-export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionProps) {
+export function StagePaymentsSection({
+  record,
+  canEdit,
+}: StagePaymentsSectionProps) {
   const queryClient = useQueryClient();
 
   const paymentMutation = useMutation({
@@ -592,7 +691,9 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
       updateStagePayment(record.id, args.stage, args.paid, args.date || null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
-      queryClient.invalidateQueries({ queryKey: ["trademark-workflow-history", record.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["trademark-workflow-history", record.id],
+      });
     },
   });
 
@@ -612,20 +713,46 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
           {(
             [
-              { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
-              { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
-              { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
-              { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
+              {
+                label: "STAGE 1",
+                stageNum: 1 as const,
+                paid: record.stage1Paid ?? false,
+                date: record.stage1PaidDate ?? "",
+              },
+              {
+                label: "STAGE 2",
+                stageNum: 2 as const,
+                paid: record.stage2Paid ?? false,
+                date: record.stage2PaidDate ?? "",
+              },
+              {
+                label: "STAGE 3",
+                stageNum: 3 as const,
+                paid: record.stage3Paid ?? false,
+                date: record.stage3PaidDate ?? "",
+              },
+              {
+                label: "STAGE 4",
+                stageNum: 4 as const,
+                paid: record.stage4Paid ?? false,
+                date: record.stage4PaidDate ?? "",
+              },
             ] as const
           ).map(({ label, stageNum, paid, date }) => (
             <div
               key={label}
               className={`border-2 p-3 print:p-1.5 shadow-none print:shadow-none ${
-                paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C] bg-[#FFF9F0]"
+                paid
+                  ? "border-[#0A6B52] bg-[#0D9970]/10"
+                  : "border-[#0C0C0C] bg-[#FFF9F0]"
               }`}
             >
-              <div className="font-mono text-sm print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
-              <label className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
+              <div className="font-mono text-sm print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">
+                {label}
+              </div>
+              <label
+                className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
+              >
                 <input
                   type="checkbox"
                   checked={paid}
@@ -634,12 +761,16 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
                     paymentMutation.mutate({
                       stage: stageNum,
                       paid: !paid,
-                      date: paid ? "" : (date || new Date().toISOString().slice(0, 10)),
+                      date: paid
+                        ? ""
+                        : date || new Date().toISOString().slice(0, 10),
                     })
                   }
                   className="w-4 h-4 print:w-3 print:h-3 accent-[#0A6B52]"
                 />
-                <span className={`font-mono text-sm print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
+                <span
+                  className={`font-mono text-sm print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}
+                >
                   {paid ? "PAID" : "UNPAID"}
                 </span>
               </label>
@@ -648,7 +779,11 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
                 value={date}
                 disabled={!canEdit || !paid || paymentMutation.isPending}
                 onChange={(e) =>
-                  paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
+                  paymentMutation.mutate({
+                    stage: stageNum,
+                    paid: true,
+                    date: e.target.value,
+                  })
                 }
                 className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-sm print:text-[8px] bg-white disabled:opacity-40"
               />
@@ -666,14 +801,23 @@ interface WorkflowHistorySectionProps {
   workflowHistory: TrademarkWorkflowEvent[];
 }
 
-export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySectionProps) {
-  const grouped = STAGE_ORDER.reduce((acc, stage) => {
-    acc[stage] = workflowHistory.filter((event) => {
-      const targetStage = event.toStatus || event.fromStatus;
-      return targetStage === stage || event.toStatus === stage || event.fromStatus === stage;
-    });
-    return acc;
-  }, {} as Record<typeof STAGE_ORDER[number], TrademarkWorkflowEvent[]>);
+export function WorkflowHistorySection({
+  workflowHistory,
+}: WorkflowHistorySectionProps) {
+  const grouped = STAGE_ORDER.reduce(
+    (acc, stage) => {
+      acc[stage] = workflowHistory.filter((event) => {
+        const targetStage = event.toStatus || event.fromStatus;
+        return (
+          targetStage === stage ||
+          event.toStatus === stage ||
+          event.fromStatus === stage
+        );
+      });
+      return acc;
+    },
+    {} as Record<(typeof STAGE_ORDER)[number], TrademarkWorkflowEvent[]>,
+  );
 
   return (
     <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
@@ -683,7 +827,8 @@ export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySecti
           <span>Workflow History</span>
         </div>
         <span className="font-mono text-sm print:text-[8px] font-bold text-[#6d6658] uppercase tracking-wider bg-white px-2 py-0.5 border border-[#0C0C0C]/20">
-          {workflowHistory.length} {workflowHistory.length === 1 ? "EVENT" : "EVENTS"}
+          {workflowHistory.length}{" "}
+          {workflowHistory.length === 1 ? "EVENT" : "EVENTS"}
         </span>
       </div>
 
@@ -695,19 +840,33 @@ export function WorkflowHistorySection({ workflowHistory }: WorkflowHistorySecti
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 print:gap-1.5">
             {STAGE_ORDER.map((stage) => (
-              <div key={stage} className="border border-stone-300 bg-[#FFF9F0] p-2.5 print:p-1.5 min-h-[120px]">
-                <div className={`inline-flex items-center justify-center px-2 py-1 font-mono text-[10px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[stage] ?? "bg-white text-[#0C0C0C]"}`}>
+              <div
+                key={stage}
+                className="border border-stone-300 bg-[#FFF9F0] p-2.5 print:p-1.5 min-h-[120px]"
+              >
+                <div
+                  className={`inline-flex items-center justify-center px-2 py-1 font-mono text-[10px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[stage] ?? "bg-white text-[#0C0C0C]"}`}
+                >
                   {stage}
                 </div>
                 <div className="mt-2 space-y-2 print:space-y-1">
                   {grouped[stage].length === 0 ? (
-                    <div className="font-mono text-[10px] text-[#9d9488] uppercase tracking-widest">No events</div>
+                    <div className="font-mono text-[10px] text-[#9d9488] uppercase tracking-widest">
+                      No events
+                    </div>
                   ) : (
                     grouped[stage].map((event) => {
-                      const toLabel = formatWorkflowLabel(event.toSubStatus) || formatWorkflowLabel(event.toStatus);
-                      const fromLabel = formatWorkflowLabel(event.fromSubStatus) || formatWorkflowLabel(event.fromStatus);
+                      const toLabel =
+                        formatWorkflowLabel(event.toSubStatus) ||
+                        formatWorkflowLabel(event.toStatus);
+                      const fromLabel =
+                        formatWorkflowLabel(event.fromSubStatus) ||
+                        formatWorkflowLabel(event.fromStatus);
                       return (
-                        <div key={event.id} className="border-l-2 border-[#0A6B52] pl-2 py-1 bg-white/70 print:bg-white">
+                        <div
+                          key={event.id}
+                          className="border-l-2 border-[#0A6B52] pl-2 py-1 bg-white/70 print:bg-white"
+                        >
                           <div className="font-mono text-[10px] font-bold text-[#0C0C0C] leading-tight">
                             {fromLabel ? `${fromLabel} → ${toLabel}` : toLabel}
                           </div>

@@ -1,11 +1,35 @@
-import { getStaffRole, listAgents, listAgentProfiles, assignStage2Agent, listTrademarkPage, listFeesForTrademark, recordAgentPayment, CITIES, formatWorkflowLabel } from "@/lib/api";
+import {
+  getStaffRole,
+  listAgents,
+  listAgentProfiles,
+  assignStage2Agent,
+  listTrademarkPage,
+  listFeesForTrademark,
+  recordAgentPayment,
+  CITIES,
+  formatWorkflowLabel,
+} from "@/lib/api";
 import type { AgentFee, TrademarkPage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { formatDateShort } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { Users2, ChevronLeft, ChevronRight, ExternalLink, ClipboardCheck, X, AlertCircle, CheckCircle2 } from "lucide-react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Users2,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  ClipboardCheck,
+  X,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 const PAGE_SIZE = 50;
@@ -15,7 +39,7 @@ const STAGE_BADGE: Record<string, string> = {
   "STAGE 2": "bg-[#B0740E] text-white",
   "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
-  "STOPPED": "bg-[#CC0000] text-white",
+  STOPPED: "bg-[#CC0000] text-white",
 };
 
 interface Filters {
@@ -48,7 +72,9 @@ function FilterSelect({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658]">{label}</label>
+      <label className="font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658]">
+        {label}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -56,7 +82,9 @@ function FilterSelect({
       >
         <option value="">ALL</option>
         {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
+          <option key={o} value={o}>
+            {o}
+          </option>
         ))}
       </select>
     </div>
@@ -65,17 +93,28 @@ function FilterSelect({
 
 export function AssignedPage() {
   const [, navigate] = useLocation();
-  const {data: role} = useQuery({queryKey:["staff-role"],queryFn:getStaffRole});
+  const { data: role } = useQuery({
+    queryKey: ["staff-role"],
+    queryFn: getStaffRole,
+  });
   const canEdit = role === "admin";
-  const [agentRate,setAgentRate] = useState("");
+  const [agentRate, setAgentRate] = useState("1000");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [page, setPage] = useState(1);
-  const [queueView, setQueueView] = useState<"assigned" | "accepted">("assigned");
-  const [assignmentRecord, setAssignmentRecord] = useState<TrademarkPage["records"][number] | null>(null);
-  const [paymentRecord, setPaymentRecord] = useState<TrademarkPage["records"][number] | null>(null);
-  const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
+  const [queueView, setQueueView] = useState<"assigned" | "accepted">(
+    "assigned",
+  );
+  const [assignmentRecord, setAssignmentRecord] = useState<
+    TrademarkPage["records"][number] | null
+  >(null);
+  const [paymentRecord, setPaymentRecord] = useState<
+    TrademarkPage["records"][number] | null
+  >(null);
+  const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>(
+    {},
+  );
   const [selectedAgentName, setSelectedAgentName] = useState("");
   const [selectedAgentCity, setSelectedAgentCity] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
@@ -83,15 +122,16 @@ export function AssignedPage() {
   // Assigned page only shows STAGE 2 + Sub-status Assigned
   const { data, isLoading, isFetching } = useQuery<TrademarkPage>({
     queryKey: ["assigned-page", queueView, page, filters],
-    queryFn: () => listTrademarkPage({
-      page,
-      pageSize: PAGE_SIZE,
-      stage: "STAGE 2",
-      subStage: queueView === "assigned" ? "Assigned" : "Accepted",
-      agent: filters.agent || undefined,
-      city: filters.city || undefined,
-      appClass: filters.appClass || undefined,
-    }),
+    queryFn: () =>
+      listTrademarkPage({
+        page,
+        pageSize: PAGE_SIZE,
+        stage: "STAGE 2",
+        subStage: queueView === "assigned" ? "Assigned" : "Accepted",
+        agent: filters.agent || undefined,
+        city: filters.city || undefined,
+        appClass: filters.appClass || undefined,
+      }),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
@@ -101,7 +141,11 @@ export function AssignedPage() {
     enabled: !!paymentRecord,
     staleTime: 0,
   });
-  const { data: agents = [] } = useQuery({ queryKey: ["agents"], queryFn: listAgents, staleTime: 5 * 60_000 });
+  const { data: agents = [] } = useQuery({
+    queryKey: ["agents"],
+    queryFn: listAgents,
+    staleTime: 5 * 60_000,
+  });
   const { data: agentProfiles = [] } = useQuery({
     queryKey: ["agent-profiles"],
     queryFn: listAgentProfiles,
@@ -109,14 +153,28 @@ export function AssignedPage() {
   });
   const activeAgentProfiles = useMemo(
     () => agentProfiles.filter((a) => a.isActive !== false),
-    [agentProfiles]
+    [agentProfiles],
   );
   const completedQuery = useQuery({
     queryKey: ["assigned-completed", filters],
     queryFn: async () => {
       const [stage3, stage4] = await Promise.all([
-        listTrademarkPage({ page: 1, pageSize: 1, stage: "STAGE 3", agent: filters.agent || undefined, city: filters.city || undefined, appClass: filters.appClass || undefined }),
-        listTrademarkPage({ page: 1, pageSize: 1, stage: "STAGE 4", agent: filters.agent || undefined, city: filters.city || undefined, appClass: filters.appClass || undefined }),
+        listTrademarkPage({
+          page: 1,
+          pageSize: 1,
+          stage: "STAGE 3",
+          agent: filters.agent || undefined,
+          city: filters.city || undefined,
+          appClass: filters.appClass || undefined,
+        }),
+        listTrademarkPage({
+          page: 1,
+          pageSize: 1,
+          stage: "STAGE 4",
+          agent: filters.agent || undefined,
+          city: filters.city || undefined,
+          appClass: filters.appClass || undefined,
+        }),
       ]);
       return stage3.total + stage4.total;
     },
@@ -136,14 +194,20 @@ export function AssignedPage() {
 
   const openAssignmentModal = (record: TrademarkPage["records"][number]) => {
     if (!canEdit) return;
-    setAgentRate(String(record.agentRate ?? ""));
+    setAgentRate(String(record.agentRate ?? 1000));
     setAssignmentRecord(record);
     setSelectedAgentName(record.agent || "");
     setSelectedAgentCity(record.city || "");
   };
 
   const handleAssignAgent = async () => {
-    if (!assignmentRecord || !canEdit || agentRate === "" || Number(agentRate) < 0) return;
+    if (
+      !assignmentRecord ||
+      !canEdit ||
+      agentRate === "" ||
+      Number(agentRate) < 0
+    )
+      return;
     if (!selectedAgentName.trim()) {
       toast({
         title: "Agent Required",
@@ -159,7 +223,7 @@ export function AssignedPage() {
         assignmentRecord.id,
         selectedAgentName.trim(),
         selectedAgentCity.trim() || undefined,
-        activeAgentProfiles.find(a => a.name === selectedAgentName)?.id,
+        activeAgentProfiles.find((a) => a.name === selectedAgentName)?.id,
         Number(agentRate),
       );
       toast({
@@ -189,12 +253,20 @@ export function AssignedPage() {
   };
 
   const paymentMutation = useMutation({
-    mutationFn: async ({ feeId, amount }: { feeId: string; amount: number; trademarkId: string }) =>
-      recordAgentPayment(feeId, amount),
+    mutationFn: async ({
+      feeId,
+      amount,
+    }: {
+      feeId: string;
+      amount: number;
+      trademarkId: string;
+    }) => recordAgentPayment(feeId, amount),
     onSuccess: async (_data, variables) => {
       setPaymentAmounts((current) => ({ ...current, [variables.feeId]: "" }));
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["case-fees", variables.trademarkId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["case-fees", variables.trademarkId],
+        }),
         queryClient.invalidateQueries({ queryKey: ["agent-profiles"] }),
         queryClient.invalidateQueries({ queryKey: ["agents"] }),
         queryClient.invalidateQueries({ queryKey: ["agent-summary"] }),
@@ -217,10 +289,14 @@ export function AssignedPage() {
 
   const handleRecordPayment = (fee: AgentFee, rawAmount: string) => {
     const amount = Number(rawAmount);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > fee.balanceDue) return;
-    paymentMutation.mutate({ feeId: fee.id, amount, trademarkId: fee.trademarkId });
+    if (!Number.isFinite(amount) || amount <= 0 || amount > fee.balanceDue)
+      return;
+    paymentMutation.mutate({
+      feeId: fee.id,
+      amount,
+      trademarkId: fee.trademarkId,
+    });
   };
-
 
   return (
     <AppShell>
@@ -228,7 +304,9 @@ export function AssignedPage() {
         <div className="shrink-0 px-6 py-4 bg-[#E8DFC7] border-b border-stone-300">
           <div className="flex items-center gap-3 mb-4">
             <Users2 className="w-5 h-5 text-[#0A6B52]" />
-            <h1 className="font-serif text-2xl uppercase tracking-widest text-[#0C0C0C] leading-none">ASSIGNED</h1>
+            <h1 className="font-serif text-2xl uppercase tracking-widest text-[#0C0C0C] leading-none">
+              ASSIGNED
+            </h1>
             <span className="ml-2 font-mono text-sm text-[#6d6658] uppercase tracking-widest">
               STAGE 2 · {queueView === "assigned" ? "ASSIGNED" : "ACCEPTED"}
             </span>
@@ -237,12 +315,19 @@ export function AssignedPage() {
             </span>
           </div>
 
-          <div className="mt-4 flex gap-2 border-b border-stone-300" role="tablist" aria-label="Stage 2 case queues">
+          <div
+            className="mt-4 flex gap-2 border-b border-stone-300"
+            role="tablist"
+            aria-label="Stage 2 case queues"
+          >
             <button
               type="button"
               role="tab"
               aria-selected={queueView === "assigned"}
-              onClick={() => { setQueueView("assigned"); setPage(1); }}
+              onClick={() => {
+                setQueueView("assigned");
+                setPage(1);
+              }}
               className={`border border-b-0 px-4 py-2 font-mono text-sm font-bold uppercase ${queueView === "assigned" ? "bg-[#0C0C0C] text-[#F0E8D0]" : "bg-white text-[#6d6658]"}`}
             >
               ASSIGNED QUEUE
@@ -251,7 +336,10 @@ export function AssignedPage() {
               type="button"
               role="tab"
               aria-selected={queueView === "accepted"}
-              onClick={() => { setQueueView("accepted"); setPage(1); }}
+              onClick={() => {
+                setQueueView("accepted");
+                setPage(1);
+              }}
               className={`border border-b-0 px-4 py-2 font-mono text-sm font-bold uppercase ${queueView === "accepted" ? "bg-[#0C0C0C] text-[#F0E8D0]" : "bg-white text-[#6d6658]"}`}
             >
               ACCEPTED / AGENT PAYMENTS
@@ -259,17 +347,32 @@ export function AssignedPage() {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <FilterSelect label="AGENT" value={filters.agent} options={agents} onChange={(v) => setFilter("agent", v)} />
-            <FilterSelect label="CITY" value={filters.city} options={CITIES} onChange={(v) => setFilter("city", v)} />
+            <FilterSelect
+              label="SERVICE ASSOCIATE"
+              value={filters.agent}
+              options={agents}
+              onChange={(v) => setFilter("agent", v)}
+            />
+            <FilterSelect
+              label="CITY"
+              value={filters.city}
+              options={CITIES}
+              onChange={(v) => setFilter("city", v)}
+            />
             <FilterSelect
               label="CLASS"
               value={filters.appClass}
-              options={Array.from({ length: 45 }, (_, index) => String(index + 1))}
+              options={Array.from({ length: 45 }, (_, index) =>
+                String(index + 1),
+              )}
               onChange={(v) => setFilter("appClass", v)}
             />
             {hasFilters && (
               <button
-                onClick={() => { setFilters(EMPTY); setPage(1); }}
+                onClick={() => {
+                  setFilters(EMPTY);
+                  setPage(1);
+                }}
                 className="self-end flex items-center gap-1.5 h-9 px-4 border-2 border-[#CC0000] text-[#CC0000] font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#CC0000] hover:text-white transition-colors"
               >
                 CLEAR
@@ -282,8 +385,26 @@ export function AssignedPage() {
           <table className="w-full text-left font-mono text-sm whitespace-nowrap border-collapse">
             <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10">
               <tr>
-                {["", "TYPE", "CLIENT CODE", "CASE NO", "APPLICATION NAME", "TM/CPR NO", "CLASS", "STAGE", "SUB-STAGE", "AGENT", "CITY", "S2 PMT", "DATE", "ACTIONS"].map((h) => (
-                  <th key={h || "img"} className="px-3 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0">
+                {[
+                  "",
+                  "TYPE",
+                  "CLIENT CODE",
+                  "CASE NO",
+                  "APPLICATION NAME",
+                  "TM/CPR NO",
+                  "CLASS",
+                  "STAGE",
+                  "SUB-STAGE",
+                  "SERVICE ASSOCIATE",
+                  "CITY",
+                  "S2 PMT",
+                  "DATE",
+                  "ACTIONS",
+                ].map((h) => (
+                  <th
+                    key={h || "img"}
+                    className="px-3 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0"
+                  >
                     {h || "IMG"}
                   </th>
                 ))}
@@ -292,32 +413,47 @@ export function AssignedPage() {
             <tbody>
               {isLoading || isFetching ? (
                 <tr>
-                  <td colSpan={14} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">
-                    LOADING {queueView === "assigned" ? "ASSIGNED" : "ACCEPTED"} RECORDS…
+                  <td
+                    colSpan={14}
+                    className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse"
+                  >
+                    LOADING {queueView === "assigned" ? "ASSIGNED" : "ACCEPTED"}{" "}
+                    RECORDS…
                   </td>
                 </tr>
               ) : paged.length === 0 ? (
                 <tr>
                   <td colSpan={14} className="px-6 py-16 text-center">
                     <div className="font-mono font-bold text-[#6d6658] uppercase tracking-widest mb-1">
-                      No {queueView === "assigned" ? "assigned" : "accepted"} records found.
+                      No {queueView === "assigned" ? "assigned" : "accepted"}{" "}
+                      records found.
                     </div>
                     <div className="font-mono text-sm text-[#9d9488]">
-                      Only Stage 2 / {queueView === "assigned" ? "Assigned" : "Accepted"} cases are listed here.
+                      Only Stage 2 /{" "}
+                      {queueView === "assigned" ? "Assigned" : "Accepted"} cases
+                      are listed here.
                     </div>
                   </td>
                 </tr>
               ) : (
                 paged.map((r, i) => (
-                    <tr
-                      key={r.id}
-                      className={`cursor-pointer border-b border-[#0C0C0C]/10 transition-colors ${
+                  <tr
+                    key={r.id}
+                    className={`cursor-pointer border-b border-[#0C0C0C]/10 transition-colors ${
                       i % 2 === 0 ? "bg-[#F0E8D0]" : "bg-white"
                     } hover:bg-[#D9D0B7]`}
                   >
                     <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">
                       <div className="w-9 h-9 border border-[#0C0C0C]/30 bg-[#F0E8D0] overflow-hidden flex items-center justify-center">
-                        {r.image ? <img src={r.image} alt="" className="w-full h-full object-contain" /> : <span className="text-sm text-[#9d9488]">—</span>}
+                        {r.image ? (
+                          <img
+                            src={r.image}
+                            alt=""
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-sm text-[#9d9488]">—</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold text-[#6C1C1F]">
@@ -340,7 +476,9 @@ export function AssignedPage() {
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10">
                       {r.stage && (
-                        <span className={`inline-block px-1.5 py-0.5 text-sm font-bold uppercase border border-[#0C0C0C]/20 ${STAGE_BADGE[r.stage] ?? "bg-[#E8DFC7]"}`}>
+                        <span
+                          className={`inline-block px-1.5 py-0.5 text-sm font-bold uppercase border border-[#0C0C0C]/20 ${STAGE_BADGE[r.stage] ?? "bg-[#E8DFC7]"}`}
+                        >
                           {r.stage}
                         </span>
                       )}
@@ -349,7 +487,11 @@ export function AssignedPage() {
                       {formatWorkflowLabel(r.subStage) || ""}
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10 font-bold max-w-[120px] truncate">
-                      {r.agent || <span className="text-[#9d9488] font-normal italic">unassigned</span>}
+                      {r.agent || (
+                        <span className="text-[#9d9488] font-normal italic">
+                          unassigned
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10">
                       {r.city || ""}
@@ -370,17 +512,32 @@ export function AssignedPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5">
-                        <button type="button" onClick={() => goToRecord(r.id)} className="inline-flex items-center gap-1 border border-stone-300 bg-white px-2 py-1 font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white" title="Open complete record detail">
+                        <button
+                          type="button"
+                          onClick={() => goToRecord(r.id)}
+                          className="inline-flex items-center gap-1 border border-stone-300 bg-white px-2 py-1 font-mono text-sm font-bold uppercase hover:bg-[#0C0C0C] hover:text-white"
+                          title="Open complete record detail"
+                        >
                           <ExternalLink className="h-3 w-3" /> RECORD
                         </button>
                         {queueView === "assigned" ? (
-                          <button type="button" onClick={() => openAssignmentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" disabled={!canEdit}
-                            title="Open assignment acceptance summary">
+                          <button
+                            type="button"
+                            onClick={() => openAssignmentModal(r)}
+                            className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white"
+                            disabled={!canEdit}
+                            title="Open assignment acceptance summary"
+                          >
                             <ClipboardCheck className="h-3 w-3" /> ASSIGNMENT
                           </button>
                         ) : (
-                          <button type="button" onClick={() => openPaymentModal(r)} className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white" disabled={!canEdit}
-                            title="Record a payment against this accepted case payable">
+                          <button
+                            type="button"
+                            onClick={() => openPaymentModal(r)}
+                            className="inline-flex items-center gap-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-2 py-1 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white"
+                            disabled={!canEdit}
+                            title="Record a payment against this accepted case payable"
+                          >
                             <CheckCircle2 className="h-3 w-3" /> AGENT PAYMENT
                           </button>
                         )}
@@ -431,26 +588,88 @@ export function AssignedPage() {
           </div>
         )}
         {assignmentRecord && canEdit && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4" onClick={() => setAssignmentRecord(null)}>
-            <section className="w-full max-w-2xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4"
+            onClick={() => setAssignmentRecord(null)}
+          >
+            <section
+              className="w-full max-w-2xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none"
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="flex items-start gap-3 border-b border-stone-300 pb-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">AGENT ASSIGNMENT / ACCEPTANCE SUMMARY</div>
-                  <h2 className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]">{assignmentRecord.appName || "UNTITLED CASE"}</h2>
-                  <div className="mt-2 font-mono text-sm font-bold uppercase">CLIENT CODE: {assignmentRecord.clientCode || "—"} · CASE NO: {assignmentRecord.caseNumber || "—"} · TM NO: {assignmentRecord.tmCprNo || "—"}</div>
+                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">
+                    AGENT ASSIGNMENT / ACCEPTANCE SUMMARY
+                  </div>
+                  <h2 className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]">
+                    {assignmentRecord.appName || "UNTITLED CASE"}
+                  </h2>
+                  <div className="mt-2 font-mono text-sm font-bold uppercase">
+                    CLIENT CODE: {assignmentRecord.clientCode || "—"} · CASE NO:{" "}
+                    {assignmentRecord.caseNumber || "—"} · TM NO:{" "}
+                    {assignmentRecord.tmCprNo || "—"}
+                  </div>
                 </div>
-                <button type="button" onClick={() => setAssignmentRecord(null)} className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white" aria-label="Close assignment summary"><X className="h-4 w-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => setAssignmentRecord(null)}
+                  className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white"
+                  aria-label="Close assignment summary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="border border-stone-300 bg-white p-3 shadow-none"><div className="font-mono text-sm font-bold uppercase text-[#6d6658]">ASSIGNED QUEUE</div><div className="mt-1 font-serif text-3xl">{total}</div></div>
-                <div className="border border-stone-300 bg-[#D8F2E8] p-3 shadow-none"><div className="font-mono text-sm font-bold uppercase text-[#0A6B52]">COMPLETED STAGE 3/4</div><div className="mt-1 font-serif text-3xl text-[#0A6B52]">{completedQuery.data ?? "—"}</div></div>
-                <div className="border border-stone-300 bg-[#FFF0D0] p-3 shadow-none"><div className="font-mono text-sm font-bold uppercase text-[#6C1C1F]">PENDING IN ASSIGNED QUEUE</div><div className="mt-1 font-serif text-3xl text-[#6C1C1F]">{total}</div></div>
+                <div className="border border-stone-300 bg-white p-3 shadow-none">
+                  <div className="font-mono text-sm font-bold uppercase text-[#6d6658]">
+                    ASSIGNED QUEUE
+                  </div>
+                  <div className="mt-1 font-serif text-3xl">{total}</div>
+                </div>
+                <div className="border border-stone-300 bg-[#D8F2E8] p-3 shadow-none">
+                  <div className="font-mono text-sm font-bold uppercase text-[#0A6B52]">
+                    COMPLETED STAGE 3/4
+                  </div>
+                  <div className="mt-1 font-serif text-3xl text-[#0A6B52]">
+                    {completedQuery.data ?? "—"}
+                  </div>
+                </div>
+                <div className="border border-stone-300 bg-[#FFF0D0] p-3 shadow-none">
+                  <div className="font-mono text-sm font-bold uppercase text-[#6C1C1F]">
+                    PENDING IN ASSIGNED QUEUE
+                  </div>
+                  <div className="mt-1 font-serif text-3xl text-[#6C1C1F]">
+                    {total}
+                  </div>
+                </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 border border-stone-300 bg-white p-3 font-mono text-sm uppercase sm:grid-cols-4">
-                <div><span className="block text-sm font-bold text-[#6d6658]">AGENT</span><strong>{assignmentRecord.agent || "—"}</strong></div>
-                <div><span className="block text-sm font-bold text-[#6d6658]">CITY</span><strong>{assignmentRecord.city || "—"}</strong></div>
-                <div><span className="block text-sm font-bold text-[#6d6658]">STATUS</span><strong>{assignmentRecord.stage || "—"}</strong></div>
-                <div><span className="block text-sm font-bold text-[#6d6658]">SUB-STATUS</span><strong>{formatWorkflowLabel(assignmentRecord.subStage) || "—"}</strong></div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    AGENT
+                  </span>
+                  <strong>{assignmentRecord.agent || "—"}</strong>
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    CITY
+                  </span>
+                  <strong>{assignmentRecord.city || "—"}</strong>
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    STATUS
+                  </span>
+                  <strong>{assignmentRecord.stage || "—"}</strong>
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    SUB-STATUS
+                  </span>
+                  <strong>
+                    {formatWorkflowLabel(assignmentRecord.subStage) || "—"}
+                  </strong>
+                </div>
               </div>
               <div className="mt-3 p-3 bg-[#D8F2E8] border-2 border-[#0A6B52] flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -467,7 +686,8 @@ export function AssignedPage() {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#0A6B52] shrink-0" />
                   <span className="font-mono text-sm font-bold text-[#0A6B52]">
-                    Stage 2 Payment Confirmed ({assignmentRecord.stage2PaidDate || "Recorded"})
+                    Stage 2 Payment Confirmed (
+                    {assignmentRecord.stage2PaidDate || "Recorded"})
                   </span>
                 </div>
                 <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
@@ -480,23 +700,35 @@ export function AssignedPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-mono text-sm font-bold text-[#6d6658] mb-1">AGENT</label>
+                    <label className="block font-mono text-sm font-bold text-[#6d6658] mb-1">
+                      AGENT
+                    </label>
                     <select
                       value={selectedAgentName}
                       onChange={(e) => {
                         const val = e.target.value;
                         setSelectedAgentName(val);
-                        const matched = activeAgentProfiles.find((a) => a.name === val);
-                        if (matched?.city && CITIES.includes(matched.city as any)) {
+                        const matched = activeAgentProfiles.find(
+                          (a) => a.name === val,
+                        );
+                        if (
+                          matched?.city &&
+                          CITIES.includes(matched.city as any)
+                        ) {
                           setSelectedAgentCity(matched.city);
                         }
                       }}
                       className="w-full h-9 px-2 bg-white border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                     >
                       <option value="">-- SELECT AGENT --</option>
-                      {selectedAgentName && !activeAgentProfiles.some((a) => a.name === selectedAgentName) && (
-                        <option value={selectedAgentName}>{selectedAgentName} (Current)</option>
-                      )}
+                      {selectedAgentName &&
+                        !activeAgentProfiles.some(
+                          (a) => a.name === selectedAgentName,
+                        ) && (
+                          <option value={selectedAgentName}>
+                            {selectedAgentName} (Current)
+                          </option>
+                        )}
                       {activeAgentProfiles.map((a) => (
                         <option key={a.id} value={a.name}>
                           {a.name} {a.city ? `(${a.city})` : ""}
@@ -505,7 +737,9 @@ export function AssignedPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-mono text-sm font-bold text-[#6d6658] mb-1">AGENT CITY</label>
+                    <label className="block font-mono text-sm font-bold text-[#6d6658] mb-1">
+                      AGENT CITY
+                    </label>
                     <select
                       value={selectedAgentCity}
                       onChange={(e) => setSelectedAgentCity(e.target.value)}
@@ -513,17 +747,36 @@ export function AssignedPage() {
                     >
                       <option value="">-- SELECT CITY --</option>
                       {CITIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
                       ))}
                     </select>
                   </div>
                 </div>
-                <label className="block text-sm mt-3">Agreed case rate (Rs.)<input required type="number" min="0" step="0.01" value={agentRate} onChange={e=>setAgentRate(e.target.value)} className="block border px-3 py-2" /></label>
+                <label className="block text-sm mt-3">
+                  Agreed case rate (Rs.)
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={agentRate}
+                    onChange={(e) => setAgentRate(e.target.value)}
+                    className="block border px-3 py-2"
+                  />
+                </label>
                 <div className="mt-3 flex justify-end">
                   <button
                     type="button"
                     onClick={handleAssignAgent}
-                    disabled={!canEdit || isAssigning || !selectedAgentName.trim() || agentRate === "" || Number(agentRate) < 0}
+                    disabled={
+                      !canEdit ||
+                      isAssigning ||
+                      !selectedAgentName.trim() ||
+                      agentRate === "" ||
+                      Number(agentRate) < 0
+                    }
                     className="inline-flex items-center gap-1.5 border-2 border-[#0A6B52] bg-[#0A6B52] px-4 py-1.5 font-mono text-sm font-bold uppercase text-white hover:bg-[#074F3C] disabled:opacity-50 transition-colors"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -531,38 +784,105 @@ export function AssignedPage() {
                   </button>
                 </div>
               </div>
-              <p className="mt-4 border-l-4 border-[#6C1C1F] bg-[#FFF0D0] p-3 font-mono text-sm uppercase leading-relaxed">This view reports the current assignment queue from the trusted trademark status fields. Complete acceptance workflow history is available in the case detail record.</p>
-              <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => goToRecord(assignmentRecord.id)} className="inline-flex items-center gap-2 border-2 border-[#6C1C1F] bg-[#6C1C1F] px-3 py-2 font-mono text-sm font-bold uppercase text-white"><ExternalLink className="h-4 w-4" /> OPEN RECORD</button></div>
+              <p className="mt-4 border-l-4 border-[#6C1C1F] bg-[#FFF0D0] p-3 font-mono text-sm uppercase leading-relaxed">
+                This view reports the current assignment queue from the trusted
+                trademark status fields. Complete acceptance workflow history is
+                available in the case detail record.
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToRecord(assignmentRecord.id)}
+                  className="inline-flex items-center gap-2 border-2 border-[#6C1C1F] bg-[#6C1C1F] px-3 py-2 font-mono text-sm font-bold uppercase text-white"
+                >
+                  <ExternalLink className="h-4 w-4" /> OPEN RECORD
+                </button>
+              </div>
             </section>
           </div>
         )}
         {paymentRecord && canEdit && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4" onClick={() => setPaymentRecord(null)}>
-            <section className="w-full max-w-2xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none" onClick={(event) => event.stopPropagation()} aria-labelledby="agent-payment-title">
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4"
+            onClick={() => setPaymentRecord(null)}
+          >
+            <section
+              className="w-full max-w-2xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none"
+              onClick={(event) => event.stopPropagation()}
+              aria-labelledby="agent-payment-title"
+            >
               <div className="flex items-start gap-3 border-b border-stone-300 pb-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">ACCEPTED CASE · AGENT PAYABLE</div>
-                  <h2 id="agent-payment-title" className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]">{paymentRecord.appName || "UNTITLED CASE"}</h2>
-                  <div className="mt-2 font-mono text-sm font-bold uppercase">CLIENT CODE: {paymentRecord.clientCode || "—"} · CASE NO: {paymentRecord.caseNumber || "—"}</div>
+                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">
+                    ACCEPTED CASE · AGENT PAYABLE
+                  </div>
+                  <h2
+                    id="agent-payment-title"
+                    className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]"
+                  >
+                    {paymentRecord.appName || "UNTITLED CASE"}
+                  </h2>
+                  <div className="mt-2 font-mono text-sm font-bold uppercase">
+                    CLIENT CODE: {paymentRecord.clientCode || "—"} · CASE NO:{" "}
+                    {paymentRecord.caseNumber || "—"}
+                  </div>
                 </div>
-                <button type="button" onClick={() => setPaymentRecord(null)} className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white" aria-label="Close agent payment form"><X className="h-4 w-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentRecord(null)}
+                  className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white"
+                  aria-label="Close agent payment form"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               {paymentFeesQuery.isLoading ? (
-                <p className="mt-4 p-4 text-center font-mono text-sm font-bold">LOADING PAYABLES…</p>
+                <p className="mt-4 p-4 text-center font-mono text-sm font-bold">
+                  LOADING PAYABLES…
+                </p>
               ) : paymentFeesQuery.error ? (
-                <div className="mt-4 border border-[#CC0000] bg-white p-4" role="alert">
-                  <p className="font-mono text-sm text-[#CC0000]">{paymentFeesQuery.error.message}</p>
-                  <button type="button" onClick={() => void paymentFeesQuery.refetch()} className="mt-3 border border-stone-300 bg-white px-3 py-2 font-mono text-sm font-bold uppercase">RETRY</button>
+                <div
+                  className="mt-4 border border-[#CC0000] bg-white p-4"
+                  role="alert"
+                >
+                  <p className="font-mono text-sm text-[#CC0000]">
+                    {paymentFeesQuery.error.message}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void paymentFeesQuery.refetch()}
+                    className="mt-3 border border-stone-300 bg-white px-3 py-2 font-mono text-sm font-bold uppercase"
+                  >
+                    RETRY
+                  </button>
                 </div>
               ) : paymentFeesQuery.data?.length ? (
                 <div className="mt-4 space-y-3">
                   {paymentFeesQuery.data.map((fee) => (
-                    <article key={fee.id} className="border border-stone-300 bg-white p-3">
-                      <div className="font-mono text-sm font-bold uppercase">{fee.description}</div>
-                      <p className="mt-1 font-mono text-sm">Billed {formatCurrency(fee.amountBilled)} · Paid {formatCurrency(fee.amountPaid)} · Balance <strong>{formatCurrency(fee.balanceDue)}</strong></p>
+                    <article
+                      key={fee.id}
+                      className="border border-stone-300 bg-white p-3"
+                    >
+                      <div className="font-mono text-sm font-bold uppercase">
+                        {fee.description}
+                      </div>
+                      <p className="mt-1 font-mono text-sm">
+                        Billed {formatCurrency(fee.amountBilled)} · Paid{" "}
+                        {formatCurrency(fee.amountPaid)} · Balance{" "}
+                        <strong>{formatCurrency(fee.balanceDue)}</strong>
+                      </p>
                       {fee.balanceDue > 0 ? (
-                        <form className="mt-3 flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); handleRecordPayment(fee, paymentAmounts[fee.id] ?? ""); }}>
+                        <form
+                          className="mt-3 flex flex-wrap items-end gap-3"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            handleRecordPayment(
+                              fee,
+                              paymentAmounts[fee.id] ?? "",
+                            );
+                          }}
+                        >
                           <label className="block font-mono text-sm font-bold">
                             PAYMENT AMOUNT (PKR)
                             <input
@@ -572,24 +892,47 @@ export function AssignedPage() {
                               step="0.01"
                               required
                               value={paymentAmounts[fee.id] ?? ""}
-                              onChange={(event) => setPaymentAmounts((current) => ({ ...current, [fee.id]: event.target.value }))}
+                              onChange={(event) =>
+                                setPaymentAmounts((current) => ({
+                                  ...current,
+                                  [fee.id]: event.target.value,
+                                }))
+                              }
                               className="mt-1 block border border-stone-300 bg-white px-3 py-2 font-mono"
                               disabled={paymentMutation.isPending}
                             />
                           </label>
-                          <button type="submit" disabled={paymentMutation.isPending || !paymentAmounts[fee.id] || Number(paymentAmounts[fee.id]) <= 0 || Number(paymentAmounts[fee.id]) > fee.balanceDue} className="border-2 border-[#0A6B52] bg-[#0A6B52] px-4 py-2 font-mono text-sm font-bold uppercase text-white disabled:opacity-50">
-                            {paymentMutation.isPending ? "RECORDING…" : "RECORD PAYMENT"}
+                          <button
+                            type="submit"
+                            disabled={
+                              paymentMutation.isPending ||
+                              !paymentAmounts[fee.id] ||
+                              Number(paymentAmounts[fee.id]) <= 0 ||
+                              Number(paymentAmounts[fee.id]) > fee.balanceDue
+                            }
+                            className="border-2 border-[#0A6B52] bg-[#0A6B52] px-4 py-2 font-mono text-sm font-bold uppercase text-white disabled:opacity-50"
+                          >
+                            {paymentMutation.isPending
+                              ? "RECORDING…"
+                              : "RECORD PAYMENT"}
                           </button>
                         </form>
                       ) : (
-                        <p className="mt-2 font-mono text-sm font-bold uppercase text-[#0A6B52]">PAID IN FULL</p>
+                        <p className="mt-2 font-mono text-sm font-bold uppercase text-[#0A6B52]">
+                          PAID IN FULL
+                        </p>
                       )}
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 border border-stone-300 bg-white p-4 font-mono text-sm" role="status">
-                  No payable is recorded for this case yet. Payables are created when an eligible case reaches Accepted with an assigned agent and agreed rate.
+                <div
+                  className="mt-4 border border-stone-300 bg-white p-4 font-mono text-sm"
+                  role="status"
+                >
+                  No payable is recorded for this case yet. Payables are created
+                  when an eligible case reaches Accepted with an assigned agent
+                  and agreed rate.
                 </div>
               )}
             </section>

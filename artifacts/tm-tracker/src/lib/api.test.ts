@@ -70,8 +70,10 @@ function createQuery(response: unknown = { data: [], error: null, count: 0 }) {
     delete: vi.fn(() => query),
     maybeSingle: vi.fn(() => Promise.resolve(response)),
     single: vi.fn(() => Promise.resolve(response)),
-    then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-      Promise.resolve(response).then(resolve, reject),
+    then: (
+      resolve: (value: unknown) => unknown,
+      reject: (reason: unknown) => unknown,
+    ) => Promise.resolve(response).then(resolve, reject),
   };
   return query;
 }
@@ -110,19 +112,31 @@ beforeEach(() => {
   // Clear queued mockReturnValueOnce responses as well as call history.
   // Early validation failures can leave unused responses for the next test.
   vi.resetAllMocks();
-  supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  supabaseMock.auth.getUser.mockResolvedValue({
+    data: { user: { id: "user-1" } },
+  });
   supabaseMock.storage.from.mockReturnValue({
     createSignedUrls: vi.fn().mockResolvedValue({ data: [] }),
-    createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/upload.png" } }),
+    createSignedUrl: vi
+      .fn()
+      .mockResolvedValue({
+        data: { signedUrl: "https://signed.example/upload.png" },
+      }),
   });
 });
 
 describe("Brandex data mapping", () => {
   it("keeps creation, filing, and modification dates independent", async () => {
-    const row = { ...baseSupabaseRow, created_at: "2026-09-01T09:15:00Z", updated_at: "2026-09-02T12:30:00Z" };
+    const row = {
+      ...baseSupabaseRow,
+      created_at: "2026-09-01T09:15:00Z",
+      updated_at: "2026-09-02T12:30:00Z",
+    };
     supabaseMock.from.mockImplementation((table: string) => {
-      if (table === "trademarks") return createQuery({ data: row, error: null });
-      if (table === "form_registry") return createQuery({ data: [], error: null });
+      if (table === "trademarks")
+        return createQuery({ data: row, error: null });
+      if (table === "form_registry")
+        return createQuery({ data: [], error: null });
       throw new Error(`Unexpected table: ${table}`);
     });
     const record = await getRecord(row.id);
@@ -133,7 +147,10 @@ describe("Brandex data mapping", () => {
 
   it("does not substitute filing date when creation timestamp is unavailable", async () => {
     supabaseMock.from.mockImplementation((table: string) =>
-      createQuery({ data: table === "trademarks" ? baseSupabaseRow : [], error: null }),
+      createQuery({
+        data: table === "trademarks" ? baseSupabaseRow : [],
+        error: null,
+      }),
     );
     expect((await getRecord(baseSupabaseRow.id))?.createdAt).toBeUndefined();
   });
@@ -177,7 +194,9 @@ describe("Brandex data mapping", () => {
       logo_path: "pending/user/logo.png",
       legacy_image_url: null,
     });
-    expect(inputToRow({ image: "https://drive.google.com/logo" })).toMatchObject({
+    expect(
+      inputToRow({ image: "https://drive.google.com/logo" }),
+    ).toMatchObject({
       logo_path: null,
       legacy_image_url: "https://drive.google.com/logo",
     });
@@ -190,30 +209,65 @@ describe("Brandex data mapping", () => {
 
 describe("Brandex Supabase access patterns", () => {
   it("loads paginated list rows without fetching private detail fields", async () => {
-    const query = createQuery({ data: [baseSupabaseRow], error: null, count: 1 });
+    const query = createQuery({
+      data: [baseSupabaseRow],
+      error: null,
+      count: 1,
+    });
     supabaseMock.from.mockReturnValue(query);
 
-    const page = await listTrademarkPage({ search: " CASE,9 ", page: 2, pageSize: 50 });
+    const page = await listTrademarkPage({
+      search: " CASE,9 ",
+      page: 2,
+      pageSize: 50,
+    });
 
-    expect(supabaseMock.from).toHaveBeenCalledWith("trademarks");
-    expect(query.select).toHaveBeenCalledWith(expect.not.stringContaining("notes"), { count: "exact" });
-    expect(query.select).toHaveBeenCalledWith(expect.stringContaining("logo_path"), { count: "exact" });
-    expect(query.order).toHaveBeenNthCalledWith(1, "filing_date", { ascending: false });
-    expect(query.order).toHaveBeenNthCalledWith(2, "updated_at", { ascending: false });
+    expect(supabaseMock.from).toHaveBeenCalledWith("trademark_followup");
+    expect(query.select).toHaveBeenCalledWith(
+      expect.not.stringContaining("notes"),
+      { count: "exact" },
+    );
+    expect(query.select).toHaveBeenCalledWith(
+      expect.stringContaining("logo_path"),
+      { count: "exact" },
+    );
+    expect(query.order).toHaveBeenNthCalledWith(1, "filing_date", {
+      ascending: false,
+    });
+    expect(query.order).toHaveBeenNthCalledWith(2, "updated_at", {
+      ascending: false,
+    });
     expect(query.order).toHaveBeenNthCalledWith(3, "type", { ascending: true });
-    expect(query.order).toHaveBeenNthCalledWith(4, "client_code", { ascending: true });
-    expect(query.order).toHaveBeenNthCalledWith(5, "case_number", { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(4, "client_code", {
+      ascending: true,
+    });
+    expect(query.order).toHaveBeenNthCalledWith(5, "case_number", {
+      ascending: true,
+    });
     expect(query.range).toHaveBeenCalledWith(50, 99);
-    expect(query.or).toHaveBeenCalledWith(expect.stringContaining("case_number.ilike.%CASE 9%"));
+    expect(query.or).toHaveBeenCalledWith(
+      expect.stringContaining("case_number.ilike.%CASE 9%"),
+    );
     expect(supabaseMock.storage.from).toHaveBeenCalledWith("trademark-files");
-    expect(page.records[0]).toMatchObject({ id: "BX-1", caseNumber: "CASE-9", image: "" });
+    expect(page.records[0]).toMatchObject({
+      id: "BX-1",
+      caseNumber: "CASE-9",
+      image: "",
+    });
   });
 
   it("exports filtered records by reusing server-side filters with detail columns", async () => {
-    const query = createQuery({ data: [baseSupabaseRow], error: null, count: 1 });
+    const query = createQuery({
+      data: [baseSupabaseRow],
+      error: null,
+      count: 1,
+    });
     supabaseMock.from.mockReturnValue(query);
 
-    const records = await listTrademarksForExport({ city: "Islamabad", tmForm: "TM5" });
+    const records = await listTrademarksForExport({
+      city: "Islamabad",
+      tmForm: "TM5",
+    });
 
     expect(query.select).toHaveBeenCalledWith("*", { count: "exact" });
     expect(query.eq).toHaveBeenCalledWith("city", "Islamabad");
@@ -255,15 +309,31 @@ describe("Brandex Supabase access patterns", () => {
 
     const result = await searchTm("TM 123 45");
 
-    expect(trademarkQuery.eq).toHaveBeenCalledWith("tm_cpr_number_norm", "12345");
+    expect(trademarkQuery.eq).toHaveBeenCalledWith(
+      "tm_cpr_number_norm",
+      "12345",
+    );
     expect(createSignedUrls).toHaveBeenCalledWith(["logos/bx-1.png"], 3600);
     expect(result.records[0].image).toBe("https://signed.example/logo.png");
   });
 
   it("routes create, update, and delete through RLS-protected trademark mutations", async () => {
-    const createQueryMock = createQuery({ data: { id: "BX-2", case_number: "CASE-10" }, error: null });
-    const selectBeforeUpdateMock = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true }, error: null });
-    const updateQueryMock = createQuery({ data: { id: "BX-2", version: 4 }, error: null });
+    const createQueryMock = createQuery({
+      data: { id: "BX-2", case_number: "CASE-10" },
+      error: null,
+    });
+    const selectBeforeUpdateMock = createQuery({
+      data: {
+        status: "STAGE 1",
+        sub_status: "Acknowledgment",
+        stage1_paid: true,
+      },
+      error: null,
+    });
+    const updateQueryMock = createQuery({
+      data: { id: "BX-2", version: 4 },
+      error: null,
+    });
     const deleteQueryMock = createQuery({ error: null });
     supabaseMock.from
       .mockReturnValueOnce(createQueryMock)
@@ -271,57 +341,109 @@ describe("Brandex Supabase access patterns", () => {
       .mockReturnValueOnce(updateQueryMock)
       .mockReturnValueOnce(deleteQueryMock);
 
-    await createTrademark({ type: "X", clientCode: "C-7", caseNumber: "CASE-10", appName: "NEW", city: "Lahore", stage: "STAGE 1" });
-    await updateTrademark("BX-2", { type: "X", clientCode: "C-7", caseNumber: "CASE-10", appName: "UPDATED", city: "Lahore", stage: "STAGE 1" }, 3);
+    await createTrademark({
+      type: "X",
+      clientCode: "C-7",
+      caseNumber: "CASE-10",
+      appName: "NEW",
+      city: "Lahore",
+      stage: "STAGE 1",
+    });
+    await updateTrademark(
+      "BX-2",
+      {
+        type: "X",
+        clientCode: "C-7",
+        caseNumber: "CASE-10",
+        appName: "UPDATED",
+        city: "Lahore",
+        stage: "STAGE 1",
+      },
+      3,
+    );
     await deleteTrademark("BX-2");
 
-    expect(createQueryMock.insert).toHaveBeenCalledWith(expect.objectContaining({ created_by: "user-1", updated_by: "user-1" }));
-    expect(updateQueryMock.update).toHaveBeenCalledWith(expect.objectContaining({ application_name: "UPDATED" }));
+    expect(createQueryMock.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ created_by: "user-1", updated_by: "user-1" }),
+    );
+    expect(updateQueryMock.update).toHaveBeenCalledWith(
+      expect.objectContaining({ application_name: "UPDATED" }),
+    );
     expect(updateQueryMock.eq).toHaveBeenCalledWith("version", 3);
     expect(deleteQueryMock.delete).toHaveBeenCalled();
     expect(deleteQueryMock.eq).toHaveBeenCalledWith("id", "BX-2");
   });
 
   it("turns a database TM-number uniqueness conflict into a clear error", async () => {
-    supabaseMock.from.mockReturnValue(createQuery({
-      data: null,
-      error: {
-        code: "23505",
-        constraint: "trademarks_tm_cpr_number_norm_unique_idx",
-        message: "duplicate key value violates unique constraint \"trademarks_tm_cpr_number_norm_unique_idx\"",
-      },
-    }));
+    supabaseMock.from.mockReturnValue(
+      createQuery({
+        data: null,
+        error: {
+          code: "23505",
+          constraint: "trademarks_tm_cpr_number_norm_unique_idx",
+          message:
+            'duplicate key value violates unique constraint "trademarks_tm_cpr_number_norm_unique_idx"',
+        },
+      }),
+    );
 
-    await expect(createTrademark({
-      type: "X",
-      clientCode: "C-7",
-      caseNumber: "CASE-11",
-      appName: "DUPLICATE",
-      tmCprNo: "121-212",
-      city: "Lahore",
-      stage: "STAGE 1",
-    })).rejects.toBeInstanceOf(DuplicateTmNumberError);
+    await expect(
+      createTrademark({
+        type: "X",
+        clientCode: "C-7",
+        caseNumber: "CASE-11",
+        appName: "DUPLICATE",
+        tmCprNo: "121-212",
+        city: "Lahore",
+        stage: "STAGE 1",
+      }),
+    ).rejects.toBeInstanceOf(DuplicateTmNumberError);
   });
 
   it("raises a conflict when optimistic locking updates no row", async () => {
-    const selectQuery = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true }, error: null });
+    const selectQuery = createQuery({
+      data: {
+        status: "STAGE 1",
+        sub_status: "Acknowledgment",
+        stage1_paid: true,
+      },
+      error: null,
+    });
     const updateQuery = createQuery({ data: null, error: null });
     supabaseMock.from
       .mockReturnValueOnce(selectQuery)
       .mockReturnValueOnce(updateQuery);
 
     await expect(
-      updateTrademark("BX-1", { type: "X", clientCode: "C-7", caseNumber: "CASE-9", appName: "BRANDEX", city: "Islamabad", stage: "STAGE 2", subStage: "Assigned" }, 3),
+      updateTrademark(
+        "BX-1",
+        {
+          type: "X",
+          clientCode: "C-7",
+          caseNumber: "CASE-9",
+          appName: "BRANDEX",
+          city: "Islamabad",
+          stage: "STAGE 2",
+          subStage: "Assigned",
+        },
+        3,
+      ),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it("uploads files into private user-scoped storage and returns a short-lived signed URL", async () => {
     const storage = {
       upload: vi.fn().mockResolvedValue({ error: null }),
-      createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/upload.png" } }),
+      createSignedUrl: vi
+        .fn()
+        .mockResolvedValue({
+          data: { signedUrl: "https://signed.example/upload.png" },
+        }),
     };
     supabaseMock.storage.from.mockReturnValue(storage);
-    vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000000");
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000000",
+    );
 
     const file = new File(["image"], "brand.png", { type: "image/png" });
     const result = await uploadImage(file);
@@ -341,24 +463,28 @@ describe("Brandex Supabase access patterns", () => {
 
   it("fetches workflow history mapped to TrademarkWorkflowEvent array", async () => {
     const query = createQuery({
-      data: [{
-        id: 1,
-        trademark_id: "BX-1",
-        event_type: "STATUS_CHANGE",
-        from_status: "STAGE 1",
-        from_sub_status: null,
-        to_status: "STAGE 2",
-        to_sub_status: "Accepted",
-        event_at: "2026-09-10T12:00:00Z",
-        changed_by: "user-1",
-        profiles: { display_name: "User A" }
-      }],
-      error: null
+      data: [
+        {
+          id: 1,
+          trademark_id: "BX-1",
+          event_type: "STATUS_CHANGE",
+          from_status: "STAGE 1",
+          from_sub_status: null,
+          to_status: "STAGE 2",
+          to_sub_status: "Accepted",
+          event_at: "2026-09-10T12:00:00Z",
+          changed_by: "user-1",
+          profiles: { display_name: "User A" },
+        },
+      ],
+      error: null,
     });
     supabaseMock.from.mockReturnValue(query);
 
     const history = await getWorkflowHistory("BX-1");
-    expect(supabaseMock.from).toHaveBeenCalledWith("trademark_workflow_history");
+    expect(supabaseMock.from).toHaveBeenCalledWith(
+      "trademark_workflow_history",
+    );
     expect(query.eq).toHaveBeenCalledWith("trademark_id", "BX-1");
     expect(history).toHaveLength(1);
     expect(history[0].toSubStatus).toBe("Accepted");
@@ -366,46 +492,95 @@ describe("Brandex Supabase access patterns", () => {
   });
 
   it("enforces Stage 2 payment gate (stage1_paid = true required)", () => {
-    expect(() => validatePaymentGate("STAGE 2", { stage1_paid: false, stage2_paid: false, stage3_paid: false }))
-      .toThrow(StagePaymentRequiredError);
-    expect(() => validatePaymentGate("STAGE 2", { stage1_paid: true, stage2_paid: false, stage3_paid: false }))
-      .not.toThrow();
+    expect(() =>
+      validatePaymentGate("STAGE 2", {
+        stage1_paid: false,
+        stage2_paid: false,
+        stage3_paid: false,
+      }),
+    ).toThrow(StagePaymentRequiredError);
+    expect(() =>
+      validatePaymentGate("STAGE 2", {
+        stage1_paid: true,
+        stage2_paid: false,
+        stage3_paid: false,
+      }),
+    ).not.toThrow();
   });
 
   describe("Stage 1 workflow rules", () => {
     it("allows Filing → Acknowledgement", () => {
-      expect(workflowTransitionError("STAGE 1", "Filing", "STAGE 1", "Acknowledgment")).toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 1",
+          "Filing",
+          "STAGE 1",
+          "Acknowledgment",
+        ),
+      ).toBeNull();
     });
 
     it("allows Filing → Examination", () => {
-      expect(workflowTransitionError("STAGE 1", "Filing", "STAGE 1", "Examination")).toBeNull();
+      expect(
+        workflowTransitionError("STAGE 1", "Filing", "STAGE 1", "Examination"),
+      ).toBeNull();
     });
 
     it("allows Examination → Acknowledgement", () => {
-      expect(workflowTransitionError("STAGE 1", "Examination", "STAGE 1", "Acknowledgment")).toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 1",
+          "Examination",
+          "STAGE 1",
+          "Acknowledgment",
+        ),
+      ).toBeNull();
     });
 
     it("rejects Acknowledgement → Filing", () => {
-      expect(workflowTransitionError("STAGE 1", "Acknowledgment", "STAGE 1", "Filing")).not.toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 1",
+          "Acknowledgment",
+          "STAGE 1",
+          "Filing",
+        ),
+      ).not.toBeNull();
     });
 
     it("rejects Acknowledgement → Examination", () => {
-      expect(workflowTransitionError("STAGE 1", "Acknowledgment", "STAGE 1", "Examination")).not.toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 1",
+          "Acknowledgment",
+          "STAGE 1",
+          "Examination",
+        ),
+      ).not.toBeNull();
     });
 
     it("rejects Stage 1 → Stage 2 without required Stage 1 payment condition", () => {
-      expect(() => validatePaymentGate("STAGE 2", { stage1_paid: false, stage2_paid: false, stage3_paid: false }))
-        .toThrow(StagePaymentRequiredError);
+      expect(() =>
+        validatePaymentGate("STAGE 2", {
+          stage1_paid: false,
+          stage2_paid: false,
+          stage3_paid: false,
+        }),
+      ).toThrow(StagePaymentRequiredError);
     });
   });
 
   describe("Stage 2 workflow rules", () => {
     it("allows Assigned → Accepted", () => {
-      expect(workflowTransitionError("STAGE 2", "Assigned", "STAGE 2", "Accepted")).toBeNull();
+      expect(
+        workflowTransitionError("STAGE 2", "Assigned", "STAGE 2", "Accepted"),
+      ).toBeNull();
     });
 
     it("allows Assigned → Hearing", () => {
-      expect(workflowTransitionError("STAGE 2", "Assigned", "STAGE 2", "Hearing")).toBeNull();
+      expect(
+        workflowTransitionError("STAGE 2", "Assigned", "STAGE 2", "Hearing"),
+      ).toBeNull();
     });
 
     it("rejects Stage 2 → Stage 1", () => {
@@ -413,36 +588,79 @@ describe("Brandex Supabase access patterns", () => {
     });
 
     it("rejects Stage 2 → Stage 3 without required Stage 2 payment condition", () => {
-      expect(() => validatePaymentGate("STAGE 3", { stage1_paid: true, stage2_paid: false, stage3_paid: false }))
-        .toThrow(StagePaymentRequiredError);
+      expect(() =>
+        validatePaymentGate("STAGE 3", {
+          stage1_paid: true,
+          stage2_paid: false,
+          stage3_paid: false,
+        }),
+      ).toThrow(StagePaymentRequiredError);
     });
 
     it("allows agent assignment without Stage 2 payment", async () => {
-      const queryMock = createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage1_paid: true, stage2_paid: false }, error: null });
+      const queryMock = createQuery({
+        data: {
+          status: "STAGE 2",
+          sub_status: "Assigned",
+          stage1_paid: true,
+          stage2_paid: false,
+        },
+        error: null,
+      });
       const updateQueryMock = createQuery({ error: null });
       supabaseMock.from
         .mockReturnValueOnce(queryMock)
         .mockReturnValueOnce(updateQueryMock);
 
-      await expect(assignStage2Agent("BX-1", "Agent Name", "Islamabad")).resolves.not.toThrow();
+      await expect(
+        assignStage2Agent("BX-1", "Agent Name", "Islamabad"),
+      ).resolves.not.toThrow();
     });
   });
 
   describe("Stage 4 workflow rules", () => {
     it("allows CER Acknowledge → CER Received", () => {
-      expect(workflowTransitionError("STAGE 4", "CER Acknowledge", "STAGE 4", "CER Received")).toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 4",
+          "CER Acknowledge",
+          "STAGE 4",
+          "CER Received",
+        ),
+      ).toBeNull();
     });
 
     it("allows CER Received → CER Dispatch", () => {
-      expect(workflowTransitionError("STAGE 4", "CER Received", "STAGE 4", "CER Dispatch")).toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 4",
+          "CER Received",
+          "STAGE 4",
+          "CER Dispatch",
+        ),
+      ).toBeNull();
     });
 
     it("rejects CER Received → CER Acknowledge", () => {
-      expect(workflowTransitionError("STAGE 4", "CER Received", "STAGE 4", "CER Acknowledge")).not.toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 4",
+          "CER Received",
+          "STAGE 4",
+          "CER Acknowledge",
+        ),
+      ).not.toBeNull();
     });
 
     it("rejects CER Dispatch → CER Received", () => {
-      expect(workflowTransitionError("STAGE 4", "CER Dispatch", "STAGE 4", "CER Received")).not.toBeNull();
+      expect(
+        workflowTransitionError(
+          "STAGE 4",
+          "CER Dispatch",
+          "STAGE 4",
+          "CER Received",
+        ),
+      ).not.toBeNull();
     });
   });
 
@@ -471,25 +689,46 @@ describe("Brandex Supabase access patterns", () => {
     });
 
     it("requires STOPPED reason when entering STOPPED", async () => {
-      const queryMock = createQuery({ data: { status: "STAGE 1", stage1_paid: true, stage2_paid: false, stage3_paid: false, notes: "" }, error: null });
+      const queryMock = createQuery({
+        data: {
+          status: "STAGE 1",
+          stage1_paid: true,
+          stage2_paid: false,
+          stage3_paid: false,
+          notes: "",
+        },
+        error: null,
+      });
       const updateQueryMock = createQuery({ error: null });
       supabaseMock.from
         .mockReturnValueOnce(queryMock)
         .mockReturnValueOnce(updateQueryMock);
 
-      await expect(updateTrademarkStatus("BX-1", "STOPPED", null))
-        .rejects.toThrow("STOPPED requires a reason");
+      await expect(
+        updateTrademarkStatus("BX-1", "STOPPED", null),
+      ).rejects.toThrow("STOPPED requires a reason");
     });
 
     it("stores STOPPED reason in notes field", async () => {
-      const queryMock = createQuery({ data: { status: "STAGE 1", stage1_paid: true, stage2_paid: false, stage3_paid: false, notes: "" }, error: null });
+      const queryMock = createQuery({
+        data: {
+          status: "STAGE 1",
+          stage1_paid: true,
+          stage2_paid: false,
+          stage3_paid: false,
+          notes: "",
+        },
+        error: null,
+      });
       const updateQueryMock = createQuery({ error: null });
       supabaseMock.from
         .mockReturnValueOnce(queryMock)
         .mockReturnValueOnce(updateQueryMock);
 
       // Should not throw when reason is provided
-      await expect(updateTrademarkStatus("BX-1", "STOPPED", null, "Client requested stop")).resolves.not.toThrow();
+      await expect(
+        updateTrademarkStatus("BX-1", "STOPPED", null, "Client requested stop"),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -512,7 +751,9 @@ describe("Brandex Supabase access patterns", () => {
     // Stage 2 with unpaid Stage 1 status must be blocked
     expect(isStage2PaymentRequired("STAGE 2", false)).toBe(true);
     expect(isStage2PaymentRequired("STAGE 2", undefined)).toBe(true);
-    expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(StagePaymentRequiredError);
+    expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(
+      StagePaymentRequiredError,
+    );
     expect(() => validateStage2PaymentGate("STAGE 2", false)).toThrow(
       "Stage 2 cannot be started until Stage 1 payment is cleared.",
     );
@@ -529,9 +770,22 @@ describe("Brandex Supabase access patterns", () => {
   it("allows agent assignment without Stage 2 payment (new rule)", async () => {
     // Agent assignment no longer requires payment check
     const updateQueryMock = createQuery({ error: null });
-    supabaseMock.from.mockReturnValueOnce(createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage2_paid: false }, error: null })).mockReturnValueOnce(updateQueryMock);
+    supabaseMock.from
+      .mockReturnValueOnce(
+        createQuery({
+          data: {
+            status: "STAGE 2",
+            sub_status: "Assigned",
+            stage2_paid: false,
+          },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(updateQueryMock);
 
-    await expect(assignStage2Agent("BX-1", "Counsel A", "Islamabad")).resolves.not.toThrow();
+    await expect(
+      assignStage2Agent("BX-1", "Counsel A", "Islamabad"),
+    ).resolves.not.toThrow();
     // Just verify it doesn't throw - the implementation changed
   });
 });
@@ -556,21 +810,34 @@ const baseStageDocRow = {
 
 describe("Batch 9: Stage document API", () => {
   it("uploadStageDocument — maps stage, sub_stage, and title on the inserted row", async () => {
-    const trademarkQuery = createQuery({ data: { status: "STAGE 1" }, error: null });
+    const trademarkQuery = createQuery({
+      data: { status: "STAGE 1" },
+      error: null,
+    });
     const insertQuery = createQuery({ data: baseStageDocRow, error: null });
-    insertQuery.single = vi.fn().mockResolvedValue({ data: baseStageDocRow, error: null });
+    insertQuery.single = vi
+      .fn()
+      .mockResolvedValue({ data: baseStageDocRow, error: null });
     const uploadStorage = {
       upload: vi.fn().mockResolvedValue({ error: null }),
-      createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/doc.pdf" } }),
+      createSignedUrl: vi
+        .fn()
+        .mockResolvedValue({
+          data: { signedUrl: "https://signed.example/doc.pdf" },
+        }),
       remove: vi.fn(),
     };
     supabaseMock.from
       .mockReturnValueOnce(trademarkQuery)
       .mockReturnValueOnce(insertQuery);
     supabaseMock.storage.from.mockReturnValue(uploadStorage);
-    vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
+    );
 
-    const file = new File([new Uint8Array(204800)], "application.pdf", { type: "application/pdf" });
+    const file = new File([new Uint8Array(204800)], "application.pdf", {
+      type: "application/pdf",
+    });
     const result = await uploadStageDocument(file, {
       trademarkId: "BX-1",
       stage: "STAGE 1",
@@ -603,15 +870,25 @@ describe("Batch 9: Stage document API", () => {
       createSignedUrl: vi.fn(),
       remove: vi.fn().mockResolvedValue({ error: null }),
     };
-    const trademarkQuery = createQuery({ data: { status: "STAGE 1" }, error: null });
-    const failQuery = createQuery({ data: null, error: { message: "insert failed" } });
+    const trademarkQuery = createQuery({
+      data: { status: "STAGE 1" },
+      error: null,
+    });
+    const failQuery = createQuery({
+      data: null,
+      error: { message: "insert failed" },
+    });
     // Set up single() to return error for insert
-    failQuery.single = vi.fn().mockResolvedValue({ data: null, error: { message: "insert failed" } });
+    failQuery.single = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: { message: "insert failed" } });
     supabaseMock.from
       .mockReturnValueOnce(trademarkQuery)
       .mockReturnValueOnce(failQuery);
     supabaseMock.storage.from.mockReturnValue(removeStorage);
-    vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
+    );
 
     const file = new File(["pdf"], "app.pdf", { type: "application/pdf" });
     await expect(
@@ -619,8 +896,9 @@ describe("Batch 9: Stage document API", () => {
     ).rejects.toThrow("insert failed");
 
     // Orphan cleanup must be attempted
-    expect(removeStorage.remove).toHaveBeenCalledWith([expect.stringMatching(/^BX-1\/STAGE_1\//)],
-    );
+    expect(removeStorage.remove).toHaveBeenCalledWith([
+      expect.stringMatching(/^BX-1\/STAGE_1\//),
+    ]);
 
     void storagePath; // suppress unused-variable lint
   });
@@ -631,16 +909,30 @@ describe("Batch 9: Stage document API", () => {
       createSignedUrl: vi.fn().mockResolvedValue({ data: null }),
       remove: vi.fn(),
     };
-    const trademarkQuery = createQuery({ data: { status: "STAGE 1" }, error: null });
-    const insertQuery = createQuery({ data: { ...baseStageDocRow, sub_stage: null, title: null }, error: null });
-    insertQuery.single = vi.fn().mockResolvedValue({ data: { ...baseStageDocRow, sub_stage: null, title: null }, error: null });
+    const trademarkQuery = createQuery({
+      data: { status: "STAGE 1" },
+      error: null,
+    });
+    const insertQuery = createQuery({
+      data: { ...baseStageDocRow, sub_stage: null, title: null },
+      error: null,
+    });
+    insertQuery.single = vi
+      .fn()
+      .mockResolvedValue({
+        data: { ...baseStageDocRow, sub_stage: null, title: null },
+        error: null,
+      });
     supabaseMock.from
       .mockReturnValueOnce(trademarkQuery)
       .mockReturnValueOnce(insertQuery);
     supabaseMock.storage.from.mockReturnValue(noUrlStorage);
 
     const file = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
-    const result = await uploadStageDocument(file, { trademarkId: "BX-1", stage: "STAGE 1" });
+    const result = await uploadStageDocument(file, {
+      trademarkId: "BX-1",
+      stage: "STAGE 1",
+    });
 
     // signedUrl absent — no public URL exposed
     expect(result.signedUrl).toBeUndefined();
@@ -649,9 +941,19 @@ describe("Batch 9: Stage document API", () => {
   });
 
   it("listStageDocuments — returns all docs for trademark when no stage filter", async () => {
-    const row2 = { ...baseStageDocRow, id: "doc-uuid-2", stage: "STAGE 2", storage_path: "BX-1/STAGE_2/doc-uuid-2.pdf" };
-    const listQuery = createQuery({ data: [baseStageDocRow, row2], error: null });
-    listQuery.single = vi.fn().mockResolvedValue({ data: [baseStageDocRow, row2], error: null });
+    const row2 = {
+      ...baseStageDocRow,
+      id: "doc-uuid-2",
+      stage: "STAGE 2",
+      storage_path: "BX-1/STAGE_2/doc-uuid-2.pdf",
+    };
+    const listQuery = createQuery({
+      data: [baseStageDocRow, row2],
+      error: null,
+    });
+    listQuery.single = vi
+      .fn()
+      .mockResolvedValue({ data: [baseStageDocRow, row2], error: null });
     supabaseMock.from.mockReturnValue(listQuery);
     supabaseMock.storage.from.mockReturnValue({
       createSignedUrls: vi.fn().mockResolvedValue({
@@ -677,10 +979,16 @@ describe("Batch 9: Stage document API", () => {
 
   it("listStageDocuments — applies stage filter when stage argument is provided", async () => {
     const listQuery = createQuery({ data: [baseStageDocRow], error: null });
-    listQuery.single = vi.fn().mockResolvedValue({ data: [baseStageDocRow], error: null });
+    listQuery.single = vi
+      .fn()
+      .mockResolvedValue({ data: [baseStageDocRow], error: null });
     supabaseMock.from.mockReturnValue(listQuery);
     supabaseMock.storage.from.mockReturnValue({
-      createSignedUrls: vi.fn().mockResolvedValue({ data: [{ signedUrl: "https://signed.example/stage1.pdf" }] }),
+      createSignedUrls: vi
+        .fn()
+        .mockResolvedValue({
+          data: [{ signedUrl: "https://signed.example/stage1.pdf" }],
+        }),
     });
 
     const docs = await listStageDocuments("BX-1", "STAGE 1");
@@ -697,7 +1005,10 @@ describe("Batch 9: Stage document API", () => {
   // Batch 2: Document stage restriction tests
   describe("Batch 2: Document Stage Restrictions", () => {
     it("rejects upload to different stage than current", async () => {
-      const trademarkQuery = createQuery({ data: { status: "STAGE 1" }, error: null });
+      const trademarkQuery = createQuery({
+        data: { status: "STAGE 1" },
+        error: null,
+      });
       const uploadStorage = {
         upload: vi.fn().mockResolvedValue({ error: null }),
         createSignedUrl: vi.fn(),
@@ -706,52 +1017,74 @@ describe("Batch 9: Stage document API", () => {
       supabaseMock.from.mockReturnValueOnce(trademarkQuery);
       supabaseMock.storage.from.mockReturnValue(uploadStorage);
 
-      const file = new File([new Uint8Array(204800)], "doc.pdf", { type: "application/pdf" });
+      const file = new File([new Uint8Array(204800)], "doc.pdf", {
+        type: "application/pdf",
+      });
 
       await expect(
         uploadStageDocument(file, {
           trademarkId: "BX-1",
           stage: "STAGE 2",
-        })
-      ).rejects.toThrow("You can only upload documents for the current workflow stage (STAGE 1). Cannot upload to STAGE 2.");
+        }),
+      ).rejects.toThrow(
+        "You can only upload documents for the current workflow stage (STAGE 1). Cannot upload to STAGE 2.",
+      );
     });
 
     it("rejects upload when record is in STOPPED state", async () => {
-      const trademarkQuery = createQuery({ data: { status: "STOPPED" }, error: null });
+      const trademarkQuery = createQuery({
+        data: { status: "STOPPED" },
+        error: null,
+      });
       supabaseMock.from.mockReturnValue(trademarkQuery);
 
-      const file = new File([new Uint8Array(204800)], "doc.pdf", { type: "application/pdf" });
+      const file = new File([new Uint8Array(204800)], "doc.pdf", {
+        type: "application/pdf",
+      });
 
       await expect(
         uploadStageDocument(file, {
           trademarkId: "BX-1",
           stage: "STOPPED",
-        })
+        }),
       ).rejects.toThrow("Document uploads are not allowed for STOPPED cases.");
     });
 
     it("allows upload to current stage", async () => {
-      const trademarkQuery = createQuery({ data: { status: "STAGE 2" }, error: null });
+      const trademarkQuery = createQuery({
+        data: { status: "STAGE 2" },
+        error: null,
+      });
       const insertQuery = createQuery({ data: baseStageDocRow, error: null });
-      insertQuery.single = vi.fn().mockResolvedValue({ data: baseStageDocRow, error: null });
+      insertQuery.single = vi
+        .fn()
+        .mockResolvedValue({ data: baseStageDocRow, error: null });
       const uploadStorage = {
         upload: vi.fn().mockResolvedValue({ error: null }),
-        createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/doc.pdf" } }),
+        createSignedUrl: vi
+          .fn()
+          .mockResolvedValue({
+            data: { signedUrl: "https://signed.example/doc.pdf" },
+          }),
         remove: vi.fn(),
       };
       supabaseMock.from
         .mockReturnValueOnce(trademarkQuery)
         .mockReturnValueOnce(insertQuery);
       supabaseMock.storage.from.mockReturnValue(uploadStorage);
-      vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+      vi.spyOn(crypto, "randomUUID").mockReturnValue(
+        "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
+      );
 
-      const file = new File([new Uint8Array(204800)], "doc.pdf", { type: "application/pdf" });
+      const file = new File([new Uint8Array(204800)], "doc.pdf", {
+        type: "application/pdf",
+      });
 
       await expect(
         uploadStageDocument(file, {
           trademarkId: "BX-1",
           stage: "STAGE 2",
-        })
+        }),
       ).resolves.not.toThrow();
     });
   });
@@ -759,11 +1092,15 @@ describe("Batch 9: Stage document API", () => {
 
 describe("Batch 10: Workflow Terminology Expansion", () => {
   it("formatWorkflowLabel — expands abbreviated sub-stage codes to full terminology", () => {
-    expect(formatWorkflowLabel("D-Note Submitted")).toBe("Demand Note Submitted");
+    expect(formatWorkflowLabel("D-Note Submitted")).toBe(
+      "Demand Note Submitted",
+    );
     expect(formatWorkflowLabel("D-Note Received")).toBe("Demand Note Received");
     expect(formatWorkflowLabel("OPPO: Filed")).toBe("Opposition: Filed");
     expect(formatWorkflowLabel("OPPO: Received")).toBe("Opposition: Received");
-    expect(formatWorkflowLabel("OPPO: Withdrawn")).toBe("Opposition: Withdrawn");
+    expect(formatWorkflowLabel("OPPO: Withdrawn")).toBe(
+      "Opposition: Withdrawn",
+    );
   });
 
   it("formatWorkflowLabel — leaves unmapped or already expanded terminology unchanged", () => {
@@ -775,7 +1112,9 @@ describe("Batch 10: Workflow Terminology Expansion", () => {
     expect(formatWorkflowLabel("CER Dispatch")).toBe("CER Dispatch");
     expect(formatWorkflowLabel("CER Received")).toBe("CER Received");
     expect(formatWorkflowLabel("CER Acknowledge")).toBe("CER Acknowledge");
-    expect(formatWorkflowLabel("Demand Note Submitted")).toBe("Demand Note Submitted");
+    expect(formatWorkflowLabel("Demand Note Submitted")).toBe(
+      "Demand Note Submitted",
+    );
   });
 
   it("formatWorkflowLabel — safely handles empty or null/undefined values", () => {
@@ -785,11 +1124,19 @@ describe("Batch 10: Workflow Terminology Expansion", () => {
   });
 
   it("normalizeWorkflowValue — maps full terminology back to canonical internal database values", () => {
-    expect(normalizeWorkflowValue("Demand Note Submitted")).toBe("D-Note Submitted");
-    expect(normalizeWorkflowValue("Demand Note Received")).toBe("D-Note Received");
+    expect(normalizeWorkflowValue("Demand Note Submitted")).toBe(
+      "D-Note Submitted",
+    );
+    expect(normalizeWorkflowValue("Demand Note Received")).toBe(
+      "D-Note Received",
+    );
     expect(normalizeWorkflowValue("Opposition: Filed")).toBe("OPPO: Filed");
-    expect(normalizeWorkflowValue("Opposition: Received")).toBe("OPPO: Received");
-    expect(normalizeWorkflowValue("Opposition: Withdrawn")).toBe("OPPO: Withdrawn");
+    expect(normalizeWorkflowValue("Opposition: Received")).toBe(
+      "OPPO: Received",
+    );
+    expect(normalizeWorkflowValue("Opposition: Withdrawn")).toBe(
+      "OPPO: Withdrawn",
+    );
 
     // Existing internal values remain unchanged
     expect(normalizeWorkflowValue("D-Note Submitted")).toBe("D-Note Submitted");
@@ -873,7 +1220,11 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
   it("uploadStageDocument — normalizes full subStage when inserting DB row", async () => {
     const uploadStorage = {
       upload: vi.fn().mockResolvedValue({ error: null }),
-      createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/doc.pdf" } }),
+      createSignedUrl: vi
+        .fn()
+        .mockResolvedValue({
+          data: { signedUrl: "https://signed.example/doc.pdf" },
+        }),
       remove: vi.fn().mockResolvedValue({ error: null }),
     };
     supabaseMock.storage.from.mockReturnValue(uploadStorage);
@@ -910,13 +1261,20 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
       },
       error: null,
     });
-    const trademarkQuery = createQuery({ data: { status: "STAGE 3" }, error: null });
+    const trademarkQuery = createQuery({
+      data: { status: "STAGE 3" },
+      error: null,
+    });
     supabaseMock.from
       .mockReturnValueOnce(trademarkQuery)
       .mockReturnValueOnce(insertQuery);
-    vi.spyOn(crypto, "randomUUID").mockReturnValue("doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
+    );
 
-    const file = new File(["dummy pdf content"], "demand_note.pdf", { type: "application/pdf" });
+    const file = new File(["dummy pdf content"], "demand_note.pdf", {
+      type: "application/pdf",
+    });
     await uploadStageDocument(file, {
       trademarkId: "BX-1",
       stage: "STAGE 3",
@@ -935,21 +1293,29 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
 });
 
 describe("Batch 12: RecordView Workflow Consolidation", () => {
-  it("updateTrademarkStatus — blocks transition to STAGE 2 when stage1_paid is false", async () => {
+  it("updateTrademarkStatus — lets the database enforce client terms instead of manual flags", async () => {
     const selectQuery = createQuery({
-      data: { stage1_paid: false, status: "STAGE 1", sub_status: "Acknowledgment" },
+      data: {
+        stage1_paid: false,
+        status: "STAGE 1",
+        sub_status: "Acknowledgment",
+      },
       error: null,
     });
     supabaseMock.from.mockReturnValue(selectQuery);
 
     await expect(
       updateTrademarkStatus("BX-1", "STAGE 2", "Assigned"),
-    ).rejects.toBeInstanceOf(StagePaymentRequiredError);
+    ).resolves.toBeUndefined();
   });
 
   it("updateTrademarkStatus — allows transition to STAGE 2 when stage1_paid is true", async () => {
     const selectQuery = createQuery({
-      data: { stage1_paid: true, status: "STAGE 1", sub_status: "Acknowledgment" },
+      data: {
+        stage1_paid: true,
+        status: "STAGE 1",
+        sub_status: "Acknowledgment",
+      },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -969,7 +1335,12 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkStatus — normalizes user-facing subStage when updating status", async () => {
     const selectQuery = createQuery({
-      data: { status: "STAGE 3", sub_status: "D-Note Received", stage1_paid: true, stage2_paid: true },
+      data: {
+        status: "STAGE 3",
+        sub_status: "D-Note Received",
+        stage1_paid: true,
+        stage2_paid: true,
+      },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -988,7 +1359,18 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkAgent — allows assignment of agent and city", async () => {
     const updateQuery = createQuery({ data: null, error: null });
-    supabaseMock.from.mockReturnValueOnce(createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage2_paid: false }, error: null })).mockReturnValueOnce(updateQuery);
+    supabaseMock.from
+      .mockReturnValueOnce(
+        createQuery({
+          data: {
+            status: "STAGE 2",
+            sub_status: "Assigned",
+            stage2_paid: false,
+          },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(updateQuery);
 
     await updateTrademarkAgent("BX-1", "Counsel A", "Islamabad");
     // Agent name and city are uppercased at the API boundary (Batch 2 normalisation rule)
@@ -1049,7 +1431,11 @@ describe("Batch 13: Publication Workflow Integration", () => {
 
     const records = await listPublicationPipeline();
 
-    expect(selectQuery.not).toHaveBeenCalledWith("publication_date", "is", null);
+    expect(selectQuery.not).toHaveBeenCalledWith(
+      "publication_date",
+      "is",
+      null,
+    );
     expect(records).toHaveLength(2);
 
     // Record 1: D-Note Submitted -> Demand Note Submitted
@@ -1111,7 +1497,9 @@ describe("Batch 13: Publication Workflow Integration", () => {
       expect(reminders[1].active).toBe(false);
       expect(reminders[2].active).toBe(true);
       expect(reminders[3].active).toBe(false);
-      expect(reminders[2].description).toContain("Published in Trade Marks Journal");
+      expect(reminders[2].description).toContain(
+        "Published in Trade Marks Journal",
+      );
     });
 
     it("activates reminder 4 for STAGE 4", () => {
@@ -1182,21 +1570,37 @@ describe("Batch 13: Publication Workflow Integration", () => {
   describe("Batch 15: Security, Workflow Validation & Reliability", () => {
     it("validates stage and sub-stage values on updateTrademark", async () => {
       await expect(
-        updateTrademark("BX-1", { stage: "INVALID_STAGE" as any })
+        updateTrademark("BX-1", { stage: "INVALID_STAGE" as any }),
       ).rejects.toThrow('Invalid stage "INVALID_STAGE"');
 
       await expect(
-        updateTrademark("BX-1", { stage: "STAGE 1", subStage: "NonExistentSubStage" })
+        updateTrademark("BX-1", {
+          stage: "STAGE 1",
+          subStage: "NonExistentSubStage",
+        }),
       ).rejects.toThrow('Invalid sub-stage "NonExistentSubStage" for STAGE 1');
     });
 
     it("requires non-empty agent name on assignStage2Agent", async () => {
-      await expect(assignStage2Agent("BX-1", "   ")).rejects.toThrow("Agent name is required.");
+      await expect(assignStage2Agent("BX-1", "   ")).rejects.toThrow(
+        "Agent name is required.",
+      );
     });
 
     it("trims agent and city whitespace on assignStage2Agent", async () => {
       const updateQuery = createQuery({ data: null, error: null });
-      supabaseMock.from.mockReturnValueOnce(createQuery({ data: { status: "STAGE 2", sub_status: "Assigned", stage2_paid: false }, error: null })).mockReturnValueOnce(updateQuery);
+      supabaseMock.from
+        .mockReturnValueOnce(
+          createQuery({
+            data: {
+              status: "STAGE 2",
+              sub_status: "Assigned",
+              stage2_paid: false,
+            },
+            error: null,
+          }),
+        )
+        .mockReturnValueOnce(updateQuery);
 
       await assignStage2Agent("BX-1", "  Agent Smith  ", "  Karachi  ");
       // Whitespace is trimmed AND value is uppercased at the API boundary (Batch 2 normalisation rule)
@@ -1208,9 +1612,14 @@ describe("Batch 13: Publication Workflow Integration", () => {
   });
 
   describe("Batch 1 (v2.0.1): Core Workflow + New Record Creation Corrections", () => {
-    it("A. New record defaults (STAGE 1, Filing, stage1_paid = true, filing_date)", async () => {
-      supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-      const insertQuery = createQuery({ data: { id: "new-tm-1", case_number: "TM-001" }, error: null });
+    it("A. New record defaults (STAGE 1, Filing, no false paid claim, filing_date)", async () => {
+      supabaseMock.auth.getUser.mockResolvedValue({
+        data: { user: { id: "user-1" } },
+      });
+      const insertQuery = createQuery({
+        data: { id: "new-tm-1", case_number: "TM-001" },
+        error: null,
+      });
       supabaseMock.from.mockReturnValue(insertQuery);
 
       const result = await createTrademark({
@@ -1227,9 +1636,9 @@ describe("Batch 13: Publication Workflow Integration", () => {
         expect.objectContaining({
           status: "STAGE 1",
           sub_status: "Filing",
-          stage1_paid: true,
-          stage1_paid_date: "2026-09-22",
-        })
+          stage1_paid: false,
+          stage1_paid_date: null,
+        }),
       );
     });
 
@@ -1257,27 +1666,60 @@ describe("Batch 13: Publication Workflow Integration", () => {
 
     it("C. Payment gate validation logic", () => {
       // Stage 2 requires stage1_paid
-      expect(() => validatePaymentGate("STAGE 2", { stage1_paid: false })).toThrow(StagePaymentRequiredError);
-      expect(() => validatePaymentGate("STAGE 2", { stage1_paid: true })).not.toThrow();
+      expect(() =>
+        validatePaymentGate("STAGE 2", { stage1_paid: false }),
+      ).toThrow(StagePaymentRequiredError);
+      expect(() =>
+        validatePaymentGate("STAGE 2", { stage1_paid: true }),
+      ).not.toThrow();
 
       // Stage 3 requires stage1_paid AND stage2_paid
-      expect(() => validatePaymentGate("STAGE 3", { stage1_paid: true, stage2_paid: false })).toThrow(StagePaymentRequiredError);
-      expect(() => validatePaymentGate("STAGE 3", { stage1_paid: true, stage2_paid: true })).not.toThrow();
+      expect(() =>
+        validatePaymentGate("STAGE 3", {
+          stage1_paid: true,
+          stage2_paid: false,
+        }),
+      ).toThrow(StagePaymentRequiredError);
+      expect(() =>
+        validatePaymentGate("STAGE 3", {
+          stage1_paid: true,
+          stage2_paid: true,
+        }),
+      ).not.toThrow();
 
       // Stage 4 requires stage1_paid AND stage2_paid AND stage3_paid
-      expect(() => validatePaymentGate("STAGE 4", { stage1_paid: true, stage2_paid: true, stage3_paid: false })).toThrow(StagePaymentRequiredError);
-      expect(() => validatePaymentGate("STAGE 4", { stage1_paid: true, stage2_paid: true, stage3_paid: true })).not.toThrow();
+      expect(() =>
+        validatePaymentGate("STAGE 4", {
+          stage1_paid: true,
+          stage2_paid: true,
+          stage3_paid: false,
+        }),
+      ).toThrow(StagePaymentRequiredError);
+      expect(() =>
+        validatePaymentGate("STAGE 4", {
+          stage1_paid: true,
+          stage2_paid: true,
+          stage3_paid: true,
+        }),
+      ).not.toThrow();
     });
 
     it("D. Backward status update rejection at API level", async () => {
       const selectQuery = createQuery({
-        data: { status: "STAGE 3", stage1_paid: true, stage2_paid: true, stage3_paid: true },
+        data: {
+          status: "STAGE 3",
+          stage1_paid: true,
+          stage2_paid: true,
+          stage3_paid: true,
+        },
         error: null,
       });
       supabaseMock.from.mockReturnValue(selectQuery);
 
-      await expect(updateTrademarkStatus("BX-1", "STAGE 2", "Assigned")).rejects.toThrow(
-        "Backward workflow transitions are not allowed (cannot move from STAGE 3 to STAGE 2)."
+      await expect(
+        updateTrademarkStatus("BX-1", "STAGE 2", "Assigned"),
+      ).rejects.toThrow(
+        "Backward workflow transitions are not allowed (cannot move from STAGE 3 to STAGE 2).",
       );
     });
   });
@@ -1290,7 +1732,10 @@ describe("Batch 13: Publication Workflow Integration", () => {
       const stats = await getStats();
 
       expect(supabaseMock.from).toHaveBeenCalledWith("trademarks");
-      expect(mockQuery.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+      expect(mockQuery.select).toHaveBeenCalledWith("id", {
+        count: "exact",
+        head: true,
+      });
       expect(stats.total).toBe(42);
       expect(stats.recentlyModified).toBe(42);
       expect(Array.isArray(stats.byStage)).toBe(true);
@@ -1321,7 +1766,7 @@ describe("Batch 13: Publication Workflow Integration", () => {
     });
 
     it("D. Regional Distribution uses actual database cities (not just predefined array)", async () => {
-      const mockQuery = createQuery({ 
+      const mockQuery = createQuery({
         data: [
           { city: "Islamabad" },
           { city: "Lahore" },
@@ -1329,8 +1774,8 @@ describe("Batch 13: Publication Workflow Integration", () => {
           { city: "Peshawar" },
           { city: "Islamabad" }, // Duplicate to test counting
           { city: "Rawalpindi" }, // City not in predefined CITIES array
-        ], 
-        error: null 
+        ],
+        error: null,
       });
       supabaseMock.from.mockReturnValue(mockQuery);
 
@@ -1343,19 +1788,19 @@ describe("Batch 13: Publication Workflow Integration", () => {
     });
 
     it("E. Dashboard filters affect Regional Distribution consistently", async () => {
-      const mockQuery = createQuery({ 
+      const mockQuery = createQuery({
         data: [
           { city: "Islamabad", agent: "Agent A" },
           { city: "Lahore", agent: "Agent B" },
           { city: "Karachi", agent: "Agent A" },
-        ], 
-        error: null 
+        ],
+        error: null,
       });
       supabaseMock.from.mockReturnValue(mockQuery);
 
       // Test with agent filter
       const stats = await getStats({ agent: "Agent A" });
-      
+
       expect(mockQuery.eq).toHaveBeenCalledWith("agent", "Agent A");
       // The mock returns all 3 cities but with filter applied, should only count Agent A records
       // Since the mock doesn't actually filter, we just verify the filter was applied
@@ -1396,8 +1841,14 @@ describe("Batch 5: Search Page + Search Results", () => {
     const page = await listTrademarkPage({ page: 1, pageSize: 50 });
 
     expect(page.records).toHaveLength(1);
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("logo_path"), { count: "exact" });
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("legacy_image_url"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("logo_path"),
+      { count: "exact" },
+    );
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("legacy_image_url"),
+      { count: "exact" },
+    );
   });
 
   it("B. listTrademarkPage — includes TM Forms fields (tm5, tm6, tm11, tm16, tm56)", async () => {
@@ -1427,11 +1878,26 @@ describe("Batch 5: Search Page + Search Results", () => {
     const page = await listTrademarkPage({ page: 1, pageSize: 50 });
 
     expect(page.records).toHaveLength(1);
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm5"), { count: "exact" });
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm6"), { count: "exact" });
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm11"), { count: "exact" });
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm16"), { count: "exact" });
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("tm56"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("tm5"),
+      { count: "exact" },
+    );
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("tm6"),
+      { count: "exact" },
+    );
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("tm11"),
+      { count: "exact" },
+    );
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("tm16"),
+      { count: "exact" },
+    );
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("tm56"),
+      { count: "exact" },
+    );
   });
 
   it("C. listTrademarkPage — includes Journal fields (journal_number, journal_date)", async () => {
@@ -1458,51 +1924,77 @@ describe("Batch 5: Search Page + Search Results", () => {
     const page = await listTrademarkPage({ page: 1, pageSize: 50 });
 
     expect(page.records).toHaveLength(1);
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("journal_number"), { count: "exact" });
-    expect(mockQuery.select).toHaveBeenCalledWith(expect.stringContaining("journal_date"), { count: "exact" });
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("journal_number"),
+      { count: "exact" },
+    );
+    expect(mockQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("journal_date"),
+      { count: "exact" },
+    );
   });
 });
 
 describe("Database Table Sorting and Pagination", () => {
   it("A. Default sorting is by filing_date descending, then updated_at descending", async () => {
-    const mockQuery = createQuery({ 
+    const mockQuery = createQuery({
       data: [
-        { id: "1", filing_date: "2026-09-24", updated_at: "2026-09-24T10:00:00Z" },
-        { id: "2", filing_date: "2026-09-24", updated_at: "2026-09-24T09:00:00Z" },
-      ], 
-      count: 2, 
-      error: null 
+        {
+          id: "1",
+          filing_date: "2026-09-24",
+          updated_at: "2026-09-24T10:00:00Z",
+        },
+        {
+          id: "2",
+          filing_date: "2026-09-24",
+          updated_at: "2026-09-24T09:00:00Z",
+        },
+      ],
+      count: 2,
+      error: null,
     });
     supabaseMock.from.mockReturnValue(mockQuery);
 
     await listTrademarkPage({ page: 1, pageSize: 50 });
 
-    expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
-    expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+    expect(mockQuery.order).toHaveBeenCalledWith("filing_date", {
+      ascending: false,
+    });
+    expect(mockQuery.order).toHaveBeenCalledWith("updated_at", {
+      ascending: false,
+    });
   });
 
   it("B. Deterministic ordering with Type, Client Code, and Case Number as tiebreakers", async () => {
-    const mockQuery = createQuery({ 
-      data: [], 
-      count: 0, 
-      error: null 
+    const mockQuery = createQuery({
+      data: [],
+      count: 0,
+      error: null,
     });
     supabaseMock.from.mockReturnValue(mockQuery);
 
     await listTrademarkPage({ page: 1, pageSize: 50 });
 
-    expect(mockQuery.order).toHaveBeenCalledWith("filing_date", { ascending: false });
-    expect(mockQuery.order).toHaveBeenCalledWith("updated_at", { ascending: false });
+    expect(mockQuery.order).toHaveBeenCalledWith("filing_date", {
+      ascending: false,
+    });
+    expect(mockQuery.order).toHaveBeenCalledWith("updated_at", {
+      ascending: false,
+    });
     expect(mockQuery.order).toHaveBeenCalledWith("type", { ascending: true });
-    expect(mockQuery.order).toHaveBeenCalledWith("client_code", { ascending: true });
-    expect(mockQuery.order).toHaveBeenCalledWith("case_number", { ascending: true });
+    expect(mockQuery.order).toHaveBeenCalledWith("client_code", {
+      ascending: true,
+    });
+    expect(mockQuery.order).toHaveBeenCalledWith("case_number", {
+      ascending: true,
+    });
   });
 
   it("C. Pagination returns correct page boundaries", async () => {
-    const mockQuery = createQuery({ 
-      data: Array.from({ length: 50 }, (_, i) => ({ id: String(i) })), 
-      count: 150, 
-      error: null 
+    const mockQuery = createQuery({
+      data: Array.from({ length: 50 }, (_, i) => ({ id: String(i) })),
+      count: 150,
+      error: null,
     });
     supabaseMock.from.mockReturnValue(mockQuery);
 
@@ -1517,17 +2009,17 @@ describe("Database Table Sorting and Pagination", () => {
   });
 
   it("D. Changing page size affects pagination correctly", async () => {
-    const mockQuery25 = createQuery({ 
-      data: Array.from({ length: 25 }, (_, i) => ({ id: String(i) })), 
-      count: 100, 
-      error: null 
+    const mockQuery25 = createQuery({
+      data: Array.from({ length: 25 }, (_, i) => ({ id: String(i) })),
+      count: 100,
+      error: null,
     });
-    const mockQuery100 = createQuery({ 
-      data: Array.from({ length: 100 }, (_, i) => ({ id: String(i) })), 
-      count: 100, 
-      error: null 
+    const mockQuery100 = createQuery({
+      data: Array.from({ length: 100 }, (_, i) => ({ id: String(i) })),
+      count: 100,
+      error: null,
     });
-    
+
     supabaseMock.from.mockReturnValue(mockQuery25);
     const page25 = await listTrademarkPage({ page: 1, pageSize: 25 });
     expect(page25.pageSize).toBe(25);
@@ -1540,47 +2032,61 @@ describe("Database Table Sorting and Pagination", () => {
   });
 });
 
-
 describe("Canonical workflow enforcement", () => {
   it.each([
     ["STAGE 1", "Acknowledgment", "STAGE 1", "Examination"],
     ["STAGE 1", "Filing", "STAGE 2", "Assigned"],
     ["STAGE 1", "Acknowledgment", "STAGE 3", "Published"],
     ["STAGE 2", "Accepted", "STAGE 2", "Hearing"],
-    ["STAGE 2", "Hearing", "STAGE 2", "Accepted"],
+    ["STAGE 2", "Hearing", "STAGE 3", "Published"],
     ["STAGE 3", "Published", "STAGE 3", "D-Note Submitted"],
     ["STAGE 4", "CER Acknowledge", "STAGE 4", "CER Dispatch"],
     ["STOPPED", "", "STAGE 1", "Filing"],
     ["STAGE 1", "Filing", "STOPPED", "Case Stopped"],
-  ])("rejects %s/%s to %s/%s", (a,b,c,d) => {
-    expect(workflowTransitionError(a,b,c,d)).not.toBeNull();
+  ])("rejects %s/%s to %s/%s", (a, b, c, d) => {
+    expect(workflowTransitionError(a, b, c, d)).not.toBeNull();
   });
   it.each([
     ["STAGE 1", "Acknowledgment", "STAGE 2", "Assigned"],
     ["STAGE 2", "Accepted", "STAGE 3", "Published"],
-    ["STAGE 2", "Hearing", "STAGE 3", "Published"],
+    ["STAGE 2", "Hearing", "STAGE 2", "Accepted"],
     ["STAGE 3", "Published", "STAGE 3", "D-Note Received"],
     ["STAGE 3", "D-Note Received", "STAGE 3", "D-Note Submitted"],
     ["STAGE 3", "D-Note Submitted", "STAGE 4", "CER Acknowledge"],
-  ])("allows %s/%s to %s/%s", (a,b,c,d) => {
-    expect(workflowTransitionError(a,b,c,d)).toBeNull();
+  ])("allows %s/%s to %s/%s", (a, b, c, d) => {
+    expect(workflowTransitionError(a, b, c, d)).toBeNull();
   });
   it("fails closed when the current record cannot be read", async () => {
-    const query = createQuery({ data: null, error: { message: "Read denied" } });
+    const query = createQuery({
+      data: null,
+      error: { message: "Read denied" },
+    });
     supabaseMock.from.mockReturnValue(query);
-    await expect(updateTrademark("BX-1", { appName: "Changed" })).rejects.toThrow("Read denied");
+    await expect(
+      updateTrademark("BX-1", { appName: "Changed" }),
+    ).rejects.toThrow("Read denied");
     expect(query.update).not.toHaveBeenCalled();
   });
   it("blocks general STOPPED bypass", async () => {
-    const query = createQuery({ data: { status: "STAGE 1", sub_status: "Filing" }, error: null });
+    const query = createQuery({
+      data: { status: "STAGE 1", sub_status: "Filing" },
+      error: null,
+    });
     supabaseMock.from.mockReturnValue(query);
-    await expect(updateTrademark("BX-1", { stage: "STOPPED" })).rejects.toThrow("mandatory reason");
+    await expect(updateTrademark("BX-1", { stage: "STOPPED" })).rejects.toThrow(
+      "mandatory reason",
+    );
     expect(query.update).not.toHaveBeenCalled();
   });
   it("blocks agent assignment outside Stage 2 Assigned without writing", async () => {
-    const query = createQuery({ data: { status: "STAGE 3", sub_status: "Published" }, error: null });
+    const query = createQuery({
+      data: { status: "STAGE 3", sub_status: "Published" },
+      error: null,
+    });
     supabaseMock.from.mockReturnValue(query);
-    await expect(assignStage2Agent("BX-1", "Agent")).rejects.toThrow("Stage 2 / Assigned");
+    await expect(assignStage2Agent("BX-1", "Agent")).rejects.toThrow(
+      "Stage 2 / Assigned",
+    );
     expect(query.update).not.toHaveBeenCalled();
   });
 });

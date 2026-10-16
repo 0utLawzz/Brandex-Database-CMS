@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import {
   createTrademark,
   updateTrademark,
@@ -38,24 +39,32 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-const CASE_TYPES = ["Trademark", "Copyright", "Design", "Patent", "Renewal", "Opposition", "Other"];
+const CASE_TYPES = [
+  "Trademark",
+  "Copyright",
+  "Design",
+  "Patent",
+  "Renewal",
+  "Opposition",
+  "Other",
+];
 
 const schema = z.object({
-  date:       z.string().min(1, "Date is required"),
-  type:       z.string().min(1, "Type is required"),
+  date: z.string().min(1, "Date is required"),
+  type: z.string().min(1, "Type is required"),
   clientCode: z.string().min(1, "Client Code is required"),
   clientName: z.string().optional(),
   caseNumber: z.string().min(1, "Case Number is required"),
-  appName:    z.string().min(1, "Application Name is required"),
-  tmCprNo:    z.string().optional(),
-  appClass:   z.string().optional(),
-  stage:      z.string().min(1, "Status is required"),
-  subStage:   z.string().optional(),
-  caseType:   z.string().optional(),
-  agent:      z.string().optional(),
-  city:       z.string().min(1, "City is required"),
-  notes:      z.string().optional(),
-  image:      z.string().optional(),
+  appName: z.string().min(1, "Application Name is required"),
+  tmCprNo: z.string().optional(),
+  appClass: z.string().optional(),
+  stage: z.string().min(1, "Status is required"),
+  subStage: z.string().optional(),
+  caseType: z.string().optional(),
+  agent: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  notes: z.string().optional(),
+  image: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -67,15 +76,25 @@ interface RecordModalProps {
   onSaved?: () => void;
 }
 
-function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+function FieldLabel({
+  children,
+  required,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
     <label className="block font-mono text-sm font-bold uppercase tracking-widest text-[#6d6658] mb-1.5">
-      {children}{required && <span className="text-[#CC0000] ml-0.5">*</span>}
+      {children}
+      {required && <span className="text-[#CC0000] ml-0.5">*</span>}
     </label>
   );
 }
 
-function FormInput({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+function FormInput({
+  className = "",
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
@@ -84,7 +103,11 @@ function FormInput({ className = "", ...props }: React.InputHTMLAttributes<HTMLI
   );
 }
 
-function FormSelect({ children, className = "", ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+function FormSelect({
+  children,
+  className = "",
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
@@ -98,13 +121,20 @@ function FormSelect({ children, className = "", ...props }: React.SelectHTMLAttr
 function SectionHead({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#0C0C0C]">{title}</div>
+      <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#0C0C0C]">
+        {title}
+      </div>
       <div className="flex-1 h-0.5 bg-[#0C0C0C]/10" />
     </div>
   );
 }
 
-export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: RecordModalProps) {
+export function RecordModal({
+  recordId,
+  isNew: forceNew,
+  onClose,
+  onSaved,
+}: RecordModalProps) {
   const creating = forceNew || !recordId;
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -129,10 +159,28 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
     staleTime: 5 * 60_000,
   });
 
-  const { data: allTrademarks = [] } = useQuery<TrademarkRecord[]>({
-    queryKey: ["trademarks"],
-    queryFn: () => listTrademarks(),
-    staleTime: 60_000,
+  const { data: billingClients = [] } = useQuery({
+    queryKey: ["billing-client-reference"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("billing_clients")
+        .select("series,code,name")
+        .order("code")
+        .limit(1000);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const { data: seriesOptions = [] } = useQuery({
+    queryKey: ["billing-series-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("billing_series")
+        .select("code")
+        .order("code");
+      if (error) throw error;
+      return data;
+    },
   });
 
   // Build client code -> client name map
@@ -141,13 +189,9 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
     for (const c of clientRefs) {
       if (c.code && c.name) map.set(c.code.trim().toUpperCase(), c.name.trim());
     }
-    for (const tm of allTrademarks) {
-      if (tm.clientCode && tm.clientName && !map.has(tm.clientCode.trim().toUpperCase())) {
-        map.set(tm.clientCode.trim().toUpperCase(), tm.clientName.trim());
-      }
-    }
+    for (const c of billingClients) map.set(`${c.series}-${c.code}`, c.name);
     return map;
-  }, [clientRefs, allTrademarks]);
+  }, [clientRefs, billingClients]);
 
   const { data: staffRole } = useQuery({
     queryKey: ["staff-role"],
@@ -164,7 +208,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
 
   const activeAgentProfiles = useMemo(
     () => agentProfiles.filter((a) => a.isActive !== false),
-    [agentProfiles]
+    [agentProfiles],
   );
 
   const createMutation = useMutation({
@@ -199,42 +243,42 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date:       format(new Date(), "yyyy-MM-dd"),
-      type:       "X",
+      date: format(new Date(), "yyyy-MM-dd"),
+      type: "X",
       clientCode: "",
       clientName: "",
       caseNumber: "",
-      appName:    "",
-      tmCprNo:    "",
-      appClass:   "",
-      stage:      "STAGE 1",
-      subStage:   "Filing",
-      caseType:   "Trademark",
-      agent:      "",
-      city:       "Islamabad",
-      notes:      "",
-      image:      "",
+      appName: "",
+      tmCprNo: "",
+      appClass: "",
+      stage: "STAGE 1",
+      subStage: "Filing",
+      caseType: "Trademark",
+      agent: "",
+      city: "Islamabad",
+      notes: "",
+      image: "",
     },
   });
 
   useEffect(() => {
     if (trademark && !creating) {
       form.reset({
-        date:       trademark.date?.split("T")[0] ?? format(new Date(), "yyyy-MM-dd"),
-        type:       trademark.type || "X",
+        date: trademark.date?.split("T")[0] ?? format(new Date(), "yyyy-MM-dd"),
+        type: trademark.type || "X",
         clientCode: trademark.clientCode ?? "",
         clientName: trademark.clientName ?? "",
         caseNumber: trademark.caseNumber ?? "",
-        appName:    trademark.appName ?? "",
-        tmCprNo:    trademark.tmCprNo ?? "",
-        appClass:   trademark.appClass ?? "",
-        stage:      trademark.stage || "STAGE 1",
-        subStage:   normalizeWorkflowValue(trademark.subStage ?? ""),
-        caseType:   trademark.caseType || "Trademark",
-        agent:      trademark.agent ?? "",
-        city:       trademark.city || "Islamabad",
-        notes:      trademark.notes ?? "",
-        image:      trademark.imagePath ?? "",
+        appName: trademark.appName ?? "",
+        tmCprNo: trademark.tmCprNo ?? "",
+        appClass: trademark.appClass ?? "",
+        stage: trademark.stage || "STAGE 1",
+        subStage: normalizeWorkflowValue(trademark.subStage ?? ""),
+        caseType: trademark.caseType || "Trademark",
+        agent: trademark.agent ?? "",
+        city: trademark.city || "Islamabad",
+        notes: trademark.notes ?? "",
+        image: trademark.imagePath ?? "",
       });
       setImagePreview(trademark.image ?? "");
     }
@@ -250,7 +294,10 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
     const val = e.target.value;
     form.setValue("clientCode", val);
     if (val.trim()) {
-      const match = clientMap.get(val.trim().toUpperCase());
+      const match =
+        clientMap.get(
+          `${form.getValues("type")}-${val.trim().toUpperCase()}`,
+        ) ?? clientMap.get(val.trim().toUpperCase());
       if (match) {
         form.setValue("clientName", match);
       } else {
@@ -291,21 +338,21 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
 
   const onSubmit = (data: FormValues) => {
     const payload: TrademarkInput = {
-      date:       data.date,
-      type:       data.type,
+      date: data.date,
+      type: data.type,
       clientCode: data.clientCode,
       clientName: data.clientName || undefined,
       caseNumber: data.caseNumber,
-      appName:    data.appName,
-      tmCprNo:    data.tmCprNo   || undefined,
-      appClass:   data.appClass  || undefined,
-      caseType:   data.caseType  || undefined,
-      stage:      data.stage,
-      subStage:   data.subStage  || undefined,
-      agent:      data.agent     || undefined,
-      city:       data.city,
-      notes:      data.notes     || undefined,
-      image:      data.image     || undefined,
+      appName: data.appName,
+      tmCprNo: data.tmCprNo || undefined,
+      appClass: data.appClass || undefined,
+      caseType: data.caseType || undefined,
+      stage: data.stage,
+      subStage: data.subStage || undefined,
+      agent: data.agent || undefined,
+      city: data.city,
+      notes: data.notes || undefined,
+      image: data.image || undefined,
     };
 
     if (creating) {
@@ -321,9 +368,10 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
         onError: (err: unknown) =>
           toast({
             title: "⚠ Save Failed",
-            description: err instanceof DuplicateTmNumberError
-              ? err.message
-              : "Unable to save record. Please check your connection and try again.",
+            description:
+              err instanceof DuplicateTmNumberError
+                ? err.message
+                : "Unable to save record. Please check your connection and try again.",
             variant: "destructive",
           }),
       });
@@ -347,12 +395,17 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
             return;
           }
           if (err instanceof DuplicateTmNumberError) {
-            toast({ title: "⚠ Duplicate TM Number", description: err.message, variant: "destructive" });
+            toast({
+              title: "⚠ Duplicate TM Number",
+              description: err.message,
+              variant: "destructive",
+            });
             return;
           }
           toast({
             title: "⚠ Update Failed",
-            description: "Unable to update record. Please check your connection and try again.",
+            description:
+              "Unable to update record. Please check your connection and try again.",
             variant: "destructive",
           });
         },
@@ -361,7 +414,12 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
   };
 
   const handleDelete = () => {
-    if (!confirm("Delete this record permanently?\n\nThis action cannot be undone.")) return;
+    if (
+      !confirm(
+        "Delete this record permanently?\n\nThis action cannot be undone.",
+      )
+    )
+      return;
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
         toast({ title: "Record Deleted" });
@@ -370,7 +428,8 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
       onError: () =>
         toast({
           title: "⚠ Delete Failed",
-          description: "Unable to delete record. Please check your connection and try again.",
+          description:
+            "Unable to delete record. Please check your connection and try again.",
           variant: "destructive",
         }),
     });
@@ -380,10 +439,13 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
 
   // Types list: include standard series ["X", "A", "N"] plus any existing record type
   const availableTypes = useMemo(() => {
-    const set = new Set<string>(VALID_TYPES);
+    const set = new Set<string>([
+      ...VALID_TYPES,
+      ...seriesOptions.map((s) => s.code),
+    ]);
     if (trademark?.type) set.add(trademark.type);
     return Array.from(set);
-  }, [trademark]);
+  }, [trademark, seriesOptions]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 animate-in fade-in duration-150">
@@ -400,7 +462,11 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               </div>
             )}
           </div>
-          <button onClick={onClose} disabled={isPending} className="text-[#C5B89A] hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            disabled={isPending}
+            className="text-[#C5B89A] hover:text-white transition-colors"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -410,13 +476,17 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
             LOADING SECURE RECORD…
           </div>
         ) : (
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {isViewer && (
                 <div className="p-3 bg-[#FFF0D0] border-2 border-[#B0740E] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#6C1C1F] shrink-0" />
                   <span className="font-mono text-sm font-bold text-[#6C1C1F] uppercase">
-                    VIEWER MODE: You have read-only access. Saving or deleting records is restricted.
+                    VIEWER MODE: You have read-only access. Saving or deleting
+                    records is restricted.
                   </span>
                 </div>
               )}
@@ -429,31 +499,54 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     <FieldLabel required>DATE</FieldLabel>
                     <FormInput type="date" {...form.register("date")} />
                     {form.formState.errors.date && (
-                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.date.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">
+                        {form.formState.errors.date.message}
+                      </p>
                     )}
                   </div>
                   <div>
                     <FieldLabel required>TYPE (Series)</FieldLabel>
                     <FormSelect {...form.register("type")}>
-                      {availableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                      {availableTypes.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
                     </FormSelect>
                   </div>
                   <div>
                     <FieldLabel required>CLIENT CODE</FieldLabel>
                     <FormInput
+                      list="billing-client-codes"
                       placeholder="e.g. 284"
                       {...form.register("clientCode")}
                       onChange={handleClientCodeChange}
                     />
+                    <datalist id="billing-client-codes">
+                      {billingClients
+                        .filter((c) => c.series === form.watch("type"))
+                        .map((c) => (
+                          <option key={`${c.series}-${c.code}`} value={c.code}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </datalist>
                     {form.formState.errors.clientCode && (
-                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.clientCode.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">
+                        {form.formState.errors.clientCode.message}
+                      </p>
                     )}
                   </div>
                   <div>
                     <FieldLabel required>CASE NUMBER</FieldLabel>
-                    <FormInput placeholder="e.g. 001" {...form.register("caseNumber")} />
+                    <FormInput
+                      placeholder="e.g. 001"
+                      {...form.register("caseNumber")}
+                    />
                     {form.formState.errors.caseNumber && (
-                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.caseNumber.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">
+                        {form.formState.errors.caseNumber.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -466,28 +559,44 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   <div>
                     <FieldLabel>CASE TYPE</FieldLabel>
                     <FormSelect {...form.register("caseType")}>
-                      {CASE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      {CASE_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
                     </FormSelect>
                   </div>
                   <div className="sm:col-span-2">
                     <FieldLabel required>APPLICATION NAME</FieldLabel>
-                    <FormInput placeholder="Trademark / Application name" {...form.register("appName")} />
+                    <FormInput
+                      placeholder="Trademark / Application name"
+                      {...form.register("appName")}
+                    />
                     {form.formState.errors.appName && (
-                      <p className="mt-1 text-sm font-mono text-[#CC0000]">{form.formState.errors.appName.message}</p>
+                      <p className="mt-1 text-sm font-mono text-[#CC0000]">
+                        {form.formState.errors.appName.message}
+                      </p>
                     )}
                   </div>
                   <div>
                     <FieldLabel>CLASS</FieldLabel>
                     <FormSelect {...form.register("appClass")}>
                       <option value="">SELECT</option>
-                      {Array.from({ length: 45 }, (_, i) => String(i + 1)).map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
+                      {Array.from({ length: 45 }, (_, i) => String(i + 1)).map(
+                        (c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ),
+                      )}
                     </FormSelect>
                   </div>
                   <div className="sm:col-span-2">
                     <FieldLabel>TM / CPR NUMBER</FieldLabel>
-                    <FormInput placeholder="e.g. 633710" {...form.register("tmCprNo")} />
+                    <FormInput
+                      placeholder="e.g. 633710"
+                      {...form.register("tmCprNo")}
+                    />
                   </div>
                 </div>
               </div>
@@ -495,7 +604,10 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               {/* Status */}
               <div>
                 <SectionHead title="Status" />
-                <p className="text-sm mb-3">New cases start at Filing. Use Update Status on the case for workflow changes and stopping reasons.</p>
+                <p className="text-sm mb-3">
+                  New cases start at Filing. Use Update Status on the case for
+                  workflow changes and stopping reasons.
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel required>STAGE</FieldLabel>
@@ -506,13 +618,19 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                         const newStage = e.target.value;
                         form.setValue("stage", newStage);
                         const validSubs = STATUS_WORKFLOW[newStage] ?? [];
-                        const currentSub = normalizeWorkflowValue(form.getValues("subStage"));
+                        const currentSub = normalizeWorkflowValue(
+                          form.getValues("subStage"),
+                        );
                         if (!currentSub || !validSubs.includes(currentSub)) {
                           form.setValue("subStage", "");
                         }
                       }}
                     >
-                      {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {STAGES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </FormSelect>
                   </div>
                   <div>
@@ -527,75 +645,41 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     </FormSelect>
                   </div>
                 </div>
-                {watchStage === "STAGE 2" && (
-                  <div
-                    className={`mt-3 p-3 border-2 flex items-center justify-between ${
-                      isStage2Paid
-                        ? "bg-[#D8F2E8] border-[#0A6B52]"
-                        : "bg-[#FFF0D0] border-[#B0740E]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {isStage2Paid ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#0A6B52] shrink-0" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
-                      )}
-                      <span
-                        className={`font-mono text-sm font-bold ${
-                          isStage2Paid ? "text-[#0A6B52]" : "text-[#6C1C1F]"
-                        }`}
-                      >
-                        {isStage2Paid
-                          ? `Stage 2 Payment Confirmed (${trademark?.stage2PaidDate || "Recorded"})`
-                          : "Stage 2 payment is required before proceeding."}
-                      </span>
-                    </div>
-                    <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
-                      MANUAL — NOT VERIFIED
-                    </span>
-                  </div>
-                )}
+                <p className="mt-3">
+                  Payment terms and actual receiving are shown in the case
+                  Ledger panel.
+                </p>
               </div>
 
               {/* Assignment */}
               <div>
                 <SectionHead title="Assignment" />
-                {watchStage === "STAGE 2" && !isStage2Paid ? (
-                  <div className="p-3 bg-[#FFF0D0] border-2 border-[#B0740E] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
-                        <span className="font-mono text-sm font-bold text-[#6C1C1F]">
-                          Stage 2 payment is required before proceeding.
-                        </span>
-                      </div>
-                      <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
-                        MANUAL — NOT VERIFIED
-                      </span>
-                    </div>
-                    <div className="font-mono text-sm text-[#6d6658]">
-                      Agent assignment is locked until Stage 2 payment is cleared.
-                    </div>
-                  </div>
-                ) : (
+                {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <FieldLabel>AGENT (MASTER SYSTEM)</FieldLabel>
+                      <FieldLabel>SERVICE ASSOCIATE (VIEW ONLY)</FieldLabel>
                       <FormSelect
                         {...form.register("agent")}
+                        disabled
                         onChange={(e) => {
                           const val = e.target.value;
                           form.setValue("agent", val);
-                          const matched = activeAgentProfiles.find((a) => a.name === val);
-                          if (matched?.city && CITIES.includes(matched.city as any)) {
+                          const matched = activeAgentProfiles.find(
+                            (a) => a.name === val,
+                          );
+                          if (
+                            matched?.city &&
+                            CITIES.includes(matched.city as any)
+                          ) {
                             form.setValue("city", matched.city);
                           }
                         }}
                       >
-                        <option value="">-- SELECT AGENT --</option>
+                        <option value="">-- SERVICE ASSOCIATE --</option>
                         {form.watch("agent") &&
-                          !activeAgentProfiles.some((a) => a.name === form.watch("agent")) && (
+                          !activeAgentProfiles.some(
+                            (a) => a.name === form.watch("agent"),
+                          ) && (
                             <option value={form.watch("agent")}>
                               {form.watch("agent")} (Current)
                             </option>
@@ -610,11 +694,15 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                     <div>
                       <FieldLabel required>AGENT CITY</FieldLabel>
                       <FormSelect {...form.register("city")}>
-                        {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        {CITIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
                       </FormSelect>
                     </div>
                   </div>
-                )}
+                }
               </div>
 
               {/* Additional */}
@@ -652,13 +740,20 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                           className="flex items-center gap-2 px-4 h-10 bg-[#0C0C0C] text-[#F0E8D0] border border-stone-300 font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#6C1C1F] hover:border-[#6C1C1F] hover:text-white transition-colors disabled:opacity-50"
                         >
                           <UploadCloud className="w-4 h-4" />
-                          {uploading ? "UPLOADING…" : watchImage ? "REPLACE IMAGE" : "BROWSE / UPLOAD IMAGE"}
+                          {uploading
+                            ? "UPLOADING…"
+                            : watchImage
+                              ? "REPLACE IMAGE"
+                              : "BROWSE / UPLOAD IMAGE"}
                         </button>
 
                         {watchImage && (
                           <button
                             type="button"
-                            onClick={() => { form.setValue("image", ""); setImagePreview(""); }}
+                            onClick={() => {
+                              form.setValue("image", "");
+                              setImagePreview("");
+                            }}
                             className="px-3 h-10 border-2 border-[#CC0000] text-[#CC0000] font-mono font-bold text-sm uppercase tracking-wider hover:bg-[#CC0000] hover:text-white transition-colors"
                           >
                             REMOVE IMAGE
@@ -695,13 +790,15 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                               alt="Preview"
                               className="w-full h-full object-contain"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = "none";
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
                               }}
                             />
                           </div>
                           <div className="flex flex-col gap-1 font-mono text-sm">
                             <div className="flex items-center gap-1.5 text-[#0A6B52] font-bold text-sm uppercase">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Image Attached
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Image
+                              Attached
                             </div>
                             <button
                               type="button"
@@ -732,7 +829,9 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between px-4 py-2 bg-[#0C0C0C] text-[#F0E8D0]">
-                    <span className="font-mono font-bold text-sm uppercase tracking-widest">Image Preview</span>
+                    <span className="font-mono font-bold text-sm uppercase tracking-widest">
+                      Image Preview
+                    </span>
                     <button
                       onClick={() => setPreviewModalOpen(false)}
                       className="font-mono text-sm text-[#C5B89A] hover:text-white"
@@ -760,7 +859,9 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                 >
                   <Trash2 className="w-4 h-4" /> DELETE
                 </button>
-              ) : <div />}
+              ) : (
+                <div />
+              )}
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -777,7 +878,11 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                   title={isViewer ? "Admin role required" : undefined}
                 >
                   <Save className="w-4 h-4" />
-                  {isPending ? "SAVING TO DATABASE…" : creating ? "SAVE RECORD" : "UPDATE RECORD"}
+                  {isPending
+                    ? "SAVING TO DATABASE…"
+                    : creating
+                      ? "SAVE RECORD"
+                      : "UPDATE RECORD"}
                 </button>
               </div>
             </div>

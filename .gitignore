@@ -63,3 +63,6 @@ artifacts/tm-tracker/public/branding/Logo_*.PNG
 static-build/
 .vercel
 .env*
+
+# Supabase CLI local state
+supabase/.temp/

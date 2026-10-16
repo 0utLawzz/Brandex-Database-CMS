@@ -21,13 +21,19 @@ import { BrandingSettingsModal } from "@/components/BrandingSettingsModal";
 import { Sparkles } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/",           label: "DASHBOARD",    icon: LayoutDashboard },
-  { href: "/search",     label: "SEARCH TM",    icon: Search },
-  { href: "/database",   label: "DATABASE",     icon: Database },
-  { href: "/assigned",   label: "ASSIGNED",     icon: Users2 },
-  { href: "/agents",     label: "AGENTS",       icon: BriefcaseBusiness },
+  { href: "/ledger", label: "LEDGER", icon: BookOpen },
+  {
+    href: "/associate-payments",
+    label: "ASSOC. PAYMENTS",
+    icon: BriefcaseBusiness,
+  },
+  { href: "/", label: "DASHBOARD", icon: LayoutDashboard },
+  { href: "/search", label: "SEARCH TM", icon: Search },
+  { href: "/database", label: "DATABASE", icon: Database },
+  { href: "/assigned", label: "ASSIGNED", icon: Users2 },
+  { href: "/agents", label: "ASSOCIATES", icon: BriefcaseBusiness },
   { href: "/publication", label: "PUBLICATION", icon: BookOpen },
-  { href: "/logs",       label: "LOGS",         icon: ScrollText },
+  { href: "/logs", label: "LOGS", icon: ScrollText },
 ];
 
 export function Navbar() {
@@ -58,14 +64,18 @@ export function Navbar() {
       <header className="sticky top-0 z-40 bg-[#0C0C0C] border-b-2 border-[#1A1A1A] text-[#F0E8D0] shadow-none print:hidden">
         <div className="flex items-center justify-between px-4 h-16 w-full">
           {/* Logo & Brand */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity"
+          >
             <img
               src="/branding/brandex-logo-12.png"
               alt="Brandex Law Associates Logo"
               className="w-10 h-10 object-contain"
               onError={(e) => {
                 // Fallback icon if custom logo fails to load
-                (e.target as HTMLImageElement).src = "/branding/brandex-logo-12.png";
+                (e.target as HTMLImageElement).src =
+                  "/branding/brandex-logo-12.png";
               }}
             />
             <div className="hidden sm:block">
@@ -118,7 +128,9 @@ export function Navbar() {
               title="Refresh data from Supabase"
               className="hidden sm:flex items-center justify-center gap-2 bg-[#B0740E] text-white border-2 border-[#B0740E] px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider hover:brightness-105 active:brightness-95 transition-all disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
+              />
               {refreshing ? "REFRESHING..." : "REFRESH"}
             </button>
 
@@ -135,7 +147,11 @@ export function Navbar() {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle menu"
             >
-              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
         </div>
@@ -170,11 +186,16 @@ export function Navbar() {
             })}
           </nav>
           <button
-            onClick={() => { handleRefresh(); setMobileOpen(false); }}
+            onClick={() => {
+              handleRefresh();
+              setMobileOpen(false);
+            }}
             disabled={refreshing}
             className="mt-auto w-full flex items-center justify-center gap-2 bg-[#B0740E] text-white border-2 border-[#B0740E] px-4 py-3 font-mono text-sm font-bold uppercase tracking-wider disabled:opacity-50"
           >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
+            />
             {refreshing ? "REFRESHING..." : "REFRESH DATA"}
           </button>
         </div>

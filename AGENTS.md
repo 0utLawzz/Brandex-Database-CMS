@@ -1,5 +1,10 @@
 # Brandex Project Guidelines (AGENTS.md)
 
+## Current approved candidate - 16 October 2026
+
+Read `docs/SYSTEM_ROADMAP.md` and `docs/CONFIRMED_BUILD_STATUS.md`. Latest owner decisions supersede conflicting historical rules: all clients default Monthly Billing; 60% removed; client terms govern advance gates; Stage 3 billed at Accepted; associate payable at assignment; guarded TM-57 reactivation allowed. Work is isolated on `feat/confirmed-workflow-ledger`. Production schemas/data/deployments are unchanged. Preserve the mature CMS features and original Ledger/Sheets; do not claim parity or live acceptance from a passing build alone.
+
+
 **Mandatory first action for every AI agent or automated contributor:**
 
 1. Read the current-status section of `Progress.md`, `docs/PROJECT_TRUTH.md`, and `docs/WORKFLOW_BUSINESS_RULES.md`. Historical logs are context, not verification.

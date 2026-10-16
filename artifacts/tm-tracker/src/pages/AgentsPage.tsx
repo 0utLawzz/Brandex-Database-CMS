@@ -1,8 +1,31 @@
-import { listAgentProfiles, createAgentProfile, updateAgentProfile, listFeesForAgent, deleteAgentFee, getAgentCaseCounts, getStaffRole, type AgentWithStats, type AgentFee, type AgentInput, type AgentCaseCounts } from "@/lib/api";
+import {
+  listAgentProfiles,
+  createAgentProfile,
+  updateAgentProfile,
+  listFeesForAgent,
+  deleteAgentFee,
+  getAgentCaseCounts,
+  getStaffRole,
+  type AgentWithStats,
+  type AgentFee,
+  type AgentInput,
+  type AgentCaseCounts,
+} from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
@@ -26,7 +49,9 @@ function formatCurrency(amount: number): string {
 export function AgentsPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [page, setPage] = useState(1);
-  const [selectedAgent, setSelectedAgent] = useState<AgentWithStats | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<AgentWithStats | null>(
+    null,
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<AgentInput>({ name: "" });
   const { toast } = useToast();
@@ -47,17 +72,18 @@ export function AgentsPage() {
 
   const { data: agentFees = [], isLoading: feesLoading } = useQuery({
     queryKey: ["agent-fees", selectedAgent?.id],
-    queryFn: () => selectedAgent ? listFeesForAgent(selectedAgent.id) : [],
+    queryFn: () => (selectedAgent ? listFeesForAgent(selectedAgent.id) : []),
     enabled: !!selectedAgent,
     staleTime: 30_000,
   });
 
-  const { data: caseCounts, isLoading: caseCountsLoading } = useQuery<AgentCaseCounts>({
-    queryKey: ["agent-case-counts", selectedAgent?.name],
-    queryFn: () => getAgentCaseCounts(selectedAgent!.name),
-    enabled: !!selectedAgent && !isEditing,
-    staleTime: 60_000,
-  });
+  const { data: caseCounts, isLoading: caseCountsLoading } =
+    useQuery<AgentCaseCounts>({
+      queryKey: ["agent-case-counts", selectedAgent?.name],
+      queryFn: () => getAgentCaseCounts(selectedAgent!.name),
+      enabled: !!selectedAgent && !isEditing,
+      staleTime: 60_000,
+    });
 
   const createMutation = useMutation({
     mutationFn: createAgentProfile,
@@ -68,12 +94,17 @@ export function AgentsPage() {
       setEditForm({ name: "" });
     },
     onError: (error) => {
-      toast({ title: "Failed to create agent", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to create agent",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<AgentInput> }) => updateAgentProfile(id, input),
+    mutationFn: ({ id, input }: { id: string; input: Partial<AgentInput> }) =>
+      updateAgentProfile(id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent-profiles"] });
       toast({ title: "Agent updated successfully" });
@@ -81,25 +112,40 @@ export function AgentsPage() {
       setSelectedAgent(null);
     },
     onError: (error) => {
-      toast({ title: "Failed to update agent", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to update agent",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   const deleteFeeMutation = useMutation({
     mutationFn: deleteAgentFee,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agent-fees", selectedAgent?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["agent-fees", selectedAgent?.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["agent-profiles"] });
       toast({ title: "Fee entry deleted" });
     },
     onError: (error) => {
-      toast({ title: "Failed to delete fee", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed to delete fee",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
-  const filteredAgents = agents.filter((agent) => filters.showInactive || agent.isActive);
+  const filteredAgents = agents.filter(
+    (agent) => filters.showInactive || agent.isActive,
+  );
   const totalPages = Math.max(1, Math.ceil(filteredAgents.length / PAGE_SIZE));
-  const pagedAgents = filteredAgents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedAgents = filteredAgents.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   const handleCreateAgent = () => {
     if (!editForm.name.trim()) {
@@ -141,7 +187,9 @@ export function AgentsPage() {
         <div className="shrink-0 px-6 py-4 bg-[#E8DFC7] border-b border-stone-300">
           <div className="flex items-center gap-3 mb-4">
             <Users className="w-5 h-5 text-[#0A6B52]" />
-            <h1 className="font-serif text-2xl uppercase tracking-widest text-[#0C0C0C] leading-none">AGENTS</h1>
+            <h1 className="font-serif text-2xl uppercase tracking-widest text-[#0C0C0C] leading-none">
+              SERVICE ASSOCIATES
+            </h1>
             <span className="ml-auto font-mono text-sm text-[#6d6658] font-bold uppercase tracking-widest">
               {isLoading ? "LOADING…" : `${filteredAgents.length} AGENTS`}
             </span>
@@ -181,8 +229,23 @@ export function AgentsPage() {
           <table className="w-full text-left font-mono text-sm whitespace-nowrap border-collapse">
             <thead className="bg-[#0C0C0C] text-[#F0E8D0] sticky top-0 z-10">
               <tr>
-                {["NAME", "CITY", "PHONE", "EMAIL", "CASES WITH FEES", "TOTAL BILLED", "TOTAL RECEIVED", "BALANCE", "UNPAID", "STATUS", "ACTIONS"].map((h) => (
-                  <th key={h} className="px-3 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0">
+                {[
+                  "NAME",
+                  "CITY",
+                  "PHONE",
+                  "EMAIL",
+                  "CASES WITH FEES",
+                  "TOTAL BILLED",
+                  "TOTAL RECEIVED",
+                  "BALANCE",
+                  "UNPAID",
+                  "STATUS",
+                  "ACTIONS",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-3 py-3 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0"
+                  >
                     {h}
                   </th>
                 ))}
@@ -191,7 +254,10 @@ export function AgentsPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse">
+                  <td
+                    colSpan={11}
+                    className="px-6 py-12 text-center font-bold text-[#6d6658] animate-pulse"
+                  >
                     LOADING AGENTS…
                   </td>
                 </tr>
@@ -242,7 +308,8 @@ export function AgentsPage() {
                     <td className="px-3 py-2 border-r border-[#0C0C0C]/10">
                       {agent.unpaidEntries > 0 ? (
                         <span className="inline-flex items-center gap-1 text-[#CC0000] font-bold">
-                          <AlertCircle className="h-3 w-3" /> {agent.unpaidEntries}
+                          <AlertCircle className="h-3 w-3" />{" "}
+                          {agent.unpaidEntries}
                         </span>
                       ) : (
                         <span className="text-[#0A6B52]">0</span>
@@ -272,7 +339,9 @@ export function AgentsPage() {
                           <Edit className="h-3 w-3" /> EDIT
                         </button>
                       ) : (
-                        <span className="font-mono text-sm text-[#9d9488] uppercase">—</span>
+                        <span className="font-mono text-sm text-[#9d9488] uppercase">
+                          —
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -323,41 +392,72 @@ export function AgentsPage() {
 
       {/* Agent Detail Modal */}
       {selectedAgent && !isEditing && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4" onClick={() => setSelectedAgent(null)}>
-          <section className="w-full max-w-7xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none max-h-[90vh] overflow-auto" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#0C0C0C]/55 p-4"
+          onClick={() => setSelectedAgent(null)}
+        >
+          <section
+            className="w-full max-w-7xl border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none max-h-[90vh] overflow-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start gap-3 border-b border-stone-300 pb-3">
               <div className="min-w-0 flex-1">
-                <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">AGENT DETAIL</div>
-                <h2 className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]">{selectedAgent.name}</h2>
+                <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">
+                  AGENT DETAIL
+                </div>
+                <h2 className="mt-1 font-serif text-3xl uppercase leading-none text-[#0C0C0C]">
+                  {selectedAgent.name}
+                </h2>
                 <div className="mt-2 font-mono text-sm font-bold uppercase">
-                  {selectedAgent.city || "NO CITY"} · {selectedAgent.phone || "NO PHONE"} · {selectedAgent.email || "NO EMAIL"}
+                  {selectedAgent.city || "NO CITY"} ·{" "}
+                  {selectedAgent.phone || "NO PHONE"} ·{" "}
+                  {selectedAgent.email || "NO EMAIL"}
                 </div>
               </div>
-              <button type="button" onClick={() => setSelectedAgent(null)} className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white" aria-label="Close">
+              <button
+                type="button"
+                onClick={() => setSelectedAgent(null)}
+                className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white"
+                aria-label="Close"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Case assignment stats — sourced from trademarks.agent text field */}
             <div className="mt-4">
-              <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F] mb-2">CASE ASSIGNMENT (from trademark records)</div>
+              <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F] mb-2">
+                CASE ASSIGNMENT (from trademark records)
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="border border-stone-300 bg-white p-3 shadow-none">
-                  <span className="block text-sm font-bold text-[#6d6658] uppercase">ASSIGNED (STAGE 2)</span>
+                  <span className="block text-sm font-bold text-[#6d6658] uppercase">
+                    ASSIGNED (STAGE 2)
+                  </span>
                   <strong className="font-serif text-2xl text-[#B0740E]">
-                    {caseCountsLoading ? "…" : (caseCounts?.assignedCases ?? "—")}
+                    {caseCountsLoading
+                      ? "…"
+                      : (caseCounts?.assignedCases ?? "—")}
                   </strong>
                 </div>
                 <div className="border border-stone-300 bg-white p-3 shadow-none">
-                  <span className="block text-sm font-bold text-[#6d6658] uppercase">ACCEPTED (STAGE 2)</span>
+                  <span className="block text-sm font-bold text-[#6d6658] uppercase">
+                    ACCEPTED (STAGE 2)
+                  </span>
                   <strong className="font-serif text-2xl text-[#0A6B52]">
-                    {caseCountsLoading ? "…" : (caseCounts?.acceptedCases ?? "—")}
+                    {caseCountsLoading
+                      ? "…"
+                      : (caseCounts?.acceptedCases ?? "—")}
                   </strong>
                 </div>
                 <div className="border border-stone-300 bg-white p-3 shadow-none">
-                  <span className="block text-sm font-bold text-[#6d6658] uppercase">TOTAL CASES</span>
+                  <span className="block text-sm font-bold text-[#6d6658] uppercase">
+                    TOTAL CASES
+                  </span>
                   <strong className="font-serif text-2xl">
-                    {caseCountsLoading ? "…" : (caseCounts?.totalAssignedCases ?? "—")}
+                    {caseCountsLoading
+                      ? "…"
+                      : (caseCounts?.totalAssignedCases ?? "—")}
                   </strong>
                 </div>
               </div>
@@ -368,19 +468,54 @@ export function AgentsPage() {
 
             {/* Fee financial stats — from agent_fees via agent_summary view */}
             <div className="mt-3">
-              <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F] mb-2">FEE FINANCIAL SUMMARY (from agent_fees)</div>
+              <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F] mb-2">
+                FEE FINANCIAL SUMMARY (from agent_fees)
+              </div>
               <div className="grid grid-cols-2 gap-3 border border-stone-300 bg-white p-3 font-mono text-sm uppercase sm:grid-cols-4">
-                <div><span className="block text-sm font-bold text-[#6d6658]">CASES W/ FEES</span><strong>{selectedAgent.casesWithFees}</strong></div>
-                <div><span className="block text-sm font-bold text-[#6d6658]">TOTAL BILLED</span><strong>{formatCurrency(selectedAgent.totalBilled)}</strong></div>
-                <div><span className="block text-sm font-bold text-[#6d6658]">TOTAL RECEIVED</span><strong className="text-[#0A6B52]">{formatCurrency(selectedAgent.totalPaid)}</strong></div>
-                <div><span className="block text-sm font-bold text-[#6d6658]">BALANCE</span><strong className={selectedAgent.balanceDue > 0 ? "text-[#CC0000]" : "text-[#0A6B52]"}>{formatCurrency(selectedAgent.balanceDue)}</strong></div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    CASES W/ FEES
+                  </span>
+                  <strong>{selectedAgent.casesWithFees}</strong>
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    TOTAL BILLED
+                  </span>
+                  <strong>{formatCurrency(selectedAgent.totalBilled)}</strong>
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    TOTAL RECEIVED
+                  </span>
+                  <strong className="text-[#0A6B52]">
+                    {formatCurrency(selectedAgent.totalPaid)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-[#6d6658]">
+                    BALANCE
+                  </span>
+                  <strong
+                    className={
+                      selectedAgent.balanceDue > 0
+                        ? "text-[#CC0000]"
+                        : "text-[#0A6B52]"
+                    }
+                  >
+                    {formatCurrency(selectedAgent.balanceDue)}
+                  </strong>
+                </div>
               </div>
             </div>
 
             <div className="mt-4">
-              <h3 className="font-mono text-sm font-bold uppercase text-[#0C0C0C]">Fee Entries</h3>
+              <h3 className="font-mono text-sm font-bold uppercase text-[#0C0C0C]">
+                Fee Entries
+              </h3>
               <p className="font-mono text-sm text-[#6d6658] mt-1">
-                Fees are managed per-case. Open a specific trademark record to add or edit fees.
+                Fees are managed per-case. Open a specific trademark record to
+                add or edit fees.
               </p>
             </div>
 
@@ -388,8 +523,21 @@ export function AgentsPage() {
               <table className="w-full text-left font-mono text-sm whitespace-nowrap">
                 <thead className="bg-[#0C0C0C] text-[#F0E8D0]">
                   <tr>
-                    {["CASE", "APP NAME", "DESCRIPTION", "BILLED", "PAID", "BALANCE", "DATE", "PAID", "ACTIONS"].map((h) => (
-                      <th key={h} className="px-2 py-2 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0">
+                    {[
+                      "CASE",
+                      "APP NAME",
+                      "DESCRIPTION",
+                      "BILLED",
+                      "PAID",
+                      "BALANCE",
+                      "DATE",
+                      "PAID",
+                      "ACTIONS",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-2 py-2 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0"
+                      >
                         {h}
                       </th>
                     ))}
@@ -398,13 +546,19 @@ export function AgentsPage() {
                 <tbody>
                   {feesLoading ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center font-bold text-[#6d6658] animate-pulse">
+                      <td
+                        colSpan={9}
+                        className="px-4 py-8 text-center font-bold text-[#6d6658] animate-pulse"
+                      >
                         LOADING FEES…
                       </td>
                     </tr>
                   ) : agentFees.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center font-mono text-sm text-[#9d9488]">
+                      <td
+                        colSpan={9}
+                        className="px-4 py-8 text-center font-mono text-sm text-[#9d9488]"
+                      >
                         No fee entries yet.
                       </td>
                     </tr>
@@ -425,12 +579,24 @@ export function AgentsPage() {
                             fee.caseNumber || "—"
                           )}
                         </td>
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 max-w-[150px] truncate">{fee.appName || "—"}</td>
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">{fee.description}</td>
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">{formatCurrency(fee.amountBilled)}</td>
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 text-[#0A6B52]">{formatCurrency(fee.amountPaid)}</td>
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 font-bold">{formatCurrency(fee.balanceDue)}</td>
-                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">{fee.feeDate}</td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 max-w-[150px] truncate">
+                          {fee.appName || "—"}
+                        </td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">
+                          {fee.description}
+                        </td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">
+                          {formatCurrency(fee.amountBilled)}
+                        </td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 text-[#0A6B52]">
+                          {formatCurrency(fee.amountPaid)}
+                        </td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10 font-bold">
+                          {formatCurrency(fee.balanceDue)}
+                        </td>
+                        <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">
+                          {fee.feeDate}
+                        </td>
                         <td className="px-2 py-1.5 border-r border-[#0C0C0C]/10">
                           {fee.paid ? (
                             <CheckCircle className="h-4 w-4 text-[#0A6B52]" />
@@ -442,7 +608,9 @@ export function AgentsPage() {
                           {!isViewer ? (
                             <button
                               onClick={() => {
-                                if (confirm("Delete this fee record permanently?")) {
+                                if (
+                                  confirm("Delete this fee record permanently?")
+                                ) {
                                   deleteFeeMutation.mutate(fee.id);
                                 }
                               }}
@@ -466,8 +634,14 @@ export function AgentsPage() {
 
       {/* Edit/Create Modal */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C0C0C]/55 p-4" onClick={() => setIsEditing(false)}>
-          <section className="w-full max-w-md border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C0C0C]/55 p-4"
+          onClick={() => setIsEditing(false)}
+        >
+          <section
+            className="w-full max-w-md border-3 border-[#0C0C0C] bg-[#F0E8D0] p-5 shadow-none"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start gap-3 border-b border-stone-300 pb-3">
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm font-bold uppercase tracking-widest text-[#6C1C1F]">
@@ -477,48 +651,69 @@ export function AgentsPage() {
                   {selectedAgent ? selectedAgent.name : "CREATE AGENT"}
                 </h2>
               </div>
-              <button type="button" onClick={() => setIsEditing(false)} className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white" aria-label="Close">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="border border-stone-300 bg-white p-1 hover:bg-[#0C0C0C] hover:text-white"
+                aria-label="Close"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
               <div>
-                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">NAME *</label>
+                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">
+                  NAME *
+                </label>
                 <input
                   type="text"
                   value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
                   className="mt-1 h-10 w-full px-3 border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="Agent name"
                 />
               </div>
               <div>
-                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">CITY</label>
+                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">
+                  CITY
+                </label>
                 <input
                   type="text"
                   value={editForm.city || ""}
-                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, city: e.target.value })
+                  }
                   className="mt-1 h-10 w-full px-3 border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="City"
                 />
               </div>
               <div>
-                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">PHONE</label>
+                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">
+                  PHONE
+                </label>
                 <input
                   type="text"
                   value={editForm.phone || ""}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, phone: e.target.value })
+                  }
                   className="mt-1 h-10 w-full px-3 border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="Phone number"
                 />
               </div>
               <div>
-                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">EMAIL</label>
+                <label className="font-mono text-sm font-bold uppercase text-[#6d6658]">
+                  EMAIL
+                </label>
                 <input
                   type="email"
                   value={editForm.email || ""}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
                   className="mt-1 h-10 w-full px-3 border border-stone-300 font-mono text-sm focus:outline-2 focus:outline-[#6C1C1F]"
                   placeholder="Email address"
                 />
@@ -529,10 +724,17 @@ export function AgentsPage() {
                     type="checkbox"
                     id="isActive"
                     checked={editForm.isActive ?? true}
-                    onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, isActive: e.target.checked })
+                    }
                     className="w-4 h-4 border border-stone-300"
                   />
-                  <label htmlFor="isActive" className="font-mono text-sm text-[#6d6658]">ACTIVE</label>
+                  <label
+                    htmlFor="isActive"
+                    className="font-mono text-sm text-[#6d6658]"
+                  >
+                    ACTIVE
+                  </label>
                 </div>
               )}
             </div>
@@ -543,7 +745,11 @@ export function AgentsPage() {
                 disabled={createMutation.isPending || updateMutation.isPending}
                 className="flex-1 border-2 border-[#0A6B52] bg-[#D8F2E8] px-3 py-2 font-mono text-sm font-bold uppercase text-[#0A6B52] hover:bg-[#0A6B52] hover:text-white transition-colors disabled:opacity-50"
               >
-                {createMutation.isPending || updateMutation.isPending ? "SAVING…" : selectedAgent ? "UPDATE" : "CREATE"}
+                {createMutation.isPending || updateMutation.isPending
+                  ? "SAVING…"
+                  : selectedAgent
+                    ? "UPDATE"
+                    : "CREATE"}
               </button>
               <button
                 onClick={() => setIsEditing(false)}

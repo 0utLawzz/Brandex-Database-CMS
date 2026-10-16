@@ -1,3 +1,11 @@
+## 16 October 2026 - Confirmed Database + Ledger candidate (local only)
+
+- User authorized coding after the presentation. Source recovery bundles created before edits; new branch `feat/confirmed-workflow-ledger`.
+- See `docs/CONFIRMED_BUILD_STATUS.md` for implemented source, evidence and explicit release gaps. See `docs/SYSTEM_ROADMAP.md` for the confirmed business rules.
+- Added integrated billing, receiving allocations/case receipts, financial audit, client terms/rates, assignment payables/FIFO settlement, timing flags, restoration, delivery and Drive upload source. Existing CMS operational screens retained.
+- 231 tests passed with the complete SQL migration chain in local PGlite; TypeScript and production build passed during implementation. Final checks repeat after final changes.
+- Drive OAuth/project roots and hosted end-to-end acceptance remain pending; no production migration, reset or deployment performed. Original standalone Ledger, Sheets and Suite production untouched.
+
 # Brandex Database CMS Progress
 
 **Last updated: 3 October 2026 — release fixes and workflow truth alignment**

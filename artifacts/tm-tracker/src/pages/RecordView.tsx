@@ -1,20 +1,37 @@
+import { CertificateDeliverySection } from "@/components/CertificateDeliverySection";
+import { CaseAccountSection } from "@/components/CaseAccountSection";
 import { CaseEventsSection } from "@/components/CaseEventsSection";
-import { getRecord, getWorkflowHistory, formatWorkflowLabel, getStaffRole } from "@/lib/api";
+import {
+  getRecord,
+  getWorkflowHistory,
+  formatWorkflowLabel,
+  getStaffRole,
+} from "@/lib/api";
 import type { TrademarkRecord, TmMatches } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
-import { formatDateShort, formatDate, formatDateLong, getRelativeAge, getFormDate } from "@/lib/utils";
+import {
+  formatDateShort,
+  formatDate,
+  formatDateLong,
+  getRelativeAge,
+  getFormDate,
+} from "@/lib/utils";
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import {
-  ArrowLeft, Edit2, Printer, CheckCircle2, MinusCircle,
-  Image as ImageIcon, FileText,
+  ArrowLeft,
+  Edit2,
+  Printer,
+  CheckCircle2,
+  MinusCircle,
+  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RecordModal } from "@/components/RecordModal";
 import { StageDocumentsSection } from "@/components/StageDocumentsSection";
 import {
   CaseWorkflowSection,
-  StagePaymentsSection,
   WorkflowHistorySection,
 } from "@/components/CaseWorkflowSection";
 import { useBranding } from "@/hooks/useBranding";
@@ -24,20 +41,42 @@ const STAGE_BADGE: Record<string, string> = {
   "STAGE 2": "bg-[#B0740E] text-white",
   "STAGE 3": "bg-[#6C1C1F] text-white",
   "STAGE 4": "bg-[#0A6B52] text-white",
-  "STOPPED": "bg-[#CC0000] text-white",
+  STOPPED: "bg-[#CC0000] text-white",
 };
 
-function Field({ label, value, wide }: { label: string; value?: string | null; wide?: boolean }) {
+function Field({
+  label,
+  value,
+  wide,
+}: {
+  label: string;
+  value?: string | null;
+  wide?: boolean;
+}) {
   if (!value) return null;
   return (
-    <div className={`${wide ? "col-span-2" : ""} border border-stone-300 bg-[#FFF9F0] p-3 print:p-1.5 shadow-none print:shadow-none`}>
-      <div className="font-mono text-sm print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-1 print:mb-0.5">{label}</div>
-      <div className="font-sans text-base sm:text-lg print:text-xs font-bold text-[#0C0C0C] break-words">{value}</div>
+    <div
+      className={`${wide ? "col-span-2" : ""} border border-stone-300 bg-[#FFF9F0] p-3 print:p-1.5 shadow-none print:shadow-none`}
+    >
+      <div className="font-mono text-sm print:text-[8px] font-bold uppercase tracking-widest text-[#6C1C1F] mb-1 print:mb-0.5">
+        {label}
+      </div>
+      <div className="font-sans text-base sm:text-lg print:text-xs font-bold text-[#0C0C0C] break-words">
+        {value}
+      </div>
     </div>
   );
 }
 
-function TmFormBadge({ label, active, tmMatches }: { label: string; active: boolean; tmMatches?: Record<string, any> }) {
+function TmFormBadge({
+  label,
+  active,
+  tmMatches,
+}: {
+  label: string;
+  active: boolean;
+  tmMatches?: Record<string, any>;
+}) {
   const formDate = getFormDate(tmMatches, label);
   const formattedDate = formDate ? formatDateLong(formDate) : null;
   const relativeAge = formDate ? getRelativeAge(formDate) : null;
@@ -51,7 +90,11 @@ function TmFormBadge({ label, active, tmMatches }: { label: string; active: bool
             : "border-[#0C0C0C]/35 text-[#6d6658] bg-[#FFF9F0]"
         }`}
       >
-        {active ? <CheckCircle2 className="w-4 h-4 print:w-3 print:h-3" /> : <MinusCircle className="w-4 h-4 print:w-3 print:h-3" />}
+        {active ? (
+          <CheckCircle2 className="w-4 h-4 print:w-3 print:h-3" />
+        ) : (
+          <MinusCircle className="w-4 h-4 print:w-3 print:h-3" />
+        )}
         {label}
       </span>
       {active && formattedDate && (
@@ -82,7 +125,11 @@ export function RecordView() {
   });
   const canEdit = staffRole === "admin";
 
-  const { data: record, isLoading, error } = useQuery({
+  const {
+    data: record,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["trademark", params.id],
     queryFn: () => getRecord(params.id!),
     enabled: Boolean(params.id),
@@ -113,7 +160,9 @@ export function RecordView() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center h-full gap-3">
-          <div className="font-mono font-bold text-[#CC0000]">Record not found</div>
+          <div className="font-mono font-bold text-[#CC0000]">
+            Record not found
+          </div>
           <button
             onClick={() => navigate("/search")}
             className="px-4 py-2 border border-stone-300 font-mono text-sm font-bold uppercase"
@@ -126,7 +175,11 @@ export function RecordView() {
   }
 
   const matches: TmMatches = record.tmMatches ?? {
-    TM5: false, TM6: false, TM11: false, TM16: false, TM56: false,
+    TM5: false,
+    TM6: false,
+    TM11: false,
+    TM16: false,
+    TM56: false,
   };
 
   return (
@@ -176,13 +229,13 @@ export function RecordView() {
               alt=""
               className="print-watermark-image"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "/branding/brandex-logo-14.png";
+                (e.target as HTMLImageElement).src =
+                  "/branding/brandex-logo-14.png";
               }}
             />
           </div>
 
           <div className="max-w-7xl mx-auto space-y-4 print:max-w-none print:space-y-2">
-
             {/* Print-only header — Brandex letterhead banner */}
             <div className="hidden print:block border-b-2 border-[#6C1C1F] pb-2 mb-1.5">
               <div className="flex items-center justify-between">
@@ -192,7 +245,8 @@ export function RecordView() {
                     alt="Brandex Law Associates"
                     className="h-9 max-w-[160px] object-contain"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/branding/brandex-logo-14.png";
+                      (e.target as HTMLImageElement).src =
+                        "/branding/brandex-logo-14.png";
                     }}
                   />
                   <div>
@@ -200,7 +254,8 @@ export function RecordView() {
                       Brandex Law Associates — Trademark Record
                     </div>
                     <div className="font-mono text-sm text-[#6d6658] mt-0.5">
-                      {record.caseNumber} · {record.clientCode} · {record.type} · Printed {new Date().toLocaleDateString()}
+                      {record.caseNumber} · {record.clientCode} · {record.type}{" "}
+                      · Printed {new Date().toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -216,7 +271,11 @@ export function RecordView() {
                 <div className="flex gap-3 p-4 print:p-2 sm:w-[58%] items-start">
                   <div className="w-24 h-24 sm:w-28 sm:h-28 print:w-16 print:h-16 shrink-0 border border-stone-300 bg-[#F0E8D0] flex items-center justify-center overflow-hidden">
                     {record.image ? (
-                      <img src={record.image} alt={record.appName} className="w-full h-full object-contain" />
+                      <img
+                        src={record.image}
+                        alt={record.appName}
+                        className="w-full h-full object-contain"
+                      />
                     ) : (
                       <ImageIcon className="w-8 h-8 text-[#9d9488] print:w-5 print:h-5" />
                     )}
@@ -229,7 +288,9 @@ export function RecordView() {
                       {record.tmCprNo && (
                         <div>
                           <span className="text-[#9d9488]">TM / CPR</span>
-                          <strong className="ml-1 text-[#0C0C0C] text-base print:text-[11px]">{record.tmCprNo}</strong>
+                          <strong className="ml-1 text-[#0C0C0C] text-base print:text-[11px]">
+                            {record.tmCprNo}
+                          </strong>
                         </div>
                       )}
                       {record.appClass && (
@@ -257,26 +318,42 @@ export function RecordView() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 print:gap-x-2 print:gap-y-1">
                       {record.caseType && (
                         <div className="col-span-2">
-                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">Case Type</div>
-                          <div className="font-mono text-sm print:text-[9px] font-bold text-[#0C0C0C]">{record.caseType}</div>
+                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">
+                            Case Type
+                          </div>
+                          <div className="font-mono text-sm print:text-[9px] font-bold text-[#0C0C0C]">
+                            {record.caseType}
+                          </div>
                         </div>
                       )}
                       {record.clientCode && (
                         <div>
-                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">Client Code</div>
-                          <div className="font-mono text-base print:text-[10px] font-bold text-[#0C0C0C]">{record.clientCode}</div>
+                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">
+                            Client Code
+                          </div>
+                          <div className="font-mono text-base print:text-[10px] font-bold text-[#0C0C0C]">
+                            {record.clientCode}
+                          </div>
                         </div>
                       )}
                       {record.caseNumber && (
                         <div>
-                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">Case No</div>
-                          <div className="font-mono text-base print:text-[10px] font-bold text-[#0A6B52]">{record.caseNumber}</div>
+                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">
+                            Case No
+                          </div>
+                          <div className="font-mono text-base print:text-[10px] font-bold text-[#0A6B52]">
+                            {record.caseNumber}
+                          </div>
                         </div>
                       )}
                       {record.clientName && (
                         <div className="col-span-2">
-                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">Client Name</div>
-                          <div className="font-sans text-sm print:text-[9px] font-bold text-[#0C0C0C] break-words">{record.clientName}</div>
+                          <div className="font-mono text-[10px] uppercase tracking-widest text-[#9d9488]">
+                            Client Name
+                          </div>
+                          <div className="font-sans text-sm print:text-[9px] font-bold text-[#0C0C0C] break-words">
+                            {record.clientName}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -287,10 +364,14 @@ export function RecordView() {
               <div className="border-t-2 border-[#0C0C0C]/15 px-4 py-3 print:px-2 print:py-1.5 flex flex-col sm:flex-row sm:items-start gap-3 print:gap-1.5 bg-[#F8F4EC]">
                 <div className="flex-1 flex items-start gap-2 flex-wrap">
                   <div>
-                    <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488] mb-0.5">Current Stage</div>
+                    <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488] mb-0.5">
+                      Current Stage
+                    </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {record.stage && (
-                        <span className={`px-2.5 py-0.5 font-mono text-sm print:text-[8px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}>
+                        <span
+                          className={`px-2.5 py-0.5 font-mono text-sm print:text-[8px] font-bold uppercase border border-stone-300 ${STAGE_BADGE[record.stage] ?? "bg-[#E8DFC7]"}`}
+                        >
                           {record.stage}
                         </span>
                       )}
@@ -301,32 +382,49 @@ export function RecordView() {
                       )}
                       {record.date && (
                         <span className="font-mono text-sm print:text-[8px] text-[#9d9488]">
-                          Filed: <strong className="text-[#0C0C0C]">{formatDateShort(record.date)}</strong>
+                          Filed:{" "}
+                          <strong className="text-[#0C0C0C]">
+                            {formatDateShort(record.date)}
+                          </strong>
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {workflowHistory.length > 1 && (() => {
-                  const prev = workflowHistory[1];
-                  return (
-                    <div className="shrink-0 text-right print:text-left">
-                      <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488] mb-0.5">Previous Action</div>
-                      <div className="font-mono text-sm print:text-[8px] text-[#6d6658]">
-                        {prev.fromStatus && (
-                          <span>{prev.fromStatus}{prev.fromSubStatus ? ` / ${formatWorkflowLabel(prev.fromSubStatus)}` : ""} → </span>
-                        )}
-                        <span className="font-bold text-[#0C0C0C]">
-                          {prev.toStatus}{prev.toSubStatus ? ` / ${formatWorkflowLabel(prev.toSubStatus)}` : ""}
-                        </span>
-                        {prev.eventAt && (
-                          <span className="ml-1.5 text-[#9d9488]">{formatDateShort(prev.eventAt)}</span>
-                        )}
+                {workflowHistory.length > 1 &&
+                  (() => {
+                    const prev = workflowHistory[1];
+                    return (
+                      <div className="shrink-0 text-right print:text-left">
+                        <div className="font-mono text-sm uppercase tracking-widest text-[#9d9488] mb-0.5">
+                          Previous Action
+                        </div>
+                        <div className="font-mono text-sm print:text-[8px] text-[#6d6658]">
+                          {prev.fromStatus && (
+                            <span>
+                              {prev.fromStatus}
+                              {prev.fromSubStatus
+                                ? ` / ${formatWorkflowLabel(prev.fromSubStatus)}`
+                                : ""}{" "}
+                              →{" "}
+                            </span>
+                          )}
+                          <span className="font-bold text-[#0C0C0C]">
+                            {prev.toStatus}
+                            {prev.toSubStatus
+                              ? ` / ${formatWorkflowLabel(prev.toSubStatus)}`
+                              : ""}
+                          </span>
+                          {prev.eventAt && (
+                            <span className="ml-1.5 text-[#9d9488]">
+                              {formatDateShort(prev.eventAt)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
               </div>
             </div>
 
@@ -342,7 +440,10 @@ export function RecordView() {
                 </div>
               </div>
               <div className="p-4 print:p-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 print:gap-1.5">
-                <Field label="Filing Date" value={record.date ? formatDateShort(record.date) : undefined} />
+                <Field
+                  label="Filing Date"
+                  value={record.date ? formatDateShort(record.date) : undefined}
+                />
                 <Field label="TM / CPR Number" value={record.tmCprNo} />
                 <Field label="Class" value={record.appClass} />
                 <Field label="Assigned Agent" value={record.agent} />
@@ -356,9 +457,10 @@ export function RecordView() {
             </div>
 
             {/* 3. Stage Payments */}
-            <StagePaymentsSection record={record} canEdit={canEdit} />
+            <CaseAccountSection record={record} canEdit={canEdit} />
 
             {/* 4. Workflow History — 4-column stage dashboard */}
+            <CertificateDeliverySection id={record.id} canWrite={canEdit} />
             <WorkflowHistorySection workflowHistory={workflowHistory} />
 
             {/* 4. Case Documents */}
@@ -380,11 +482,31 @@ export function RecordView() {
                 </span>
               </div>
               <div className="p-4 print:p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 print:gap-1.5">
-                <TmFormBadge label="TM5" active={matches.TM5} tmMatches={matches} />
-                <TmFormBadge label="TM6" active={matches.TM6} tmMatches={matches} />
-                <TmFormBadge label="TM11" active={matches.TM11} tmMatches={matches} />
-                <TmFormBadge label="TM16" active={matches.TM16} tmMatches={matches} />
-                <TmFormBadge label="TM56" active={matches.TM56} tmMatches={matches} />
+                <TmFormBadge
+                  label="TM5"
+                  active={matches.TM5}
+                  tmMatches={matches}
+                />
+                <TmFormBadge
+                  label="TM6"
+                  active={matches.TM6}
+                  tmMatches={matches}
+                />
+                <TmFormBadge
+                  label="TM11"
+                  active={matches.TM11}
+                  tmMatches={matches}
+                />
+                <TmFormBadge
+                  label="TM16"
+                  active={matches.TM16}
+                  tmMatches={matches}
+                />
+                <TmFormBadge
+                  label="TM56"
+                  active={matches.TM56}
+                  tmMatches={matches}
+                />
               </div>
             </div>
 
@@ -414,15 +536,23 @@ export function RecordView() {
                   {/* Primary hierarchy - Journal No and Publication Date */}
                   <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 mb-3 print:mb-2">
                     <div className="flex-1">
-                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">JOURNAL NO</div>
+                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">
+                        JOURNAL NO
+                      </div>
                       <div className="font-serif text-lg sm:text-xl print:text-sm font-bold text-[#0A6B52] leading-none">
                         {String(record.journal["Journal No"] || "—")}
                       </div>
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">PUBLICATION DATE</div>
+                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">
+                        PUBLICATION DATE
+                      </div>
                       <div className="font-serif text-lg sm:text-xl print:text-sm font-bold text-[#6C1C1F] leading-none">
-                        {record.journal["Journal Date"] ? formatDateShort(String(record.journal["Journal Date"])) : "—"}
+                        {record.journal["Journal Date"]
+                          ? formatDateShort(
+                              String(record.journal["Journal Date"]),
+                            )
+                          : "—"}
                       </div>
                     </div>
                   </div>
@@ -431,20 +561,34 @@ export function RecordView() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 print:mb-2 border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
                     {record.journal["Application No"] && (
                       <div>
-                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">TM / CPR NO</div>
-                        <div className="font-bold text-sm print:text-[10px]">{String(record.journal["Application No"])}</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">
+                          TM / CPR NO
+                        </div>
+                        <div className="font-bold text-sm print:text-[10px]">
+                          {String(record.journal["Application No"])}
+                        </div>
                       </div>
                     )}
                     {record.journal.Class && (
                       <div>
-                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">CLASS</div>
-                        <div className="font-bold text-sm print:text-[10px]">{String(record.journal.Class)}</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">
+                          CLASS
+                        </div>
+                        <div className="font-bold text-sm print:text-[10px]">
+                          {String(record.journal.Class)}
+                        </div>
                       </div>
                     )}
                     {record.journal["Date of Filing"] && (
                       <div>
-                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">FILING DATE</div>
-                        <div className="font-bold text-sm print:text-[10px]">{formatDateShort(String(record.journal["Date of Filing"]))}</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658]">
+                          FILING DATE
+                        </div>
+                        <div className="font-bold text-sm print:text-[10px]">
+                          {formatDateShort(
+                            String(record.journal["Date of Filing"]),
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -453,7 +597,9 @@ export function RecordView() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 print:mb-2 border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
                     {record.journal["Applicant Name and Address"] && (
                       <div>
-                        <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">APPLICANT</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">
+                          APPLICANT
+                        </div>
                         <div className="text-sm print:text-[8px] text-[#0C0C0C] leading-snug">
                           {String(record.journal["Applicant Name and Address"])}
                         </div>
@@ -461,7 +607,9 @@ export function RecordView() {
                     )}
                     {record.journal["Agent Name and Address"] && (
                       <div>
-                        <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">AGENT</div>
+                        <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">
+                          AGENT
+                        </div>
                         <div className="text-sm print:text-[8px] text-[#0C0C0C] leading-snug">
                           {String(record.journal["Agent Name and Address"])}
                         </div>
@@ -472,22 +620,32 @@ export function RecordView() {
                   {/* Additional details */}
                   {record.journal.Title && (
                     <div className="border-t border-[#0C0C0C]/20 pt-3 print:pt-2">
-                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">TITLE</div>
+                      <div className="text-sm uppercase tracking-widest text-[#6d6658] mb-0.5">
+                        TITLE
+                      </div>
                       <div className="text-sm print:text-[8px] text-[#0C0C0C] leading-snug">
                         {String(record.journal.Title)}
                       </div>
                     </div>
                   )}
-
-
                 </div>
               </div>
             )}
 
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                      <div>Last Modified: <span className="text-[#0C0C0C]">{record.updatedAt ? formatDate(record.updatedAt) : "—"}</span></div>
-                      <div>Date Created: <span className="text-[#0C0C0C]">{record.createdAt ? formatDate(record.createdAt) : "—"}</span></div>
-                    </div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <div>
+                Last Modified:{" "}
+                <span className="text-[#0C0C0C]">
+                  {record.updatedAt ? formatDate(record.updatedAt) : "—"}
+                </span>
+              </div>
+              <div>
+                Date Created:{" "}
+                <span className="text-[#0C0C0C]">
+                  {record.createdAt ? formatDate(record.createdAt) : "—"}
+                </span>
+              </div>
+            </div>
 
             <div className="hidden print:block mt-4 border border-stone-300 bg-[#F8F4EC] p-3 print:p-2">
               <div className="font-mono text-[10px] uppercase tracking-widest text-[#6C1C1F] mb-2">
@@ -506,7 +664,8 @@ export function RecordView() {
             </div>
 
             <div className="font-mono text-sm text-[#6d6658] text-right print:hidden">
-              Last modified: {record.updatedAt ? formatDate(record.updatedAt) : "—"}
+              Last modified:{" "}
+              {record.updatedAt ? formatDate(record.updatedAt) : "—"}
             </div>
 
             <div className="hidden print:block border-t border-[#6C1C1F]/30 pt-1.5 mt-2 text-[#6d6658] font-mono text-sm">

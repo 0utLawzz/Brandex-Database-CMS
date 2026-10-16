@@ -1,6 +1,10 @@
 /** Brandex browser data layer — Supabase is primary; Sheet mirroring is server-side. */
 
-import { isSupabaseConfigured, supabase, TRADEMARK_FILES_BUCKET } from "./supabase";
+import {
+  isSupabaseConfigured,
+  supabase,
+  TRADEMARK_FILES_BUCKET,
+} from "./supabase";
 
 export interface Trademark {
   ID: string;
@@ -48,6 +52,9 @@ export interface TrademarkRecord {
   appClass: string;
   stage: string;
   subStage: string;
+  followupTone?: string | null;
+  followupReason?: string | null;
+  followupDue?: string | null;
   caseType: string;
   agent: string;
   city: string;
@@ -175,6 +182,7 @@ export interface TrademarkListParams {
   agent?: string;
   appClass?: string;
   tmForm?: TmFormKey;
+  followup?: "red" | "yellow" | "green";
   includeDetails?: boolean;
 }
 
@@ -223,15 +231,21 @@ export interface TmSearchResult {
   journal: JournalRecord | null;
 }
 
-export const STAGES = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4", "STOPPED"] as const;
-export type StageType = typeof STAGES[number];
+export const STAGES = [
+  "STAGE 1",
+  "STAGE 2",
+  "STAGE 3",
+  "STAGE 4",
+  "STOPPED",
+] as const;
+export type StageType = (typeof STAGES)[number];
 
 export const STATUS_WORKFLOW: Record<string, string[]> = {
   "STAGE 1": ["Filing", "Examination", "Acknowledgment"],
   "STAGE 2": ["Assigned", "Accepted", "Hearing"],
   "STAGE 3": ["Published", "D-Note Received", "D-Note Submitted"],
   "STAGE 4": ["CER Acknowledge", "CER Received", "CER Dispatch"],
-  "STOPPED": [],
+  STOPPED: [],
 };
 
 /**
@@ -306,19 +320,31 @@ export const STAGE_DOCUMENT_WORKFLOW: StageDocumentDefinition[] = [
   {
     stage: "STAGE 4",
     label: "Stage 4",
-    subStages: [
-      "CER Acknowledge",
-      "CER Received",
-      "CER Dispatch",
-    ],
+    subStages: ["CER Acknowledge", "CER Received", "CER Dispatch"],
   },
 ];
 
 export { getStaffRole } from "./registryImport";
 
-export const CITIES = ["Islamabad", "Karachi", "Lahore", "Multan", "Rawalpindi", "Peshawar", "Quetta"] as const;
+export const CITIES = [
+  "Islamabad",
+  "Karachi",
+  "Lahore",
+  "Multan",
+  "Rawalpindi",
+  "Peshawar",
+  "Quetta",
+] as const;
 export const VALID_TYPES = ["X", "A", "N"] as const;
-export const CASE_TYPES = ["Trademark", "Copyright", "Design", "Patent", "Renewal", "Opposition", "Other"] as const;
+export const CASE_TYPES = [
+  "Trademark",
+  "Copyright",
+  "Design",
+  "Patent",
+  "Renewal",
+  "Opposition",
+  "Other",
+] as const;
 export const TM_FORMS: TmFormKey[] = ["TM5", "TM6", "TM11", "TM16", "TM56"];
 
 export interface UploadImageResult {
@@ -364,6 +390,9 @@ export function mapRowToRecord(row: Trademark): TrademarkRecord {
 }
 
 type SupabaseTrademarkRow = {
+  followup_tone?: string | null;
+  followup_reason?: string | null;
+  followup_due?: string | null;
   id: string;
   filing_date: string;
   type: string;
@@ -416,7 +445,9 @@ type SupabaseTrademarkRow = {
 
 function ensureConfigured() {
   if (!isSupabaseConfigured) {
-    throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.");
+    throw new Error(
+      "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.",
+    );
   }
 }
 
@@ -426,16 +457,21 @@ function throwIfError(error: { message: string } | null) {
 
 export class DuplicateTmNumberError extends Error {
   constructor() {
-    super("A record with this TM/CPR number already exists. Search the number and open the existing record.");
+    super(
+      "A record with this TM/CPR number already exists. Search the number and open the existing record.",
+    );
     this.name = "DuplicateTmNumberError";
   }
 }
 
-function throwIfDuplicateTmNumberError(error: { message: string; code?: string; constraint?: string } | null) {
-  if (error?.code === "23505" && (
-    error.constraint === "trademarks_tm_cpr_number_norm_unique_idx"
-    || error.message.includes("trademarks_tm_cpr_number_norm_unique_idx")
-  )) {
+function throwIfDuplicateTmNumberError(
+  error: { message: string; code?: string; constraint?: string } | null,
+) {
+  if (
+    error?.code === "23505" &&
+    (error.constraint === "trademarks_tm_cpr_number_norm_unique_idx" ||
+      error.message.includes("trademarks_tm_cpr_number_norm_unique_idx"))
+  ) {
     throw new DuplicateTmNumberError();
   }
   throwIfError(error);
@@ -445,7 +481,10 @@ export function normalizeTmNumber(value: string | null | undefined): string {
   return String(value ?? "").replace(/\D/g, "");
 }
 
-function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkRecord {
+function rowToRecord(
+  row: SupabaseTrademarkRow,
+  signedImage = "",
+): TrademarkRecord {
   const matches: TmMatches = {
     TM5: row.tm5,
     TM6: row.tm6,
@@ -474,6 +513,9 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     tmNo: row.tm_cpr_number ?? "",
     appClass: row.nice_class ?? "",
     stage: row.status,
+    followupTone: row.followup_tone,
+    followupReason: row.followup_reason,
+    followupDue: row.followup_due,
     subStage: row.sub_status ?? "",
     caseType: row.case_type ?? "",
     agent: row.agent ?? "",
@@ -516,21 +558,44 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
   };
 }
 
-async function mapRows(rows: SupabaseTrademarkRow[], signImages = false): Promise<TrademarkRecord[]> {
-  if (!signImages) return mergeRegistryMatches(rows.map((row) => rowToRecord(row)));
-  const paths = rows.map((row) => row.logo_path).filter((path): path is string => Boolean(path));
+async function mapRows(
+  rows: SupabaseTrademarkRow[],
+  signImages = false,
+): Promise<TrademarkRecord[]> {
+  if (!signImages)
+    return mergeRegistryMatches(rows.map((row) => rowToRecord(row)));
+  const paths = rows
+    .map((row) => row.logo_path)
+    .filter((path): path is string => Boolean(path));
   const signedByPath = new Map<string, string>();
   if (paths.length) {
-    const { data } = await supabase.storage.from(TRADEMARK_FILES_BUCKET).createSignedUrls(paths, 3600);
+    const { data } = await supabase.storage
+      .from(TRADEMARK_FILES_BUCKET)
+      .createSignedUrls(paths, 3600);
     data?.forEach((item, index) => {
       if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl);
     });
   }
-  return mergeRegistryMatches(rows.map((row) => rowToRecord(row, row.logo_path ? signedByPath.get(row.logo_path) ?? "" : "")));
+  return mergeRegistryMatches(
+    rows.map((row) =>
+      rowToRecord(
+        row,
+        row.logo_path ? (signedByPath.get(row.logo_path) ?? "") : "",
+      ),
+    ),
+  );
 }
 
-async function mergeRegistryMatches(records: TrademarkRecord[]): Promise<TrademarkRecord[]> {
-  const numbers = [...new Set(records.map((record) => record.tmCprNo.replace(/\D/g, "")).filter(Boolean))];
+async function mergeRegistryMatches(
+  records: TrademarkRecord[],
+): Promise<TrademarkRecord[]> {
+  const numbers = [
+    ...new Set(
+      records
+        .map((record) => record.tmCprNo.replace(/\D/g, ""))
+        .filter(Boolean),
+    ),
+  ];
   if (!numbers.length) return records;
 
   const { data, error } = await supabase
@@ -578,18 +643,54 @@ async function mergeRegistryMatches(records: TrademarkRecord[]): Promise<Tradema
 }
 
 const TRADEMARK_LIST_COLUMNS = [
-  "id", "filing_date", "type", "client_code", "client_name", "case_number",
-  "application_name", "tm_cpr_number", "nice_class", "status", "sub_status",
-  "case_type", "agent", "city", "tm5", "tm6", "tm11", "tm16", "tm56",
-  "assigned_agent_id", "agent_rate", "demand_note_submitted_date", "certificate_due_date", "certificate_acknowledged_date",
-  "journal_number", "journal_date", "logo_path", "legacy_image_url", "created_at", "updated_at", "version",
+  "followup_tone",
+  "followup_reason",
+  "followup_due",
+  "id",
+  "filing_date",
+  "type",
+  "client_code",
+  "client_name",
+  "case_number",
+  "application_name",
+  "tm_cpr_number",
+  "nice_class",
+  "status",
+  "sub_status",
+  "case_type",
+  "agent",
+  "city",
+  "tm5",
+  "tm6",
+  "tm11",
+  "tm16",
+  "tm56",
+  "assigned_agent_id",
+  "agent_rate",
+  "demand_note_submitted_date",
+  "certificate_due_date",
+  "certificate_acknowledged_date",
+  "journal_number",
+  "journal_date",
+  "logo_path",
+  "legacy_image_url",
+  "created_at",
+  "updated_at",
+  "version",
   // Publication fields
-  "publication_date", "opposition_deadline", "demand_note_received", "demand_note_date",
+  "publication_date",
+  "opposition_deadline",
+  "demand_note_received",
+  "demand_note_date",
   // Stage payment placeholder fields (migration 202609220003)
-  "stage1_paid", "stage1_paid_date",
-  "stage2_paid", "stage2_paid_date",
-  "stage3_paid", "stage3_paid_date",
-  "stage4_paid", "stage4_paid_date",
+  "stage1_paid",
+  "stage1_paid_date",
+  "stage2_paid",
+  "stage2_paid_date",
+  "stage3_paid",
+  "stage3_paid_date",
+  "stage4_paid",
+  "stage4_paid_date",
   "payment_reference",
 ].join(",");
 
@@ -597,13 +698,18 @@ const TRADEMARK_LIST_COLUMNS = [
  * Normalizes ordinary business string values to UPPERCASE.
  * Preserves null/undefined/empty appropriately.
  */
-export function normalizeBusinessUpper(val: string | null | undefined): string | null {
+export function normalizeBusinessUpper(
+  val: string | null | undefined,
+): string | null {
   if (val === null || val === undefined) return null;
   const s = String(val).trim();
   return s ? s.toUpperCase() : null;
 }
 
-export function normalizeBusinessUpperRequired(val: string | null | undefined, fallback = ""): string {
+export function normalizeBusinessUpperRequired(
+  val: string | null | undefined,
+  fallback = "",
+): string {
   if (!val) return fallback;
   return String(val).trim().toUpperCase();
 }
@@ -619,14 +725,14 @@ export function normalizeBusinessUpperRequired(val: string | null | undefined, f
 export function isStageDocumentSectionVisible(
   sectionStage: string,
   currentStage?: string,
-  docCount = 0
+  docCount = 0,
 ): boolean {
   // Always show if it has documents (historical preservation)
   if (docCount > 0) return true;
-  
+
   // Always show current stage
   if (sectionStage.toUpperCase() === currentStage?.toUpperCase()) return true;
-  
+
   // Hide empty future or earlier stages
   return false;
 }
@@ -637,9 +743,13 @@ export function inputToRow(input: TrademarkInput) {
   return {
     filing_date: input.date,
     type: normalizeBusinessUpperRequired(input.type ?? input.prefix),
-    client_code: normalizeBusinessUpperRequired(input.clientCode ?? input.clientNo),
+    client_code: normalizeBusinessUpperRequired(
+      input.clientCode ?? input.clientNo,
+    ),
     client_name: normalizeBusinessUpper(input.clientName),
-    case_number: normalizeBusinessUpperRequired(input.caseNumber ?? input.caseNo ?? input.folderNo),
+    case_number: normalizeBusinessUpperRequired(
+      input.caseNumber ?? input.caseNo ?? input.folderNo,
+    ),
     application_name: normalizeBusinessUpperRequired(input.appName),
     tm_cpr_number: normalizeBusinessUpper(input.tmCprNo ?? input.tmNo),
     nice_class: normalizeBusinessUpper(input.appClass),
@@ -654,22 +764,33 @@ export function inputToRow(input: TrademarkInput) {
   };
 }
 
-const TM_FORM_COLUMNS: Record<TmFormKey, "tm5" | "tm6" | "tm11" | "tm16" | "tm56"> = {
-  TM5: "tm5", TM6: "tm6", TM11: "tm11", TM16: "tm16", TM56: "tm56",
+const TM_FORM_COLUMNS: Record<
+  TmFormKey,
+  "tm5" | "tm6" | "tm11" | "tm16" | "tm56"
+> = {
+  TM5: "tm5",
+  TM6: "tm6",
+  TM11: "tm11",
+  TM16: "tm16",
+  TM56: "tm56",
 };
 
 function safeSearchTerm(value: string) {
   return value.trim().replace(/[(),]/g, " ").replace(/\s+/g, " ");
 }
 
-export async function listTrademarkPage(params: TrademarkListParams = {}): Promise<TrademarkPage> {
+export async function listTrademarkPage(
+  params: TrademarkListParams = {},
+): Promise<TrademarkPage> {
   ensureConfigured();
   const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 50));
   const page = Math.max(1, params.page ?? 1);
   const start = (page - 1) * pageSize;
   let query = supabase
-    .from("trademarks")
-    .select(params.includeDetails ? "*" : TRADEMARK_LIST_COLUMNS, { count: "exact" })
+    .from("trademark_followup")
+    .select(params.includeDetails ? "*" : TRADEMARK_LIST_COLUMNS, {
+      count: "exact",
+    })
     .order("filing_date", { ascending: false })
     .order("updated_at", { ascending: false })
     .order("type", { ascending: true })
@@ -680,21 +801,27 @@ export async function listTrademarkPage(params: TrademarkListParams = {}): Promi
   const search = params.search ? safeSearchTerm(params.search) : "";
   if (search) {
     const pattern = `%${search}%`;
-    query = query.or([
-      `client_name.ilike.${pattern}`,
-      `client_code.ilike.${pattern}`,
-      `case_number.ilike.${pattern}`,
-      `application_name.ilike.${pattern}`,
-      `tm_cpr_number.ilike.${pattern}`,
-      `nice_class.ilike.${pattern}`,
-      `agent.ilike.${pattern}`,
-      `city.ilike.${pattern}`,
-    ].join(","));
+    query = query.or(
+      [
+        `client_name.ilike.${pattern}`,
+        `client_code.ilike.${pattern}`,
+        `case_number.ilike.${pattern}`,
+        `application_name.ilike.${pattern}`,
+        `tm_cpr_number.ilike.${pattern}`,
+        `nice_class.ilike.${pattern}`,
+        `agent.ilike.${pattern}`,
+        `city.ilike.${pattern}`,
+      ].join(","),
+    );
   }
   if (params.dateFrom) query = query.gte("filing_date", params.dateFrom);
   if (params.dateTo) query = query.lte("filing_date", params.dateTo);
   if (params.type) query = query.eq("type", params.type);
-  if (params.clientCode) query = query.ilike("client_code", `%${safeSearchTerm(params.clientCode)}%`);
+  if (params.clientCode)
+    query = query.ilike(
+      "client_code",
+      `%${safeSearchTerm(params.clientCode)}%`,
+    );
   if (params?.stage) query = query.eq("status", params.stage);
   if (params?.subStage) {
     const term = safeSearchTerm(params.subStage);
@@ -705,7 +832,9 @@ export async function listTrademarkPage(params: TrademarkListParams = {}): Promi
     else if (/oppo/i.test(term)) altTerm = "Opposition";
 
     if (altTerm) {
-      query = query.or(`sub_status.ilike.%${term}%,sub_status.ilike.%${altTerm}%`);
+      query = query.or(
+        `sub_status.ilike.%${term}%,sub_status.ilike.%${altTerm}%`,
+      );
     } else {
       query = query.ilike("sub_status", `%${term}%`);
     }
@@ -714,19 +843,25 @@ export async function listTrademarkPage(params: TrademarkListParams = {}): Promi
   if (params?.caseType) query = query.eq("case_type", params.caseType);
   if (params?.agent) query = query.eq("agent", params.agent);
   if (params?.appClass) query = query.eq("nice_class", params.appClass);
+  if (params.followup) query = query.eq("followup_tone", params.followup);
   if (params.tmForm) query = query.eq(TM_FORM_COLUMNS[params.tmForm], true);
 
   const { data, error, count } = await query;
   throwIfError(error);
   return {
-    records: await mapRows((data ?? []) as unknown as SupabaseTrademarkRow[], true),
+    records: await mapRows(
+      (data ?? []) as unknown as SupabaseTrademarkRow[],
+      true,
+    ),
     total: count ?? 0,
     page,
     pageSize,
   };
 }
 
-export async function listTrademarks(params: Omit<TrademarkListParams, "page" | "pageSize"> = {}): Promise<TrademarkRecord[]> {
+export async function listTrademarks(
+  params: Omit<TrademarkListParams, "page" | "pageSize"> = {},
+): Promise<TrademarkRecord[]> {
   const first = await listTrademarkPage({ ...params, page: 1, pageSize: 500 });
   const records = [...first.records];
   for (let page = 2; records.length < first.total; page += 1) {
@@ -736,19 +871,30 @@ export async function listTrademarks(params: Omit<TrademarkListParams, "page" | 
   return records;
 }
 
-export async function listTrademarksForExport(params: Omit<TrademarkListParams, "page" | "pageSize" | "includeDetails"> = {}) {
+export async function listTrademarksForExport(
+  params: Omit<
+    TrademarkListParams,
+    "page" | "pageSize" | "includeDetails"
+  > = {},
+) {
   return listTrademarks({ ...params, includeDetails: true });
 }
 
 export async function getRecord(id: string): Promise<TrademarkRecord | null> {
   ensureConfigured();
-  const { data, error } = await supabase.from("trademarks").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from("trademarks")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
   throwIfError(error);
   if (!data) return null;
   return (await mapRows([data as SupabaseTrademarkRow], true))[0];
 }
 
-export async function getTrademark(id: string): Promise<TrademarkRecord | null> {
+export async function getTrademark(
+  id: string,
+): Promise<TrademarkRecord | null> {
   return getRecord(id);
 }
 
@@ -758,7 +904,13 @@ export async function searchTm(tmNo: string): Promise<TmSearchResult> {
   if (!normalizedNumber) {
     return {
       records: [],
-      tmMatches: { TM5: false, TM6: false, TM11: false, TM16: false, TM56: false },
+      tmMatches: {
+        TM5: false,
+        TM6: false,
+        TM11: false,
+        TM16: false,
+        TM56: false,
+      },
       journal: null,
     };
   }
@@ -773,20 +925,30 @@ export async function searchTm(tmNo: string): Promise<TmSearchResult> {
   const first = recordsWithDates[0];
   return {
     records: recordsWithDates,
-    tmMatches: first?.tmMatches ?? { TM5: false, TM6: false, TM11: false, TM16: false, TM56: false },
+    tmMatches: first?.tmMatches ?? {
+      TM5: false,
+      TM6: false,
+      TM11: false,
+      TM16: false,
+      TM56: false,
+    },
     journal: first?.journal ?? null,
   };
 }
 
 export class ConflictError extends Error {
-  constructor(message = "Record was modified by another user. Reload and try again.") {
+  constructor(
+    message = "Record was modified by another user. Reload and try again.",
+  ) {
     super(message);
     this.name = "ConflictError";
   }
 }
 
 export class StagePaymentRequiredError extends Error {
-  constructor(message = "Previous stage payment is required before proceeding.") {
+  constructor(
+    message = "Previous stage payment is required before proceeding.",
+  ) {
     super(message);
     this.name = "StagePaymentRequiredError";
   }
@@ -798,8 +960,15 @@ export class StagePaymentRequiredError extends Error {
  * STOPPED can be entered from any stage, but cannot be exited.
  * Backward transitions (e.g. Stage 2 -> Stage 1, Stage 4 -> Stage 3) are rejected.
  */
-export function isValidStageTransition(fromStage: string, toStage: string): boolean {
-  if (!STAGES.includes(fromStage as StageType) || !STAGES.includes(toStage as StageType)) return false;
+export function isValidStageTransition(
+  fromStage: string,
+  toStage: string,
+): boolean {
+  if (
+    !STAGES.includes(fromStage as StageType) ||
+    !STAGES.includes(toStage as StageType)
+  )
+    return false;
   if (fromStage === toStage) return true;
   if (toStage === "STOPPED") return true;
   if (fromStage === "STOPPED") return false;
@@ -823,35 +992,67 @@ export function isValidStageTransition(fromStage: string, toStage: string): bool
 
 /** Sub-stage transitions are deliberately explicit: Stage 2 outcomes are alternatives. */
 export const SUB_STAGE_TRANSITIONS: Record<string, Record<string, string[]>> = {
-  "STAGE 1": { Filing: ["Examination", "Acknowledgment"], Examination: ["Acknowledgment"], Acknowledgment: [] },
-  "STAGE 2": { Assigned: ["Accepted", "Hearing"], Accepted: [], Hearing: [] },
-  "STAGE 3": { Published: ["D-Note Received"], "D-Note Received": ["D-Note Submitted"], "D-Note Submitted": [] },
-  "STAGE 4": { "CER Acknowledge": ["CER Received"], "CER Received": ["CER Dispatch"], "CER Dispatch": [] },
+  "STAGE 1": {
+    Filing: ["Examination", "Acknowledgment"],
+    Examination: ["Acknowledgment"],
+    Acknowledgment: [],
+  },
+  "STAGE 2": {
+    Assigned: ["Accepted", "Hearing"],
+    Accepted: [],
+    Hearing: ["Accepted"],
+  },
+  "STAGE 3": {
+    Published: ["D-Note Received"],
+    "D-Note Received": ["D-Note Submitted"],
+    "D-Note Submitted": [],
+  },
+  "STAGE 4": {
+    "CER Acknowledge": ["CER Received"],
+    "CER Received": ["CER Dispatch"],
+    "CER Dispatch": [],
+  },
 };
 const COMPLETED_SUB_STAGES: Record<string, string[]> = {
-  "STAGE 1": ["Acknowledgment"], "STAGE 2": ["Accepted", "Hearing"],
-  "STAGE 3": ["D-Note Submitted"], "STAGE 4": ["CER Dispatch"],
+  "STAGE 1": ["Acknowledgment"],
+  "STAGE 2": ["Accepted"],
+  "STAGE 3": ["D-Note Submitted"],
+  "STAGE 4": ["CER Dispatch"],
 };
-export function workflowTransitionError(fromStage: string, fromSub: string | null | undefined,
-  toStage: string, toSub: string | null | undefined): string | null {
-  if (!isValidStageTransition(fromStage, toStage)) return `Backward workflow transitions are not allowed (cannot move from ${fromStage} to ${toStage}). Stages cannot be skipped.`;
+export function workflowTransitionError(
+  fromStage: string,
+  fromSub: string | null | undefined,
+  toStage: string,
+  toSub: string | null | undefined,
+): string | null {
+  if (!isValidStageTransition(fromStage, toStage))
+    return `Backward workflow transitions are not allowed (cannot move from ${fromStage} to ${toStage}). Stages cannot be skipped.`;
   if (toStage === "STOPPED") return toSub ? "STOPPED has no sub-stage." : null;
   const current = normalizeWorkflowValue(fromSub || "");
   const target = normalizeWorkflowValue(toSub || "");
   // Keep legacy records editable without pretending their old workflow is valid.
   if (fromStage === toStage && current === target) return null;
-  if (!STATUS_WORKFLOW[toStage]?.includes(target)) return `Invalid sub-stage "${toSub || ""}" for ${toStage}.`;
+  if (!STATUS_WORKFLOW[toStage]?.includes(target))
+    return `Invalid sub-stage "${toSub || ""}" for ${toStage}.`;
   if (fromStage !== toStage) {
-    if (!COMPLETED_SUB_STAGES[fromStage]?.includes(current)) return `Complete ${fromStage} before moving to ${toStage}.`;
-    if (target !== STATUS_WORKFLOW[toStage][0]) return `Enter ${toStage} at ${STATUS_WORKFLOW[toStage][0]}.`;
+    if (!COMPLETED_SUB_STAGES[fromStage]?.includes(current))
+      return `Complete ${fromStage} before moving to ${toStage}.`;
+    if (target !== STATUS_WORKFLOW[toStage][0])
+      return `Enter ${toStage} at ${STATUS_WORKFLOW[toStage][0]}.`;
   } else if (!SUB_STAGE_TRANSITIONS[fromStage]?.[current]?.includes(target)) {
     return `Cannot move from ${current || "an unspecified sub-stage"} to ${target}.`;
   }
   return null;
 }
-export function availableWorkflowSubStages(fromStage: string, fromSub: string, targetStage: string): string[] {
+export function availableWorkflowSubStages(
+  fromStage: string,
+  fromSub: string,
+  targetStage: string,
+): string[] {
   const candidates = STATUS_WORKFLOW[targetStage] || [];
-  return candidates.filter(sub => !workflowTransitionError(fromStage, fromSub, targetStage, sub));
+  return candidates.filter(
+    (sub) => !workflowTransitionError(fromStage, fromSub, targetStage, sub),
+  );
 }
 
 /**
@@ -862,41 +1063,65 @@ export function availableWorkflowSubStages(fromStage: string, fromSub: string, t
  */
 export function validatePaymentGate(
   targetStage: string,
-  record: { stage1_paid?: boolean; stage2_paid?: boolean; stage3_paid?: boolean }
+  record: {
+    stage1_paid?: boolean;
+    stage2_paid?: boolean;
+    stage3_paid?: boolean;
+  },
 ): void {
   if (targetStage === "STAGE 2") {
     if (!record.stage1_paid) {
-      throw new StagePaymentRequiredError("Stage 2 cannot be started until Stage 1 payment is cleared.");
+      throw new StagePaymentRequiredError(
+        "Stage 2 cannot be started until Stage 1 payment is cleared.",
+      );
     }
   } else if (targetStage === "STAGE 3") {
     if (!record.stage1_paid) {
-      throw new StagePaymentRequiredError("Stage 3 cannot be started until Stage 1 payment is cleared.");
+      throw new StagePaymentRequiredError(
+        "Stage 3 cannot be started until Stage 1 payment is cleared.",
+      );
     }
     if (!record.stage2_paid) {
-      throw new StagePaymentRequiredError("Stage 3 cannot be started until Stage 2 payment is cleared.");
+      throw new StagePaymentRequiredError(
+        "Stage 3 cannot be started until Stage 2 payment is cleared.",
+      );
     }
   } else if (targetStage === "STAGE 4") {
     if (!record.stage1_paid) {
-      throw new StagePaymentRequiredError("Stage 4 cannot be started until Stage 1 payment is cleared.");
+      throw new StagePaymentRequiredError(
+        "Stage 4 cannot be started until Stage 1 payment is cleared.",
+      );
     }
     if (!record.stage2_paid) {
-      throw new StagePaymentRequiredError("Stage 4 cannot be started until Stage 2 payment is cleared.");
+      throw new StagePaymentRequiredError(
+        "Stage 4 cannot be started until Stage 2 payment is cleared.",
+      );
     }
     if (!record.stage3_paid) {
-      throw new StagePaymentRequiredError("Stage 4 cannot be started until Stage 3 payment is cleared.");
+      throw new StagePaymentRequiredError(
+        "Stage 4 cannot be started until Stage 3 payment is cleared.",
+      );
     }
   }
 }
 
-export function isStage2PaymentRequired(stage?: string, stage1Paid?: boolean): boolean {
+export function isStage2PaymentRequired(
+  stage?: string,
+  stage1Paid?: boolean,
+): boolean {
   return stage === "STAGE 2" && !stage1Paid;
 }
 
-export function validateStage2PaymentGate(stage?: string, stage1Paid?: boolean): void {
+export function validateStage2PaymentGate(
+  stage?: string,
+  stage1Paid?: boolean,
+): void {
   validatePaymentGate(stage || "", { stage1_paid: stage1Paid });
 }
 
-export async function createTrademark(input: TrademarkInput): Promise<{ id: string; caseNumber: string }> {
+export async function createTrademark(
+  input: TrademarkInput,
+): Promise<{ id: string; caseNumber: string }> {
   ensureConfigured();
 
   const targetStage = input.stage || "STAGE 1";
@@ -904,30 +1129,40 @@ export async function createTrademark(input: TrademarkInput): Promise<{ id: stri
 
   // Validate workflow values if stage is supplied
   if (!STAGES.includes(targetStage as any)) {
-    throw new Error(`Invalid stage "${targetStage}". Permitted stages: ${STAGES.join(", ")}`);
+    throw new Error(
+      `Invalid stage "${targetStage}". Permitted stages: ${STAGES.join(", ")}`,
+    );
   }
   if (targetStage in STATUS_WORKFLOW) {
     const validSubStages = STATUS_WORKFLOW[targetStage] || [];
     const normalizedSub = normalizeWorkflowValue(targetSubStage);
     const isValid = validSubStages.some(
-      (s) => s === targetSubStage || normalizeWorkflowValue(s) === normalizedSub,
+      (s) =>
+        s === targetSubStage || normalizeWorkflowValue(s) === normalizedSub,
     );
     if (!isValid) {
-      throw new Error(`Invalid sub-stage "${targetSubStage}" for ${targetStage}.`);
+      throw new Error(
+        `Invalid sub-stage "${targetSubStage}" for ${targetStage}.`,
+      );
     }
   }
 
   if (targetStage !== "STAGE 1" || targetSubStage !== "Filing") {
-    throw new Error("New cases must start at Stage 1 / Filing. Historical imports use the import workflow.");
+    throw new Error(
+      "New cases must start at Stage 1 / Filing. Historical imports use the import workflow.",
+    );
   }
-  if (input.agent?.trim()) throw new Error("Assign the agent when the case reaches Stage 2 / Assigned.");
+  if (input.agent?.trim())
+    throw new Error(
+      "Assign the agent when the case reaches Stage 2 / Assigned.",
+    );
   const filingDate = input.date || new Date().toISOString().split("T")[0];
 
   // Prepare initial row data with Batch 1 defaults
   const rowPayload: Record<string, any> = {
     ...inputToRow({ ...input, stage: targetStage, subStage: targetSubStage }),
-    stage1_paid: input.stage1Paid ?? true,
-    stage1_paid_date: input.stage1PaidDate ?? filingDate,
+    stage1_paid: false,
+    stage1_paid_date: null,
   };
 
   if (input.stage2Paid !== undefined) rowPayload.stage2_paid = input.stage2Paid;
@@ -944,7 +1179,11 @@ export async function createTrademark(input: TrademarkInput): Promise<{ id: stri
   const { data: authData } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("trademarks")
-    .insert({ ...rowPayload, created_by: authData.user?.id, updated_by: authData.user?.id })
+    .insert({
+      ...rowPayload,
+      created_by: authData.user?.id,
+      updated_by: authData.user?.id,
+    })
     .select("id,case_number")
     .single();
   throwIfDuplicateTmNumberError(error);
@@ -968,17 +1207,23 @@ export async function assignStage2Agent(
   if (!agentName || !agentName.trim()) {
     throw new Error("Agent name is required.");
   }
-  const { data: current, error: readError } = await supabase.from("trademarks")
-    .select("status,sub_status,version").eq("id", id).single();
+  const { data: current, error: readError } = await supabase
+    .from("trademarks")
+    .select("status,sub_status,version")
+    .eq("id", id)
+    .single();
   throwIfError(readError);
   if (!current) throw new Error("Record not found.");
   if (current.status !== "STAGE 2" || current.sub_status !== "Assigned") {
     throw new Error("Agents can only be assigned in Stage 2 / Assigned.");
   }
-  const patch: Record<string, string | number> = { agent: agentName.trim().toUpperCase() };
+  const patch: Record<string, string | number> = {
+    agent: agentName.trim().toUpperCase(),
+  };
   if (agentId) patch.assigned_agent_id = agentId;
   if (rate !== undefined) {
-    if (!Number.isFinite(rate) || rate < 0) throw new Error("Agreed rate must be zero or greater.");
+    if (!Number.isFinite(rate) || rate < 0)
+      throw new Error("Agreed rate must be zero or greater.");
     patch.agent_rate = rate;
   }
   if (city && city.trim()) {
@@ -1007,7 +1252,9 @@ export async function updateTrademarkStatus(
 
   // Validate stage
   if (!STAGES.includes(stage as any)) {
-    throw new Error(`Invalid stage "${stage}". Permitted stages: ${STAGES.join(", ")}`);
+    throw new Error(
+      `Invalid stage "${stage}". Permitted stages: ${STAGES.join(", ")}`,
+    );
   }
 
   // Validate subStage if supplied
@@ -1024,20 +1271,29 @@ export async function updateTrademarkStatus(
 
   // STOPPED requires reason
   if (stage === "STOPPED" && !stoppedReason?.trim()) {
-    throw new Error("STOPPED requires a reason. Please provide a reason for stopping this case.");
+    throw new Error(
+      "STOPPED requires a reason. Please provide a reason for stopping this case.",
+    );
   }
 
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
-    .select("status, sub_status, version, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes")
+    .select(
+      "status, sub_status, version, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes",
+    )
     .eq("id", id)
     .single();
   throwIfError(fetchErr);
 
   if (!current) throw new Error("Record not found.");
-  const transitionError = workflowTransitionError(current.status, current.sub_status, stage, subStage);
+  const transitionError = workflowTransitionError(
+    current.status,
+    current.sub_status,
+    stage,
+    subStage,
+  );
   if (transitionError) throw new Error(transitionError);
-  if (current.status !== stage) validatePaymentGate(stage, current);
+  // Payment terms are enforced by the database using actual Ledger allocations.
 
   const canonicalSubStage = subStage ? normalizeWorkflowValue(subStage) : null;
   const updateData: Record<string, any> = {
@@ -1075,28 +1331,56 @@ export async function updateTrademark(
 ): Promise<{ id: string; version: number }> {
   ensureConfigured();
 
-  if (input.stage && !STAGES.includes(input.stage as StageType)) throw new Error(`Invalid stage "${input.stage}".`);
-  if (input.stage && input.subStage && input.stage !== "STOPPED" && !STATUS_WORKFLOW[input.stage]?.includes(normalizeWorkflowValue(input.subStage))) {
-    throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
+  if (input.stage && !STAGES.includes(input.stage as StageType))
+    throw new Error(`Invalid stage "${input.stage}".`);
+  if (
+    input.stage &&
+    input.subStage &&
+    input.stage !== "STOPPED" &&
+    !STATUS_WORKFLOW[input.stage]?.includes(
+      normalizeWorkflowValue(input.subStage),
+    )
+  ) {
+    throw new Error(
+      `Invalid sub-stage "${input.subStage}" for ${input.stage}.`,
+    );
   }
-  const { data: current, error: fetchErr } = await supabase.from("trademarks")
-    .select("status,sub_status,agent,notes,version,stage1_paid,stage2_paid,stage3_paid").eq("id", id).single();
+  const { data: current, error: fetchErr } = await supabase
+    .from("trademarks")
+    .select(
+      "status,sub_status,agent,notes,version,stage1_paid,stage2_paid,stage3_paid",
+    )
+    .eq("id", id)
+    .single();
   throwIfError(fetchErr);
   if (!current) throw new Error("Record not found.");
   const targetStage = input.stage ?? current.status;
   const targetSub = input.subStage ?? current.sub_status;
   if (targetStage === "STOPPED" && current.status !== "STOPPED") {
-    throw new Error("Use Update Status to stop a case with a mandatory reason.");
+    throw new Error(
+      "Use Update Status to stop a case with a mandatory reason.",
+    );
   }
-  const transitionError = workflowTransitionError(current.status, current.sub_status, targetStage, targetSub);
+  const transitionError = workflowTransitionError(
+    current.status,
+    current.sub_status,
+    targetStage,
+    targetSub,
+  );
   if (transitionError) throw new Error(transitionError);
-  if (targetStage !== current.status) validatePaymentGate(targetStage, current);
-  if (input.agent !== undefined && input.agent.trim().toUpperCase() !== (current.agent || "").toUpperCase()
-      && (current.status !== "STAGE 2" || current.sub_status !== "Assigned")) {
+  // Payment terms are enforced by the database using actual Ledger allocations.
+  if (
+    input.agent !== undefined &&
+    input.agent.trim().toUpperCase() !== (current.agent || "").toUpperCase() &&
+    (current.status !== "STAGE 2" || current.sub_status !== "Assigned")
+  ) {
     throw new Error("Agents can only be assigned in Stage 2 / Assigned.");
   }
 
-  let query = supabase.from("trademarks").update(inputToRow(input)).eq("id", id);
+  let query = supabase
+    .from("trademarks")
+    .update(inputToRow(input))
+    .eq("id", id);
   if (expectedVersion !== undefined) {
     query = query.eq("version", expectedVersion);
   }
@@ -1137,14 +1421,25 @@ export async function updateStagePayment(
   if (reference !== undefined) {
     patch["payment_reference"] = reference ?? null;
   }
-  const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
+  const { error } = await supabase
+    .from("trademarks")
+    .update(patch)
+    .eq("id", id);
   throwIfError(error);
 }
 
-export async function getStats(filters?: DashboardStatsFilters): Promise<TrademarkStats> {
+export async function getStats(
+  filters?: DashboardStatsFilters,
+): Promise<TrademarkStats> {
   ensureConfigured();
-  const exactCount = async (column?: string, value?: string | boolean, gte?: string) => {
-    let query = supabase.from("trademarks").select("id", { count: "exact", head: true });
+  const exactCount = async (
+    column?: string,
+    value?: string | boolean,
+    gte?: string,
+  ) => {
+    let query = supabase
+      .from("trademarks")
+      .select("id", { count: "exact", head: true });
     if (column && gte) query = query.gte(column, gte);
     else if (column && value !== undefined) query = query.eq(column, value);
 
@@ -1157,50 +1452,73 @@ export async function getStats(filters?: DashboardStatsFilters): Promise<Tradema
   };
 
   // Get all actual cities from database (not just predefined CITIES array)
-  const getCitiesFromDb = async (): Promise<Array<{ city: string; count: number }>> => {
+  const getCitiesFromDb = async (): Promise<
+    Array<{ city: string; count: number }>
+  > => {
     let query = supabase.from("trademarks").select("city");
     if (filters?.agent) query = query.eq("agent", filters.agent);
     if (filters?.appClass) query = query.eq("nice_class", filters.appClass);
-    
+
     const { data, error } = await query;
     throwIfError(error);
-    
+
     // Count occurrences of each city from actual data
     const cityCounts = new Map<string, number>();
     (data ?? []).forEach((row) => {
       const city = row.city || "UNSPECIFIED";
       cityCounts.set(city, (cityCounts.get(city) || 0) + 1);
     });
-    
+
     // Convert to array and sort by count descending
     return Array.from(cityCounts.entries())
       .map(([city, count]) => ({ city, count }))
       .sort((a, b) => b.count - a.count);
   };
 
-  const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [total, recentlyModified, stageCounts, cityCounts, tmCounts] = await Promise.all([
-    exactCount(),
-    exactCount("updated_at", undefined, recentCutoff),
-    Promise.all(STAGES.map(async (stage) => ({ stage, count: await exactCount("status", stage) }))),
-    getCitiesFromDb(),
-    Promise.all(TM_FORMS.map(async (form) => ({ form, count: await exactCount(TM_FORM_COLUMNS[form], true) }))),
-  ]);
+  const recentCutoff = new Date(
+    Date.now() - 7 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const [total, recentlyModified, stageCounts, cityCounts, tmCounts] =
+    await Promise.all([
+      exactCount(),
+      exactCount("updated_at", undefined, recentCutoff),
+      Promise.all(
+        STAGES.map(async (stage) => ({
+          stage,
+          count: await exactCount("status", stage),
+        })),
+      ),
+      getCitiesFromDb(),
+      Promise.all(
+        TM_FORMS.map(async (form) => ({
+          form,
+          count: await exactCount(TM_FORM_COLUMNS[form], true),
+        })),
+      ),
+    ]);
 
   return {
     total,
     recentlyModified,
     byStage: stageCounts.filter(({ count }) => count > 0),
     byCity: cityCounts.filter(({ count }) => count > 0),
-    byNumericStage: stageCounts.filter(({ stage }) => /^STAGE \d+$/.test(stage)),
+    byNumericStage: stageCounts.filter(({ stage }) =>
+      /^STAGE \d+$/.test(stage),
+    ),
     byTmForm: tmCounts,
   };
 }
 
-export async function listAuditLogs(limit = 100, offset = 0): Promise<AuditLogEntry[]> {
+export async function listAuditLogs(
+  limit = 100,
+  offset = 0,
+): Promise<AuditLogEntry[]> {
   ensureConfigured();
-  const { data, error } = await supabase.from("audit_logs").select("*")
-    .order("changed_at", { ascending: false }).range(offset, offset + limit - 1);
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .order("changed_at", { ascending: false })
+    .range(offset, offset + limit - 1);
   throwIfError(error);
   return (data ?? []).map((row) => {
     const nr = row.new_record as Record<string, unknown> | null;
@@ -1212,19 +1530,25 @@ export async function listAuditLogs(limit = 100, offset = 0): Promise<AuditLogEn
       action: row.action,
       recordId: row.trademark_id ?? "",
       caseNo: String(nr?.case_number ?? or?.case_number ?? ""),
-      record: String(nr?.case_number ?? or?.case_number ?? row.trademark_id ?? ""),
+      record: String(
+        nr?.case_number ?? or?.case_number ?? row.trademark_id ?? "",
+      ),
       field: "RECORD",
       oldValue: or ? JSON.stringify(or) : "",
       newValue: nr ? JSON.stringify(nr) : "",
-      applicationNumber: String(nr?.tm_cpr_number ?? or?.tm_cpr_number ?? "") || undefined,
-      applicationName: String(nr?.application_name ?? or?.application_name ?? "") || undefined,
+      applicationNumber:
+        String(nr?.tm_cpr_number ?? or?.tm_cpr_number ?? "") || undefined,
+      applicationName:
+        String(nr?.application_name ?? or?.application_name ?? "") || undefined,
       clientCode: String(nr?.client_code ?? or?.client_code ?? "") || undefined,
       caseType: String(nr?.type ?? or?.type ?? "") || undefined,
     };
   });
 }
 
-export async function getWorkflowHistory(trademarkId: string): Promise<TrademarkWorkflowEvent[]> {
+export async function getWorkflowHistory(
+  trademarkId: string,
+): Promise<TrademarkWorkflowEvent[]> {
   ensureConfigured();
   const { data, error } = await supabase
     .from("trademark_workflow_history")
@@ -1250,9 +1574,19 @@ export async function getWorkflowHistory(trademarkId: string): Promise<Trademark
 
 export async function listAgents(): Promise<string[]> {
   ensureConfigured();
-  const { data, error } = await supabase.from("trademarks").select("agent").not("agent", "is", null).order("agent");
+  const { data, error } = await supabase
+    .from("trademarks")
+    .select("agent")
+    .not("agent", "is", null)
+    .order("agent");
   throwIfError(error);
-  return Array.from(new Set((data ?? []).map((row) => row.agent).filter((agent): agent is string => Boolean(agent))));
+  return Array.from(
+    new Set(
+      (data ?? [])
+        .map((row) => row.agent)
+        .filter((agent): agent is string => Boolean(agent)),
+    ),
+  );
 }
 
 export interface ClientRef {
@@ -1262,31 +1596,43 @@ export interface ClientRef {
 
 export async function listClients(): Promise<ClientRef[]> {
   ensureConfigured();
-  const { data, error } = await supabase.from("clients").select("code,name").order("code");
+  const { data, error } = await supabase
+    .from("clients")
+    .select("code,name")
+    .order("code");
   throwIfError(error);
   return data ?? [];
 }
 
 export async function uploadImage(
   file: File,
-  onProgress?: (progressPercent: number) => void
+  onProgress?: (progressPercent: number) => void,
 ): Promise<UploadImageResult> {
   ensureConfigured();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) throw new Error("Please sign in before uploading files.");
-  if (file.size > 10 * 1024 * 1024) throw new Error("File must be 10 MB or smaller.");
+  if (file.size > 10 * 1024 * 1024)
+    throw new Error("File must be 10 MB or smaller.");
   const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `pending/${authData.user.id}/${crypto.randomUUID()}.${extension}`;
   onProgress?.(20);
-  const { error } = await supabase.storage.from(TRADEMARK_FILES_BUCKET).upload(path, file, {
-    contentType: file.type,
-    upsert: false,
-  });
+  const { error } = await supabase.storage
+    .from(TRADEMARK_FILES_BUCKET)
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
   throwIfError(error);
   onProgress?.(80);
-  const { data } = await supabase.storage.from(TRADEMARK_FILES_BUCKET).createSignedUrl(path, 3600);
+  const { data } = await supabase.storage
+    .from(TRADEMARK_FILES_BUCKET)
+    .createSignedUrl(path, 3600);
   onProgress?.(100);
-  return { fileId: path, url: data?.signedUrl ?? "", thumbnailUrl: data?.signedUrl ?? "" };
+  return {
+    fileId: path,
+    url: data?.signedUrl ?? "",
+    thumbnailUrl: data?.signedUrl ?? "",
+  };
 }
 
 // =============================================================================
@@ -1395,11 +1741,20 @@ export interface PublicationRecord {
  * Updates: journal_number, journal_date, publication_date, journal_data
  * Returns how many trademarks were updated
  */
-export async function runJournalMatch(): Promise<{ matched: number; message: string; ranAt: string }> {
+export async function runJournalMatch(): Promise<{
+  matched: number;
+  message: string;
+  ranAt: string;
+}> {
   ensureConfigured();
   const { data, error } = await supabase.rpc("run_journal_match");
   throwIfError(error);
-  const result = data as { matched_trademarks: number; message: string; ran_at: string; status: string };
+  const result = data as {
+    matched_trademarks: number;
+    message: string;
+    ran_at: string;
+    status: string;
+  };
   return {
     matched: result.matched_trademarks ?? 0,
     message: result.message ?? "Journal match completed",
@@ -1411,11 +1766,27 @@ export async function runJournalMatch(): Promise<{ matched: number; message: str
  * Sets tm5/tm6/tm11/tm16/tm56 booleans on matching trademarks
  * Returns count per form type
  */
-export async function runFormMatch(): Promise<{ total: number; tm5: number; tm6: number; tm11: number; tm16: number; tm56: number; message: string }> {
+export async function runFormMatch(): Promise<{
+  total: number;
+  tm5: number;
+  tm6: number;
+  tm11: number;
+  tm16: number;
+  tm56: number;
+  message: string;
+}> {
   ensureConfigured();
   const { data, error } = await supabase.rpc("run_form_match");
   throwIfError(error);
-  const result = data as { total: number; tm5: number; tm6: number; tm11: number; tm16: number; tm56: number; message: string };
+  const result = data as {
+    total: number;
+    tm5: number;
+    tm6: number;
+    tm11: number;
+    tm16: number;
+    tm56: number;
+    message: string;
+  };
   return {
     total: result.total ?? 0,
     tm5: result.tm5 ?? 0,
@@ -1441,26 +1812,36 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
     .from("trademarks")
     .select(
       "id, case_number, client_code, type, client_name, application_name, tm_cpr_number, nice_class, " +
-      "journal_number, status, sub_status, agent, publication_date, opposition_deadline, " +
-      "demand_note_received, demand_note_date, filing_date, logo_path, legacy_image_url"
+        "journal_number, status, sub_status, agent, publication_date, opposition_deadline, " +
+        "demand_note_received, demand_note_date, filing_date, logo_path, legacy_image_url",
     )
     .not("publication_date", "is", null) // only journal-matched cases
     .order("opposition_deadline", { ascending: true, nullsFirst: false });
   throwIfError(error);
 
-  const paths = (data ?? []).map((row:any)=>row.logo_path).filter(Boolean);
-  const images = new Map<string,string>();
-  if(paths.length) {
-    const {data:signed} = await supabase.storage.from(TRADEMARK_FILES_BUCKET).createSignedUrls(paths,3600);
-    signed?.forEach((item,index)=>{if(item.signedUrl) images.set(paths[index],item.signedUrl);});
+  const paths = (data ?? []).map((row: any) => row.logo_path).filter(Boolean);
+  const images = new Map<string, string>();
+  if (paths.length) {
+    const { data: signed } = await supabase.storage
+      .from(TRADEMARK_FILES_BUCKET)
+      .createSignedUrls(paths, 3600);
+    signed?.forEach((item, index) => {
+      if (item.signedUrl) images.set(paths[index], item.signedUrl);
+    });
   }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   return (data ?? []).map((row: any) => {
     // Calculate days remaining until opposition deadline
-    const deadline = row.opposition_deadline ? new Date(row.opposition_deadline) : null;
-    const daysRemaining = deadline ? Math.floor((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    const deadline = row.opposition_deadline
+      ? new Date(row.opposition_deadline)
+      : null;
+    const daysRemaining = deadline
+      ? Math.floor(
+          (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+        )
+      : 0;
 
     // Compute pipeline status label
     let status: "pending" | "overdue" | "done" = "pending";
@@ -1499,7 +1880,10 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
 /** Marks a case's demand note as received with a date
  * Called when firm physically receives the demand note from IPO
  */
-export async function markDemandNoteReceived(trademarkId: string, date: string): Promise<void> {
+export async function markDemandNoteReceived(
+  trademarkId: string,
+  date: string,
+): Promise<void> {
   ensureConfigured();
   const { error } = await supabase
     .from("trademarks")
@@ -1512,7 +1896,9 @@ export async function markDemandNoteReceived(trademarkId: string, date: string):
 }
 
 /** Clears the demand note received flag (undo/correction) */
-export async function clearDemandNoteReceived(trademarkId: string): Promise<void> {
+export async function clearDemandNoteReceived(
+  trademarkId: string,
+): Promise<void> {
   ensureConfigured();
   const { error } = await supabase
     .from("trademarks")
@@ -1586,11 +1972,15 @@ export async function createAgentProfile(input: AgentInput): Promise<Agent> {
 }
 
 /** Updates an existing agent */
-export async function updateAgentProfile(id: string, input: Partial<AgentInput>): Promise<void> {
+export async function updateAgentProfile(
+  id: string,
+  input: Partial<AgentInput>,
+): Promise<void> {
   ensureConfigured();
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name.trim().toUpperCase();
-  if (input.city !== undefined) patch.city = input.city ? input.city.trim().toUpperCase() : null;
+  if (input.city !== undefined)
+    patch.city = input.city ? input.city.trim().toUpperCase() : null;
   if (input.phone !== undefined) patch.phone = input.phone;
   if (input.email !== undefined) patch.email = input.email; // PRESERVE ORIGINAL CASE
   if (input.notes !== undefined) patch.notes = input.notes; // PRESERVE ORIGINAL CASE
@@ -1605,7 +1995,9 @@ export async function updateAgentProfile(id: string, input: Partial<AgentInput>)
 // =============================================================================
 
 /** Fetch all fee entries for a specific trademark case (for RecordView fees tab) */
-export async function listFeesForTrademark(trademarkId: string): Promise<AgentFee[]> {
+export async function listFeesForTrademark(
+  trademarkId: string,
+): Promise<AgentFee[]> {
   ensureConfigured();
   const { data, error } = await supabase
     .from("agent_fees")
@@ -1617,7 +2009,10 @@ export async function listFeesForTrademark(trademarkId: string): Promise<AgentFe
 }
 
 /** Record an Admin-authorized payment against an existing agent payable. */
-export async function recordAgentPayment(feeId: string, amount: number): Promise<void> {
+export async function recordAgentPayment(
+  feeId: string,
+  amount: number,
+): Promise<void> {
   ensureConfigured();
   const { error } = await supabase.rpc("record_agent_payment", {
     p_fee_id: feeId,
@@ -1655,7 +2050,9 @@ export async function addAgentFee(input: AgentFeeInput): Promise<AgentFee> {
       amount_paid: amountPaid,
       fee_date: input.feeDate ?? new Date().toISOString().slice(0, 10),
       paid: isPaid,
-      paid_date: input.paidDate ?? (isPaid ? new Date().toISOString().slice(0, 10) : null),
+      paid_date:
+        input.paidDate ??
+        (isPaid ? new Date().toISOString().slice(0, 10) : null),
       notes: input.notes ?? null,
       created_by: authData.user?.id,
     })
@@ -1666,17 +2063,24 @@ export async function addAgentFee(input: AgentFeeInput): Promise<AgentFee> {
 }
 
 /** Update a fee entry (e.g. mark as paid, update amount) */
-export async function updateAgentFee(id: string, input: Partial<AgentFeeInput>): Promise<void> {
+export async function updateAgentFee(
+  id: string,
+  input: Partial<AgentFeeInput>,
+): Promise<void> {
   ensureConfigured();
   const patch: Record<string, unknown> = {};
   if (input.description !== undefined) patch.description = input.description;
-  if (input.amountBilled !== undefined) patch.amount_billed = input.amountBilled;
+  if (input.amountBilled !== undefined)
+    patch.amount_billed = input.amountBilled;
   if (input.amountPaid !== undefined) patch.amount_paid = input.amountPaid;
   if (input.feeDate !== undefined) patch.fee_date = input.feeDate;
   if (input.paid !== undefined) patch.paid = input.paid;
   if (input.paidDate !== undefined) patch.paid_date = input.paidDate;
   if (input.notes !== undefined) patch.notes = input.notes;
-  const { error } = await supabase.from("agent_fees").update(patch).eq("id", id);
+  const { error } = await supabase
+    .from("agent_fees")
+    .update(patch)
+    .eq("id", id);
   throwIfError(error);
 }
 
@@ -1705,7 +2109,9 @@ export interface AgentCaseCounts {
 /** Returns trademark case counts for an agent matched by their exact name string.
  * Only fired on demand (modal open), not in the table list.
  */
-export async function getAgentCaseCounts(agentName: string): Promise<AgentCaseCounts> {
+export async function getAgentCaseCounts(
+  agentName: string,
+): Promise<AgentCaseCounts> {
   ensureConfigured();
   const [assignedResult, acceptedResult, totalResult] = await Promise.all([
     supabase
@@ -1819,7 +2225,7 @@ export async function uploadStageDocument(
     .select("status")
     .eq("id", input.trademarkId)
     .single();
-  
+
   if (!trademark) {
     throw new Error("Trademark record not found.");
   }
@@ -1835,14 +2241,15 @@ export async function uploadStageDocument(
   // Validate that requested stage matches current stage
   if (requestedStage !== currentStage.toUpperCase()) {
     throw new Error(
-      `You can only upload documents for the current workflow stage (${currentStage}). Cannot upload to ${input.stage}.`
+      `You can only upload documents for the current workflow stage (${currentStage}). Cannot upload to ${input.stage}.`,
     );
   }
 
   // Resolve uploader id
   const { data: authData } = await supabase.auth.getUser();
   const uploadedBy = input.uploadedBy ?? authData.user?.id ?? null;
-  if (!uploadedBy) throw new Error("Please sign in before uploading documents.");
+  if (!uploadedBy)
+    throw new Error("Please sign in before uploading documents.");
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
   const uuid = crypto.randomUUID();
@@ -1948,7 +2355,10 @@ type StageDocumentRow = {
   created_at: string;
 };
 
-function mapStageDocRow(row: StageDocumentRow, signedUrl?: string): StageDocument {
+function mapStageDocRow(
+  row: StageDocumentRow,
+  signedUrl?: string,
+): StageDocument {
   return {
     id: row.id,
     trademarkId: row.trademark_id,
@@ -2061,37 +2471,58 @@ export function getWorkflowReminders(
   return reminders.slice(0, 4);
 }
 
-function getReminder1(stage: string, sub: string, ctx?: { filingDate?: string }): string {
+function getReminder1(
+  stage: string,
+  sub: string,
+  ctx?: { filingDate?: string },
+): string {
   if (stage === "STAGE 1") {
-    if (sub === "Filing") return "Application has been filed. Await acknowledgment from IPO.";
-    if (sub === "Acknowledgment") return "Acknowledgment received. Await examination report.";
-    if (sub === "Examination") return "Under examination. Monitor for official queries or objections.";
+    if (sub === "Filing")
+      return "Application has been filed. Await acknowledgment from IPO.";
+    if (sub === "Acknowledgment")
+      return "Acknowledgment received. Await examination report.";
+    if (sub === "Examination")
+      return "Under examination. Monitor for official queries or objections.";
     return "Stage 1 in progress. Ensure all filing documents are complete.";
   }
-  if (ctx?.filingDate) return `Filed on ${ctx.filingDate}. Filing documentation archived.`;
+  if (ctx?.filingDate)
+    return `Filed on ${ctx.filingDate}. Filing documentation archived.`;
   return "Ensure all original filing documents are collected and archived.";
 }
 
 function getReminder2(stage: string, sub: string): string {
   if (stage === "STAGE 2") {
-    if (sub === "Assigned") return "Case assigned to agent. Await acceptance confirmation. Stage 2 payment required.";
-    if (sub === "Accepted") return "Agent has accepted. Case is under agent handling. Monitor hearing dates.";
-    if (sub === "Hearing") return "Hearing scheduled or in progress. Coordinate with assigned agent.";
+    if (sub === "Assigned")
+      return "Case assigned to agent. Await acceptance confirmation. Stage 2 payment required.";
+    if (sub === "Accepted")
+      return "Agent has accepted. Case is under agent handling. Monitor hearing dates.";
+    if (sub === "Hearing")
+      return "Hearing scheduled or in progress. Coordinate with assigned agent.";
     return "Stage 2 in progress. Verify agent assignment and payment status.";
   }
   return "Agent assignment and hearing management — refer to assigned agent details.";
 }
 
-function getReminder3(stage: string, sub: string, ctx?: { publicationDate?: string; oppositionDeadline?: string }): string {
+function getReminder3(
+  stage: string,
+  sub: string,
+  ctx?: { publicationDate?: string; oppositionDeadline?: string },
+): string {
   if (stage === "STAGE 3") {
     const normalized = normalizeWorkflowValue(sub);
-    if (normalized === "D-Note Submitted") return "Demand note submitted to IPO. Await demand note receipt.";
-    if (normalized === "D-Note Received") return "Demand note received. Process payment and proceed.";
-    if (normalized === "OPPO: Filed") return "Opposition filed against this mark. Prepare response.";
-    if (normalized === "OPPO: Received") return "Opposition received. Review and coordinate legal response.";
-    if (normalized === "OPPO: Withdrawn") return "Opposition withdrawn. Case may proceed to publication.";
+    if (normalized === "D-Note Submitted")
+      return "Demand note submitted to IPO. Await demand note receipt.";
+    if (normalized === "D-Note Received")
+      return "Demand note received. Process payment and proceed.";
+    if (normalized === "OPPO: Filed")
+      return "Opposition filed against this mark. Prepare response.";
+    if (normalized === "OPPO: Received")
+      return "Opposition received. Review and coordinate legal response.";
+    if (normalized === "OPPO: Withdrawn")
+      return "Opposition withdrawn. Case may proceed to publication.";
     if (sub === "Published") {
-      if (ctx?.oppositionDeadline) return `Published. Opposition deadline: ${ctx.oppositionDeadline}. Monitor for third-party oppositions.`;
+      if (ctx?.oppositionDeadline)
+        return `Published. Opposition deadline: ${ctx.oppositionDeadline}. Monitor for third-party oppositions.`;
       return "Published in Trade Marks Journal. Monitor opposition window.";
     }
     return "Stage 3 in progress. Track publication and opposition status.";
@@ -2101,9 +2532,12 @@ function getReminder3(stage: string, sub: string, ctx?: { publicationDate?: stri
 
 function getReminder4(stage: string, sub: string): string {
   if (stage === "STAGE 4") {
-    if (sub === "CER Dispatch") return "Certificate dispatched from IPO. Await physical receipt.";
-    if (sub === "CER Received") return "Certificate received. Verify details and deliver to client.";
-    if (sub === "CER Acknowledge") return "Certificate acknowledged. Case registration complete.";
+    if (sub === "CER Dispatch")
+      return "Certificate dispatched from IPO. Await physical receipt.";
+    if (sub === "CER Received")
+      return "Certificate received. Verify details and deliver to client.";
+    if (sub === "CER Acknowledge")
+      return "Certificate acknowledged. Case registration complete.";
     return "Stage 4 in progress. Track certificate dispatch and receipt.";
   }
   return "Registration certificate tracking — case may not yet be at this stage.";
