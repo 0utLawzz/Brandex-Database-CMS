@@ -612,7 +612,7 @@ export function DatabasePage() {
                         {record.followupTone && (
                           <div
                             title={`${record.followupReason} — due ${record.followupDue}`}
-                            className={`mt-1 font-bold ${record.followupTone === "red" ? "text-red-700" : record.followupTone === "yellow" ? "text-yellow-700" : "text-green-700"}`}
+                            className={`mt-1 font-bold ${record.followupTone === "red" ? "text-red-700" : record.followupTone === "yellow" || record.followupTone === "review" ? "text-yellow-700" : "text-green-700"}`}
                           >
                             {record.followupTone.toUpperCase()}
                             {record.followupTone === "red" ? " / OVERDUE" : ""}

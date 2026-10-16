@@ -43,7 +43,7 @@ create table public.billing_audit (
 );
 create table public.case_operations (
  trademark_id text primary key references public.trademarks(id), event_date date, accepted_date date,
- reactivated_date date, previous_stage text, previous_sub_status text, tm57_date date, restoration_approved_date date,
+ reactivated_date date, fee_submitted_date date, previous_stage text, previous_sub_status text, tm57_date date, restoration_approved_date date,
  certificate_received_date date, drive_folder_id text
 );
 create table public.case_deliveries (
@@ -135,8 +135,8 @@ begin
   perform billing_ensure_charge(new.id,1,new.id||':stage:1');
  else
   if new.status is distinct from old.status or new.sub_status is distinct from old.sub_status then
-   insert into case_operations(trademark_id,event_date,accepted_date) values(new.id,current_date,case when new.sub_status='Accepted' then current_date end)
-   on conflict(trademark_id) do update set event_date=current_date,reactivated_date=case when old.status='STOPPED' then case_operations.reactivated_date else null end,accepted_date=coalesce(excluded.accepted_date,case_operations.accepted_date);
+   insert into case_operations(trademark_id,event_date,accepted_date,fee_submitted_date) values(new.id,current_date,case when new.sub_status='Accepted' then current_date end,case when new.sub_status='D-Note Submitted' then current_date end)
+   on conflict(trademark_id) do update set event_date=current_date,reactivated_date=case when old.status='STOPPED' then case_operations.reactivated_date else null end,accepted_date=coalesce(excluded.accepted_date,case_operations.accepted_date),fee_submitted_date=coalesce(excluded.fee_submitted_date,case_operations.fee_submitted_date);
    if new.status='STAGE 2' then target=2; elsif new.status='STAGE 3' then target=3; elsif new.status='STAGE 4' then target=4; end if;
    if target is not null then perform billing_ensure_charge(new.id,target,new.id||':stage:'||target); end if;
    if new.sub_status='Accepted' then perform billing_ensure_charge(new.id,3,new.id||':stage:3'); end if;
@@ -149,9 +149,9 @@ create trigger integrated_billing_events after insert or update on public.tradem
 -- Approved event-date correction: explicit operation, not updated_at as a clock.
 create function public.set_case_event_date(p_case text,p_date date) returns void language plpgsql set search_path=public,pg_temp as $$
 begin
- if current_brandex_role()<>'admin' then raise exception 'Admin required'; end if;
+ if current_brandex_role() is distinct from 'admin' then raise exception 'Admin required'; end if;
  if p_date is null or p_date>(now() at time zone 'Asia/Karachi')::date or p_date<(select filing_date from trademarks where id=p_case) then raise exception 'Choose an actual event date on or after filing'; end if;
- update case_operations set event_date=p_date,accepted_date=case when (select sub_status from trademarks where id=p_case)='Accepted' then p_date else accepted_date end where trademark_id=p_case;
+ update case_operations set event_date=p_date,fee_submitted_date=case when (select sub_status from trademarks where id=p_case)='D-Note Submitted' then p_date else fee_submitted_date end,accepted_date=case when (select sub_status from trademarks where id=p_case)='Accepted' then p_date else accepted_date end where trademark_id=p_case;
 end $$;
 
 -- Authoritative case payment position; actual allocations, never manual flags.
@@ -280,7 +280,7 @@ revoke all on function public.credit_assignment_associate() from public;
 create function public.reactivate_case(p_case text,p_amount numeric,p_date date) returns void language plpgsql set search_path=public,pg_temp as $$
 declare op case_operations;
 begin
- if current_brandex_role()<>'admin' then raise exception 'Admin required'; end if;
+ if current_brandex_role() is distinct from 'admin' then raise exception 'Admin required'; end if;
  perform 1 from trademarks where id=p_case and status='STOPPED' for update;
  if not found then raise exception 'Choose a STOPPED case'; end if;
  select * into op from case_operations where trademark_id=p_case;
@@ -297,7 +297,7 @@ create function public.save_client_receiving(p_id uuid,p_client uuid,p_amount nu
 returns uuid language plpgsql set search_path=public,pg_temp as $$
 declare r billing_receivings; item jsonb;
 begin
- if current_brandex_role()<>'admin' then raise exception 'Admin required'; end if;
+ if current_brandex_role() is distinct from 'admin' then raise exception 'Admin required'; end if;
  if p_amount is null or p_amount<=0 or round(p_amount,2)<>p_amount or p_date is null or nullif(trim(p_method),'') is null or jsonb_typeof(p_allocations) is distinct from 'array' then raise exception 'Valid amount, date, method and allocations required'; end if;
  -- Lock client before receiving/charges for consistent concurrent operation order.
  perform 1 from billing_clients where id=p_client for update;
@@ -341,7 +341,7 @@ create function public.save_associate_settlement(p_id uuid,p_associate uuid,p_am
 returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
 declare s associate_settlements; a record; f agent_fees; left_amount numeric; old_amount numeric;
 begin
- if current_brandex_role()<>'admin' then raise exception 'Admin required'; end if;
+ if current_brandex_role() is distinct from 'admin' then raise exception 'Admin required'; end if;
  perform 1 from agents where id=p_associate for update;
  if not found then raise exception 'Associate not found'; end if;
  select * into s from associate_settlements where id=p_id for update;
@@ -385,7 +385,7 @@ begin
   if o.reactivated_date is not null then return jsonb_build_object('tone','review','reason','Restored journal cycle needs confirmation'); end if;
   base=o.accepted_date;due=(date_trunc('month',base)+case when extract(day from base)>20 then interval '1 month' else interval '0 months' end+interval '28 days')::date;label='Expected journal publication';
  elsif t.status='STAGE 3' and t.sub_status='Published' and not exists(select 1 from opposition_events where trademark_id=t.id) then base=coalesce(o.reactivated_date,t.publication_date);due=(base+interval '2 months')::date;label='Demand Note pending';
- elsif t.demand_note_submitted_date is not null and o.certificate_received_date is null and t.sub_status not in ('CER Received','CER Dispatch') then base=coalesce(o.reactivated_date,t.demand_note_submitted_date);due=(base+interval '1 month')::date;label='Certificate receipt pending';
+ elsif coalesce(o.fee_submitted_date,t.demand_note_submitted_date) is not null and o.certificate_received_date is null and t.sub_status not in ('CER Received','CER Dispatch') then base=coalesce(o.reactivated_date,o.fee_submitted_date,t.demand_note_submitted_date);due=(base+interval '1 month')::date;label='Certificate receipt pending';
  else return null; end if;
  if due is null then return null; end if;
  if p_today<due and not(t.status='STAGE 2' and t.sub_status='Assigned') then return null; end if;

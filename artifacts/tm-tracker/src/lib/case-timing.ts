@@ -118,7 +118,11 @@ export function caseFlag(record: TimingCase, today: string): CaseFlag | null {
       reason: "Demand Note pending",
     };
   }
-  if (record.feeSubmittedDate && !record.certificateReceivedDate) {
+  if (
+    record.feeSubmittedDate &&
+    !record.certificateReceivedDate &&
+    !["CER Received", "CER Dispatch"].includes(record.subStage)
+  ) {
     const start = record.reactivatedDate || record.feeSubmittedDate;
     const dueDate = calendarMonth(start, 1);
     return {

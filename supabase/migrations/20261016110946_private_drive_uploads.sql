@@ -17,14 +17,14 @@ create policy write_admin on public.case_drive_files for insert to authenticated
 grant select,insert on public.case_drive_files to authenticated;
 create function public.claim_drive_case(p_case text,p_operation uuid) returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
 begin
- if current_brandex_role()<>'admin' then raise exception 'Admin required'; end if;
+ if current_brandex_role() is distinct from 'admin' then raise exception 'Admin required'; end if;
  insert into case_drive_leases(trademark_id,operation,expires_at) values(p_case,p_operation,now()+interval '5 minutes')
  on conflict(trademark_id) do update set operation=p_operation,expires_at=excluded.expires_at where case_drive_leases.expires_at<now();
  return found;
 end $$;
 create function public.release_drive_case(p_case text,p_operation uuid) returns void language plpgsql security definer set search_path=public,pg_temp as $$
 begin
- if current_brandex_role()<>'admin' then raise exception 'Admin required'; end if;
+ if current_brandex_role() is distinct from 'admin' then raise exception 'Admin required'; end if;
  delete from case_drive_leases where trademark_id=p_case and operation=p_operation;
 end $$;
 revoke all on function public.claim_drive_case(text,uuid),public.release_drive_case(text,uuid) from public;

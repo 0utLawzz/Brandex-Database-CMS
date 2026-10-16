@@ -43,7 +43,8 @@ export function CaseAccountSection({
             eventDate: ops.data.event_date,
             acceptedDate: ops.data.accepted_date,
             publicationDate: record.publicationDate,
-            feeSubmittedDate: record.demandNoteSubmittedDate,
+            feeSubmittedDate:
+              ops.data.fee_submitted_date ?? record.demandNoteSubmittedDate,
             certificateReceivedDate: ops.data.certificate_received_date,
             reactivatedDate: ops.data.reactivated_date,
             hasObjection: opposition.data > 0,
