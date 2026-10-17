@@ -1,5 +1,9 @@
 # Brandex Project Guidelines (AGENTS.md)
 
+## Current process handoff - 17 October 2026
+
+Read `PROCESS.MD`, `AGENT.MD` and `CHANGELOG.md` first for the latest execution state. Google consent/root discovery succeeded; server secrets configuration failed HTTP 403. Integrated migrations, function deployment and hosted acceptance remain pending. Never expose local private credentials or mistake consent success for a deployed upload feature.
+
 ## Current approved candidate - 16 October 2026
 
 Read `docs/SYSTEM_ROADMAP.md` and `docs/CONFIRMED_BUILD_STATUS.md`. Latest owner decisions supersede conflicting historical rules: all clients default Monthly Billing; 60% removed; client terms govern advance gates; Stage 3 billed at Accepted; associate payable at assignment; guarded TM-57 reactivation allowed. Work is isolated on `feat/confirmed-workflow-ledger`. Production schemas/data/deployments are unchanged. Preserve the mature CMS features and original Ledger/Sheets; do not claim parity or live acceptance from a passing build alone.

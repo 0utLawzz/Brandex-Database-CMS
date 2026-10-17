@@ -1,3 +1,10 @@
+## 17 October 2026 - Drive authorization and release checklist
+
+- Drive consent, offline token exchange and existing X/A root discovery verified. No app upload tested.
+- CMS secrets set/list failed HTTP 403; Owner/Admin configuration pending. No new schema/function/frontend release.
+- Added `PROCESS.MD`, `AGENT.MD`, `CHANGELOG.md`; canonical `AGENTS.md` and build status point to them.
+- Continue from ordered release checklist; preserve live data and historical notes below.
+
 ## 16 October 2026 - Confirmed Database + Ledger candidate (local only)
 
 - User authorized coding after the presentation. Source recovery bundles created before edits; new branch `feat/confirmed-workflow-ledger`.

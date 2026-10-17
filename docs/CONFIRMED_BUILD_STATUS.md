@@ -2,6 +2,10 @@
 
 16 October 2026. Branch: `feat/confirmed-workflow-ledger`.
 
+## 17 October connection update
+
+Google OAuth consent and Drive root discovery are verified; private credentials remain outside the repository. Supabase secrets set/list failed HTTP 403, so server configuration is not complete. Hosted billing/Drive tables are absent; migrations/function/frontend cutover remain pending. Follow `../PROCESS.MD`, `../AGENT.MD` and `../CHANGELOG.md` for current execution order.
+
 ## Placement and boundaries
 
 The mature CMS React/Vite frontend remains the base: its datasheet, registry matching, publication, private stage documents, search, print and audit are retained. New integrated financial tables live alongside CMS records in the same Postgres project so case events and automatic charges can commit atomically. This is a fresh integrated financial baseline, not a claim that the old standalone Ledger's real data is connected or migrated.
