@@ -1,5 +1,10 @@
 # Brandex Project Guidelines (AGENTS.md)
 
+## Owner target correction - 17 October 2026
+
+The owner explicitly confirmed **Brandex-Suite `xogbpsnsmephupbqsfgb`** as the hosted target, with `https://brandex-suite.vercel.app`. This mature CMS branch remains a preserved, separate candidate/reference. Do not deploy its migrations into Suite. Current Drive implementation/release evidence is in `../brandex-suite/PROCESS.MD` and `../brandex-suite/docs/DRIVE_CONNECTION_STATUS.md`. Earlier CMS-target secrets/403 instructions below are historical, not the next action.
+
+
 ## Current process handoff - 17 October 2026
 
 Read `PROCESS.MD`, `AGENT.MD` and `CHANGELOG.md` first for the latest execution state. Google consent/root discovery succeeded; server secrets configuration failed HTTP 403. Integrated migrations, function deployment and hosted acceptance remain pending. Never expose local private credentials or mistake consent success for a deployed upload feature.

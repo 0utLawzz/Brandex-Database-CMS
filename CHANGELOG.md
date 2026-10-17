@@ -1,5 +1,9 @@
 # Changelog
 
+## 17 October 2026 - Owner corrected hosted target to Suite
+
+Preserve this mature CMS candidate as reference. Resume deployment work in Brandex-Suite against `xogbpsnsmephupbqsfgb`; do not port these migrations directly. Earlier CMS secret-upload permission blocker is historical. No new schema/function/data release to this CMS project.
+
 Changes describe evidence and release status; dates use Asia/Karachi. Historical CMS logs remain in `Progress.md`.
 
 ## 17 October 2026 — Drive connection preparation and handoff

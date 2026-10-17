@@ -1,5 +1,10 @@
 # Brandex process and release checklist
 
+## Owner target correction - 17 October 2026
+
+The owner explicitly confirmed **Brandex-Suite `xogbpsnsmephupbqsfgb`** as the hosted target, with `https://brandex-suite.vercel.app`. This mature CMS branch remains a preserved, separate candidate/reference. Do not deploy its migrations into Suite. Current Drive implementation/release evidence is in `../brandex-suite/PROCESS.MD` and `../brandex-suite/docs/DRIVE_CONNECTION_STATUS.md`. Earlier CMS-target secrets/403 instructions below are historical, not the next action.
+
+
 Updated: 17 October 2026 (Asia/Karachi).
 
 ## Current position
