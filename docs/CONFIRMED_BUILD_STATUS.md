@@ -1,5 +1,9 @@
 # Confirmed workflow build candidate
 
+## 20 October 2026 update
+
+The owner selected the mature Database CMS as the base for the integrated Ledger. Mail Merge remains separate. The 17 October Suite-target note in older handoff sections is historical. This branch now also contains source fixes for payment completion dates, Sheet job claims/order, spreadsheet formula escaping, bounded imports/lists, upload checks and clickjacking headers. See `../PROCESS.MD` for the current source and release checklist. These checks do not establish live migration, Google Drive upload, or hosted acceptance.
+
 16 October 2026. Branch: `feat/confirmed-workflow-ledger`.
 
 ## 17 October connection update

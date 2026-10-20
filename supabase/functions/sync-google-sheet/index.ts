@@ -33,40 +33,26 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Any row still in "processing" is from a crashed/timed-out previous run.
-  // Cron is expected to be single-flight; reclaim so those jobs can retry.
-  const { error: reclaimError } = await supabase
-    .from("sheet_sync_outbox")
-    .update({
-      state: "failed",
-      last_error: "reclaimed stale processing state",
-    })
-    .eq("state", "processing");
-
-  if (reclaimError) {
-    log("error", "sheet_sync_reclaim_failed", { error: reclaimError.message });
-    return Response.json({ error: reclaimError.message }, { status: 500 });
-  }
-
-  const { data: jobs, error: loadError } = await supabase
-    .from("sheet_sync_outbox")
-    .select("id,trademark_id,action,payload,attempt_count")
-    .in("state", ["pending", "failed"])
-    .lt("attempt_count", MAX_ATTEMPTS)
-    .order("created_at", { ascending: true })
-    .limit(BATCH_SIZE);
-
-  if (loadError) {
-    log("error", "sheet_sync_load_failed", { error: loadError.message });
-    return Response.json({ error: loadError.message }, { status: 500 });
-  }
-
   let synced = 0;
   let failed = 0;
   let dead = 0;
+  let processed = 0;
+  const attemptedIds: number[] = [];
 
-  for (const job of jobs ?? []) {
-    const nextAttempt = (job.attempt_count ?? 0) + 1;
+  for (let i = 0; i < BATCH_SIZE; i += 1) {
+    const { data: jobs, error: claimError } = await supabase.rpc("claim_sheet_sync_job", {
+      p_max_attempts: MAX_ATTEMPTS,
+      p_exclude_ids: attemptedIds,
+    });
+    if (claimError) {
+      log("error", "sheet_sync_claim_failed", { error: claimError.message });
+      return Response.json({ error: "Could not claim Sheet sync work" }, { status: 500 });
+    }
+    const job = jobs?.[0];
+    if (!job) break;
+    attemptedIds.push(job.id);
+    processed += 1;
+    const nextAttempt = job.attempt_count;
     log("info", "sheet_sync_job_started", {
       jobId: job.id,
       trademarkId: job.trademark_id,
@@ -74,15 +60,11 @@ Deno.serve(async (request) => {
       attempt: nextAttempt,
     });
 
-    await supabase
-      .from("sheet_sync_outbox")
-      .update({ state: "processing", attempt_count: nextAttempt })
-      .eq("id", job.id);
-
     try {
       const response = await fetch(sheetUrl, {
         method: "POST",
         headers: { "content-type": "text/plain;charset=utf-8" },
+        signal: AbortSignal.timeout(60_000),
         body: JSON.stringify({
           action: job.action === "delete" ? "mirrorDelete" : "mirrorUpsert",
           secret: sheetSecret,
@@ -95,10 +77,13 @@ Deno.serve(async (request) => {
         throw new Error(result.error || `Sheet mirror failed with ${response.status}`);
       }
 
-      await supabase
-        .from("sheet_sync_outbox")
-        .update({ state: "synced", processed_at: new Date().toISOString(), last_error: null })
-        .eq("id", job.id);
+      const { data: finished, error: finishError } = await supabase.rpc("finish_sheet_sync_job", {
+        p_id: job.id,
+        p_claim_token: job.claim_token,
+        p_success: true,
+        p_error: null,
+      });
+      if (finishError || !finished) throw new Error("Sheet job completion lost its claim");
       synced += 1;
       log("info", "sheet_sync_job_synced", {
         jobId: job.id,
@@ -109,15 +94,18 @@ Deno.serve(async (request) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const exhausted = nextAttempt >= MAX_ATTEMPTS;
-      await supabase
-        .from("sheet_sync_outbox")
-        .update({
-          state: "failed",
-          last_error: exhausted
-            ? `dead letter after ${nextAttempt} attempts: ${message}`
-            : message,
-        })
-        .eq("id", job.id);
+      const { data: finished, error: finishError } = await supabase.rpc("finish_sheet_sync_job", {
+        p_id: job.id,
+        p_claim_token: job.claim_token,
+        p_success: false,
+        p_error: exhausted
+          ? `dead letter after ${nextAttempt} attempts: ${message}`
+          : message,
+      });
+      if (finishError || !finished) {
+        log("error", "sheet_sync_finish_failed", { jobId: job.id, error: finishError?.message ?? "Claim expired" });
+        return Response.json({ error: "Could not finalize Sheet sync work" }, { status: 500 });
+      }
       if (exhausted) dead += 1;
       else failed += 1;
       log(exhausted ? "error" : "warn", exhausted ? "sheet_sync_job_dead_lettered" : "sheet_sync_job_failed", {
@@ -131,7 +119,7 @@ Deno.serve(async (request) => {
   }
 
   log("info", "sheet_sync_completed", {
-    processed: (jobs ?? []).length,
+    processed,
     synced,
     failed,
     dead,
@@ -139,7 +127,7 @@ Deno.serve(async (request) => {
   });
 
   return Response.json({
-    processed: (jobs ?? []).length,
+    processed,
     synced,
     failed,
     dead,

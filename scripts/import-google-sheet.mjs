@@ -20,21 +20,8 @@ const response = await fetch(process.env.GOOGLE_APPS_SCRIPT_URL, {
     secret: process.env.GOOGLE_APPS_SCRIPT_SECRET,
   }),
 });
-let result = await response.json();
-
-// Older Apps Script deployments expose the Sheet through GET ?action=list but
-// do not yet understand mirrorExport. Support that endpoint for the one-time
-// migration so data can be moved before the hardened mirror is redeployed.
-if (result?.error === "Unknown POST action: mirrorExport") {
-  const legacyUrl = new URL(process.env.GOOGLE_APPS_SCRIPT_URL);
-  legacyUrl.searchParams.set("action", "list");
-  const legacyResponse = await fetch(legacyUrl, { redirect: "follow" });
-  result = await legacyResponse.json();
-  if (!legacyResponse.ok || !result.ok) {
-    throw new Error(result.error || `Legacy Sheet export failed (${legacyResponse.status})`);
-  }
-  process.stdout.write("Using legacy read-only Sheet endpoint for one-time import.\n");
-} else if (!response.ok || !result.ok) {
+const result = await response.json();
+if (!response.ok || !result.ok) {
   throw new Error(result.error || `Sheet export failed (${response.status})`);
 }
 

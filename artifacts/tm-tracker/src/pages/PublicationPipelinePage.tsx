@@ -41,6 +41,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function PublicationPipelinePage() {
+  const [page, setPage] = useState(0);
   const [selectedRecord, setSelectedRecord] = useState<PublicationRecord | null>(null);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -59,11 +60,13 @@ export function PublicationPipelinePage() {
   });
   const isViewer = staffRole !== "admin";
 
-  const { data: records = [], isLoading } = useQuery({
-    queryKey: ["publication-pipeline"],
-    queryFn: listPublicationPipeline,
+  const { data: pipeline, isLoading } = useQuery({
+    queryKey: ["publication-pipeline", page],
+    queryFn: () => listPublicationPipeline(page),
     staleTime: 30_000,
   });
+  const records = pipeline?.records ?? [];
+  const total = pipeline?.total ?? 0;
 
   const markReceivedMutation = useMutation({
     mutationFn: ({ id, date }: { id: string; date: string }) =>
@@ -154,7 +157,7 @@ export function PublicationPipelinePage() {
               PUBLICATION PIPELINE
             </h1>
             <span className="ml-auto font-mono text-sm text-[#6d6658] font-bold uppercase tracking-widest">
-              {isLoading ? "LOADING\u2026" : `${records.length} MATCHED`}
+              {isLoading ? "LOADING\u2026" : `${total} MATCHED`}
             </span>
           </div>
 
@@ -196,18 +199,24 @@ export function PublicationPipelinePage() {
             <div className="flex items-center gap-4 ml-auto flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 border-2 border-[#0A6B52] bg-[#D8F2E8]" />
-                <span className="font-mono text-sm text-[#6d6658]">PENDING ({pendingCount})</span>
+                <span className="font-mono text-sm text-[#6d6658]">PENDING ON PAGE ({pendingCount})</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 border-2 border-[#6C1C1F] bg-[#FFF0D0]" />
-                <span className="font-mono text-sm text-[#6d6658]">OVERDUE ({overdueCount})</span>
+                <span className="font-mono text-sm text-[#6d6658]">OVERDUE ON PAGE ({overdueCount})</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 border border-stone-300 bg-[#E8DFC7]" />
-                <span className="font-mono text-sm text-[#6d6658]">DONE ({doneCount})</span>
+                <span className="font-mono text-sm text-[#6d6658]">DONE ON PAGE ({doneCount})</span>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-b border-stone-300 bg-[#FAF6EE] px-6 py-2 font-mono text-xs font-bold uppercase">
+          <span>Page {page + 1} · {total} records</span>
+          <button type="button" className="border border-[#0C0C0C] bg-white px-3 py-1 disabled:opacity-40" disabled={page === 0 || isLoading} onClick={() => setPage((value) => value - 1)}>Previous</button>
+          <button type="button" className="border border-[#0C0C0C] bg-white px-3 py-1 disabled:opacity-40" disabled={isLoading || (page + 1) * 100 >= total} onClick={() => setPage((value) => value + 1)}>Next</button>
         </div>
 
         {/* Records Grid - Compact Card Layout */}

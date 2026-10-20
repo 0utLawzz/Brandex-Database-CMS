@@ -1,5 +1,9 @@
 # Changelog
 
+## 20 October 2026 - CMS-base workflow and security remediation
+
+The owner chose the mature Database CMS as the base for the integrated Client Ledger; Mail Merge stays separate. This source-only change aligns smoke tests with Monthly Billing, repairs associate/direct-payment completion dates, serializes Sheet mirror work by case, protects CSV/Sheet output from formulas, bounds large imports/lists, validates common upload signatures and Drive folder ancestry, and adds clickjacking headers. Local verification: 236 tests across 11 files, TypeScript check, frontend production build, Edge Function syntax check and clean diff check passed. Deno-specific type check was unavailable on this machine. No production database migration, Drive function deployment or frontend cutover was performed; release still requires target verification, financial reconciliation, recoverable snapshot and hosted Admin/Viewer testing.
+
 ## 17 October 2026 - Owner corrected hosted target to Suite
 
 Preserve this mature CMS candidate as reference. Resume deployment work in Brandex-Suite against `xogbpsnsmephupbqsfgb`; do not port these migrations directly. Earlier CMS secret-upload permission blocker is historical. No new schema/function/data release to this CMS project.

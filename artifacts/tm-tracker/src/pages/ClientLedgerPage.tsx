@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AppShell } from "@/components/layout/AppShell";
 import { getStaffRole } from "@/lib/api";
-import { billingRows, saveReceiving, money } from "@/lib/billing";
+import { billingRows, billingRowsIn, saveReceiving, money } from "@/lib/billing";
 import { pakistanToday } from "@/lib/case-timing";
 import { supabase } from "@/lib/supabase";
 const input = "border border-stone-400 bg-white p-2 rounded-none";
@@ -13,25 +13,27 @@ export function ClientLedgerPage() {
     [client, setClient] = useState(""),
     [search, setSearch] = useState(""),
     [series, setSeries] = useState(""),
+    [clientPage, setClientPage] = useState(0),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [editing, setEditing] = useState<any>(null);
   const role = useQuery({ queryKey: ["staff-role"], queryFn: getStaffRole }),
     canWrite = role.data === "admin";
   const clients = useQuery({
-    queryKey: ["billing-clients", search, series],
+    queryKey: ["billing-clients", search, series, clientPage],
     queryFn: async () => {
       let q = supabase
         .from("billing_clients")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("series")
         .order("code")
-        .limit(100);
-      if (search) q = q.ilike("name", `%${search.replace(/[%_]/g, "")}%`);
+        .range(clientPage * 100, clientPage * 100 + 99);
+      const safeSearch = search.trim().replace(/[^A-Za-z0-9 -]/g, "");
+      if (safeSearch) q = q.or(`name.ilike.%${safeSearch}%,code.ilike.%${safeSearch}%`);
       if (series) q = q.eq("series", series);
-      const { data, error } = await q;
+      const { data, error, count } = await q;
       if (error) throw error;
-      return data;
+      return { rows: data ?? [], total: count ?? 0 };
     },
   });
   const groups = useQuery({
@@ -60,29 +62,15 @@ export function ClientLedgerPage() {
           "client_id",
           client,
         );
-      const charges: any[] = [],
-        allocations: any[] = [],
-        receipts: any[] = [];
-      for (const l of links)
-        charges.push(
-          ...(await billingRows(
-            "billing_stage_position",
-            "trademark_id",
-            l.trademark_id,
-          )),
-        );
-      for (const r of receivings) {
-        allocations.push(
-          ...(await billingRows("billing_allocations", "receiving_id", r.id)),
-        );
-        receipts.push(
-          ...(await billingRows("billing_receipts", "receiving_id", r.id)),
-        );
-      }
+      const [charges, allocations, receipts] = await Promise.all([
+        billingRowsIn("billing_stage_position", "trademark_id", links.map((l) => l.trademark_id)),
+        billingRowsIn("billing_allocations", "receiving_id", receivings.map((r) => r.id)),
+        billingRowsIn("billing_receipts", "receiving_id", receivings.map((r) => r.id)),
+      ]);
       return { links, charges, receivings, allocations, receipts };
     },
   });
-  const selected = clients.data?.find((c) => c.id === client),
+  const selected = clients.data?.rows.find((c) => c.id === client),
     data = account.data;
   async function action(fn: () => Promise<unknown>) {
     setBusy(true);
@@ -162,11 +150,11 @@ export function ClientLedgerPage() {
         </p>
         <div className="flex gap-3 flex-wrap">
           <label>
-            Client name{" "}
+            Client name or code{" "}
             <input
               className={input}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setClientPage(0); setClient(""); }}
             />
           </label>
           <label>
@@ -174,7 +162,7 @@ export function ClientLedgerPage() {
             <select
               className={input}
               value={series}
-              onChange={(e) => setSeries(e.target.value)}
+              onChange={(e) => { setSeries(e.target.value); setClientPage(0); setClient(""); }}
             >
               <option value="">All series</option>
               {groups.data?.map((s) => (
@@ -193,7 +181,7 @@ export function ClientLedgerPage() {
               }}
             >
               <option value="">Choose client</option>
-              {clients.data?.map((c) => (
+              {clients.data?.rows.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.series}-{c.code} — {c.name}
                 </option>
@@ -204,9 +192,11 @@ export function ClientLedgerPage() {
         {(clients.error || account.error) && (
           <p role="alert">{clients.error?.message ?? account.error?.message}</p>
         )}
-        {clients.data?.length === 100 && (
-          <p>Showing first 100 matches. Narrow the client search.</p>
-        )}
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <span>{clients.data?.total ?? 0} clients · page {clientPage + 1}</span>
+          <button type="button" className={input} disabled={clientPage === 0 || clients.isFetching} onClick={() => { setClientPage((value) => value - 1); setClient(""); }}>Previous</button>
+          <button type="button" className={input} disabled={clients.isFetching || (clientPage + 1) * 100 >= (clients.data?.total ?? 0)} onClick={() => { setClientPage((value) => value + 1); setClient(""); }}>Next</button>
+        </div>
         {canWrite && (
           <form
             className="flex gap-2"

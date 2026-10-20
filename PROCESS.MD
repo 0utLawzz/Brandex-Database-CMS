@@ -1,5 +1,23 @@
 # Brandex process and release checklist
 
+## 20 October 2026 - CMS-base implementation checkpoint
+
+The owner chose the mature Database CMS as the base, with Client Ledger integrated into it. Mail Merge remains separate. The 17 October Suite-target note below is retained as history and is no longer a deployment instruction. Target database and frontend must be explicitly verified against current accounts and existing records before a release.
+
+### Source checklist
+
+- [x] Preserve workflow rules and replace stale smoke expectations with Monthly Billing default, assignment payable and calendar-month certificate checks.
+- [x] Fix partial/void settlement dates, direct Agent payment dates, and add regression coverage.
+- [x] Add atomic Sheet-sync job claiming, stale lease recovery and ordered per-case processing.
+- [x] Escape spreadsheet/CSV formula-like user values and remove insecure legacy Sheet export fallback.
+- [x] Bound CSV import size/rows/columns; validate uploaded file signatures and Drive folder ancestry.
+- [x] Bound Ledger and publication reads; add clickjacking response headers.
+- [x] Local verification: 236 tests across 11 files, TypeScript check, frontend production build, Edge Function syntax check and clean diff check. Deno runtime was unavailable for a full function type check.
+- [ ] Review hosted schema/data and reconcile old Ledger/Sheet identities and balances before any migration.
+- [ ] Verify destination, obtain recoverable database/Storage snapshot, configure secrets and validate Admin/Viewer flows on the hosted app before cutover.
+
+The upload checks cover common file signatures and the Drive Edge Function path. Direct Admin writes to private Supabase Storage still rely on bucket authorization; deeper document-content scanning is a separate hardening boundary. Existing historical partial-payment dates require data review before any corrective backfill. No live deployment or financial migration has happened in this checkpoint.
+
 ## Owner target correction - 17 October 2026
 
 The owner explicitly confirmed **Brandex-Suite `xogbpsnsmephupbqsfgb`** as the hosted target, with `https://brandex-suite.vercel.app`. This mature CMS branch remains a preserved, separate candidate/reference. Do not deploy its migrations into Suite. Current Drive implementation/release evidence is in `../brandex-suite/PROCESS.MD` and `../brandex-suite/docs/DRIVE_CONNECTION_STATUS.md`. Earlier CMS-target secrets/403 instructions below are historical, not the next action.

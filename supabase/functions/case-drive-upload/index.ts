@@ -17,6 +17,16 @@ Deno.serve(async req=>{
   const form=await req.formData();caseId=String(form.get("case_id")??"");const uploadId=String(form.get("upload_id")??crypto.randomUUID()),fileValue=form.get("file"),syncOnly=form.get("action")==="sync";
   const file=fileValue instanceof File?fileValue:null;
   if(!caseId||caseId.length>200||(!syncOnly&&(!UUID.test(uploadId)||!file||file.size===0||file.size>20*1024*1024||!["application/pdf","image/png","image/jpeg"].includes(file.type))))return response({error:"Choose a PDF, PNG or JPEG up to 20 MB"},400);
+  if(file&&!syncOnly){
+   const head=new Uint8Array(await file.slice(0,16).arrayBuffer());
+   const starts=(bytes:number[])=>bytes.every((byte,index)=>head[index]===byte);
+   const valid=file.type==="application/pdf"
+    ? /\.pdf$/i.test(file.name)&&starts([0x25,0x50,0x44,0x46,0x2d])
+    : file.type==="image/png"
+     ? /\.png$/i.test(file.name)&&starts([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])
+     : /\.jpe?g$/i.test(file.name)&&starts([0xff,0xd8,0xff]);
+   if(!valid)return response({error:"File contents do not match its PDF, PNG or JPEG type"},400);
+  }
   const {data:previous,error:lookupError}=await sb.from("case_drive_files").select("*").eq("upload_id",uploadId).maybeSingle();if(lookupError)throw lookupError;
   if(previous){if(previous.trademark_id!==caseId)return response({error:"Upload belongs to another case"},409);return response({file_id:previous.drive_file_id});}
   const {data:record,error:recordError}=await sb.from("trademarks").select("id,type,client_code,case_number,application_name,tm_cpr_number,nice_class,status").eq("id",caseId).single();if(recordError)throw recordError;
@@ -30,7 +40,7 @@ Deno.serve(async req=>{
   const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{method:"POST",body:new URLSearchParams({grant_type:"refresh_token",client_id:clientId,client_secret:clientSecret,refresh_token:refresh})});
   const token=await tokenResponse.json();if(!tokenResponse.ok||!token.access_token)throw new Error("Drive authorization needs renewal");
   async function drive(path:string,init:RequestInit={}){const r=await fetch("https://www.googleapis.com/drive/v3/"+path,{...init,headers:{Authorization:`Bearer ${token.access_token}`,...init.headers}});if(!r.ok)throw new Error(`Drive operation failed (${r.status}); retry with the same upload ID`);return r.status===204?null:await r.json();}
-  async function folder(parent:string,name:string,saved?:string){if(saved){const f=await drive(`files/${encodeURIComponent(saved)}?fields=id,mimeType,trashed`);if(f.trashed||f.mimeType!=="application/vnd.google-apps.folder")throw new Error("Linked folder needs reconciliation");return saved;}
+  async function folder(parent:string,name:string,saved?:string){if(saved){const f=await drive(`files/${encodeURIComponent(saved)}?fields=id,mimeType,trashed,parents`);if(f.trashed||f.mimeType!=="application/vnd.google-apps.folder"||!Array.isArray(f.parents)||!f.parents.includes(parent))throw new Error("Linked folder is outside its verified parent; reconcile before upload");return saved;}
    const query=`'${escape(parent)}' in parents and name='${escape(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
    const found=await drive(`files?q=${encodeURIComponent(query)}&fields=files(id)&pageSize=100`);if(found.files.length>1)throw new Error("Duplicate folder names: reconcile the existing folder ID first");
    if(found.files.length)return found.files[0].id;

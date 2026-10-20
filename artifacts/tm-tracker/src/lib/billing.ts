@@ -24,6 +24,25 @@ export async function billingRows(
     if (data.length < 500) return rows;
   }
 }
+export async function billingRowsIn(table: string, column: string, values: string[]) {
+  if (!values.length) return [];
+  const rows: any[] = [];
+  for (let start = 0; start < values.length; start += 100) {
+    const ids = values.slice(start, start + 100);
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .in(column, ids)
+        .order("id")
+        .range(offset, offset + 499);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < 500) break;
+    }
+  }
+  return rows;
+}
 export async function caseAccount(id: string) {
   const { data, error } = await supabase.rpc("case_payment_position", {
     p_case: id,

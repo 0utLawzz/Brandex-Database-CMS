@@ -808,6 +808,12 @@ const baseStageDocRow = {
   created_at: "2026-09-22T01:00:00Z",
 };
 
+function pdfFixture(size = 204800) {
+  const bytes = new Uint8Array(size);
+  bytes.set([0x25, 0x50, 0x44, 0x46, 0x2d]);
+  return bytes;
+}
+
 describe("Batch 9: Stage document API", () => {
   it("uploadStageDocument — maps stage, sub_stage, and title on the inserted row", async () => {
     const trademarkQuery = createQuery({
@@ -835,7 +841,7 @@ describe("Batch 9: Stage document API", () => {
       "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
     );
 
-    const file = new File([new Uint8Array(204800)], "application.pdf", {
+    const file = new File([pdfFixture()], "application.pdf", {
       type: "application/pdf",
     });
     const result = await uploadStageDocument(file, {
@@ -890,7 +896,7 @@ describe("Batch 9: Stage document API", () => {
       "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
     );
 
-    const file = new File(["pdf"], "app.pdf", { type: "application/pdf" });
+    const file = new File(["%PDF-1.7"], "app.pdf", { type: "application/pdf" });
     await expect(
       uploadStageDocument(file, { trademarkId: "BX-1", stage: "STAGE 1" }),
     ).rejects.toThrow("insert failed");
@@ -928,7 +934,7 @@ describe("Batch 9: Stage document API", () => {
       .mockReturnValueOnce(insertQuery);
     supabaseMock.storage.from.mockReturnValue(noUrlStorage);
 
-    const file = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
+    const file = new File(["%PDF-1.7"], "doc.pdf", { type: "application/pdf" });
     const result = await uploadStageDocument(file, {
       trademarkId: "BX-1",
       stage: "STAGE 1",
@@ -1017,7 +1023,7 @@ describe("Batch 9: Stage document API", () => {
       supabaseMock.from.mockReturnValueOnce(trademarkQuery);
       supabaseMock.storage.from.mockReturnValue(uploadStorage);
 
-      const file = new File([new Uint8Array(204800)], "doc.pdf", {
+      const file = new File([pdfFixture()], "doc.pdf", {
         type: "application/pdf",
       });
 
@@ -1038,7 +1044,7 @@ describe("Batch 9: Stage document API", () => {
       });
       supabaseMock.from.mockReturnValue(trademarkQuery);
 
-      const file = new File([new Uint8Array(204800)], "doc.pdf", {
+      const file = new File([pdfFixture()], "doc.pdf", {
         type: "application/pdf",
       });
 
@@ -1076,7 +1082,7 @@ describe("Batch 9: Stage document API", () => {
         "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
       );
 
-      const file = new File([new Uint8Array(204800)], "doc.pdf", {
+      const file = new File([pdfFixture()], "doc.pdf", {
         type: "application/pdf",
       });
 
@@ -1272,7 +1278,7 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
       "doc-uuid-1" as `${string}-${string}-${string}-${string}-${string}`,
     );
 
-    const file = new File(["dummy pdf content"], "demand_note.pdf", {
+    const file = new File(["%PDF-1.7 dummy pdf content"], "demand_note.pdf", {
       type: "application/pdf",
     });
     await uploadStageDocument(file, {
@@ -1429,7 +1435,7 @@ describe("Batch 13: Publication Workflow Integration", () => {
     });
     supabaseMock.from.mockReturnValue(selectQuery);
 
-    const records = await listPublicationPipeline();
+    const { records, total } = await listPublicationPipeline();
 
     expect(selectQuery.not).toHaveBeenCalledWith(
       "publication_date",
@@ -1437,6 +1443,8 @@ describe("Batch 13: Publication Workflow Integration", () => {
       null,
     );
     expect(records).toHaveLength(2);
+    expect(total).toBe(2);
+    expect(selectQuery.range).toHaveBeenCalledWith(0, 99);
 
     // Record 1: D-Note Submitted -> Demand Note Submitted
     expect(records[0]).toMatchObject({

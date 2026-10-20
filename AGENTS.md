@@ -1,5 +1,9 @@
 # Brandex Project Guidelines (AGENTS.md)
 
+## Current owner direction - 20 October 2026
+
+Use this mature Database CMS as the implementation base and integrate the Client Ledger here. Mail Merge stays a separate workstream for now. The older 17 October Suite-target instruction below is historical; do not infer a production database or deployment target from it. The current feature branch is a local/reviewable candidate until live data, schema, secrets and target are verified. Preserve existing data and the standalone systems. Active login roles remain Admin and Viewer; a Service Associate is a payee, not a login.
+
 ## Owner target correction - 17 October 2026
 
 The owner explicitly confirmed **Brandex-Suite `xogbpsnsmephupbqsfgb`** as the hosted target, with `https://brandex-suite.vercel.app`. This mature CMS branch remains a preserved, separate candidate/reference. Do not deploy its migrations into Suite. Current Drive implementation/release evidence is in `../brandex-suite/PROCESS.MD` and `../brandex-suite/docs/DRIVE_CONNECTION_STATUS.md`. Earlier CMS-target secrets/403 instructions below are historical, not the next action.

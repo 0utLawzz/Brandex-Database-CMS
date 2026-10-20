@@ -1095,3 +1095,10 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
 
 
 
+## 20 October 2026 - CMS-base remediation candidate
+
+- Owner selected this mature CMS as the base for integrated Client Ledger; Mail Merge remains separate. Older Suite-target notes are historical.
+- Fixed partial/void associate settlement and direct Agent payment completion dates. Added atomic ordered Sheet-sync claims, hardened Sheet/CSV exports, bounded import and list reads, document/Drive checks and clickjacking headers.
+- Updated workflow smoke expectations to current Monthly Billing and calendar-month rules. Local verification: 236 tests across 11 files, TypeScript check, frontend build, Edge Function syntax check and clean diff check. Deno-specific type check and hosted acceptance remain pending.
+- Production data, schema, Drive upload and frontend remain unchanged. Target verification, recoverable snapshot, old-ledger reconciliation and hosted Admin/Viewer acceptance are required before release.
+

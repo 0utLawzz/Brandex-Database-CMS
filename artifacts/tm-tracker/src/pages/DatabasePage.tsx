@@ -16,6 +16,7 @@ import type {
   TmFormKey,
 } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
+import { csvCell } from "@/lib/spreadsheet";
 import { RecordModal } from "@/components/RecordModal";
 import { RegistryImportModal } from "@/components/RegistryImportModal";
 import {
@@ -109,9 +110,6 @@ const CSV_COLUMNS: Array<[string, (record: TrademarkRecord) => string]> = [
   ["IMAGE", (r) => r.imagePath ?? ""],
   ["LAST MODIFIED", (r) => r.updatedAt],
 ];
-function csvCell(value: string) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
-}
 function downloadCsv(records: TrademarkRecord[]) {
   const rows = [
     CSV_COLUMNS.map(([label]) => csvCell(label)).join(","),

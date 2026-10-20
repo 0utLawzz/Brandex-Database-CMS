@@ -65,9 +65,20 @@ export function RegistryImportModal({ onClose, onCommitted, defaultKind = "form"
     setTmDryRun(null);
     setCommitMsg(null);
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setCsvText("");
+      setFileName("");
+      setError("CSV must be 5 MB or smaller. Split larger imports into batches.");
+      return;
+    }
     setFileName(file.name);
-    const text = await file.text();
-    setCsvText(text);
+    try {
+      const text = await file.text();
+      setCsvText(text);
+    } catch {
+      setCsvText("");
+      setError("Could not read this CSV. Choose the file again.");
+    }
   };
 
   const runDry = async () => {

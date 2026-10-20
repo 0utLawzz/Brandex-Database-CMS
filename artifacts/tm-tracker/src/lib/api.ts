@@ -5,6 +5,7 @@ import {
   supabase,
   TRADEMARK_FILES_BUCKET,
 } from "./supabase";
+import { validateStageDocument } from "./document-validation";
 
 export interface Trademark {
   ID: string;
@@ -1806,17 +1807,20 @@ export async function runFormMatch(): Promise<{
 /** Returns all trademarks that have been published in the journal
  * with computed daysRemaining and status
  */
-export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
+export async function listPublicationPipeline(page = 0): Promise<{ records: PublicationRecord[]; total: number }> {
   ensureConfigured();
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("trademarks")
     .select(
       "id, case_number, client_code, type, client_name, application_name, tm_cpr_number, nice_class, " +
         "journal_number, status, sub_status, agent, publication_date, opposition_deadline, " +
         "demand_note_received, demand_note_date, filing_date, logo_path, legacy_image_url",
+      { count: "exact" },
     )
     .not("publication_date", "is", null) // only journal-matched cases
-    .order("opposition_deadline", { ascending: true, nullsFirst: false });
+    .order("opposition_deadline", { ascending: true, nullsFirst: false })
+    .order("id")
+    .range(page * 100, page * 100 + 99);
   throwIfError(error);
 
   const paths = (data ?? []).map((row: any) => row.logo_path).filter(Boolean);
@@ -1832,7 +1836,7 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return (data ?? []).map((row: any) => {
+  const records = (data ?? []).map((row: any) => {
     // Calculate days remaining until opposition deadline
     const deadline = row.opposition_deadline
       ? new Date(row.opposition_deadline)
@@ -1875,6 +1879,7 @@ export async function listPublicationPipeline(): Promise<PublicationRecord[]> {
       status,
     };
   });
+  return { records, total: count ?? records.length };
 }
 
 /** Marks a case's demand note as received with a date
@@ -2246,6 +2251,7 @@ export async function uploadStageDocument(
   }
 
   // Resolve uploader id
+  await validateStageDocument(file);
   const { data: authData } = await supabase.auth.getUser();
   const uploadedBy = input.uploadedBy ?? authData.user?.id ?? null;
   if (!uploadedBy)

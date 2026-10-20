@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseFormCsv } from "./registryImport";
+import { parseCsv, parseFormCsv } from "./registryImport";
+
+it("bounds CSV memory use before expanding oversized rows and cells", () => {
+  expect(() => parseCsv("a".repeat(5 * 1024 * 1024 + 1))).toThrow("too large");
+  expect(() => parseCsv("a".repeat(10001))).toThrow("cell is too long");
+  expect(() => parseCsv(Array(101).fill("a").join(","))).toThrow("too many columns");
+});
 
 describe("form registry CSV import", () => {
   it("accepts the descriptive type header used by the office sheet", () => {

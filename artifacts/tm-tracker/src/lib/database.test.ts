@@ -88,6 +88,7 @@ it("enforces the complete direct-SQL flow, assignment payable and calendar-month
   await db.exec(
     `select record_agent_payment((select id from agent_fees where trademark_id='flow'),400)`,
   );
+  expect((await db.query<any>(`select paid,paid_date from agent_fees where trademark_id='flow'`)).rows[0]).toEqual({paid:false,paid_date:null});
   expect(
     (
       await db.query(
@@ -100,6 +101,10 @@ it("enforces the complete direct-SQL flow, assignment payable and calendar-month
       `select record_agent_payment((select id from agent_fees where trademark_id='flow'),601)`,
     ),
   ).rejects.toThrow("outstanding");
+  await db.exec(
+    `select record_agent_payment((select id from agent_fees where trademark_id='flow'),600)`,
+  );
+  expect((await db.query<any>(`select paid,paid_date is not null as dated from agent_fees where trademark_id='flow'`)).rows[0]).toEqual({paid:true,dated:true});
   await expect(
     db.exec(`update trademarks set sub_status='Hearing' where id='flow'`),
   ).rejects.toThrow("Invalid workflow transition");
@@ -489,6 +494,14 @@ it("settles oldest associate fees partially and returns amounts on void", async 
   expect(
     (
       await db.query<any>(
+        `select count(*)::int n from agent_fees where agent_id=$1 and amount_paid<amount_billed and paid_date is not null`,
+        [associate],
+      )
+    ).rows[0].n,
+  ).toBe(0);
+  expect(
+    (
+      await db.query<any>(
         `select count(*)::int n from associate_settlement_allocations where settlement_id=$1`,
         [pay],
       )
@@ -506,6 +519,60 @@ it("settles oldest associate fees partially and returns amounts on void", async 
       )
     ).rows[0].paid,
   ).toBe("0.00");
+  expect(
+    (
+      await db.query<any>(
+        `select count(*)::int n from agent_fees where agent_id=$1 and paid_date is not null`,
+        [associate],
+      )
+    ).rows[0].n,
+  ).toBe(0);
+});
+
+it("claims Sheet jobs in case order and rejects stale completion tokens", async () => {
+  await db.exec(`reset role;
+    insert into sheet_sync_outbox(trademark_id,action,payload)
+      values('sync-order-check','upsert','{}'),('sync-order-check','upsert','{}')`);
+  const unrelatedIds = (
+    await db.query<any>(
+      `select id from sheet_sync_outbox where trademark_id<>'sync-order-check'`,
+    )
+  ).rows.map((row) => row.id);
+  await db.exec(`set request.role='service_role'; set role service_role`);
+  try {
+    const first = (
+      await db.query<any>(
+        `select id,claim_token,attempt_count from claim_sheet_sync_job(10,$1::bigint[])`,
+        [unrelatedIds],
+      )
+    ).rows[0];
+    expect(first.attempt_count).toBe(1);
+    const secondWhileFirstRuns = await db.query<any>(
+      `select id from claim_sheet_sync_job(10,$1::bigint[]) where trademark_id='sync-order-check'`,
+      [[...unrelatedIds, first.id]],
+    );
+    expect(secondWhileFirstRuns.rows).toHaveLength(0);
+    const wrongToken = await db.query<any>(
+      `select finish_sheet_sync_job($1,gen_random_uuid(),true) done`,
+      [first.id],
+    );
+    expect(wrongToken.rows[0].done).toBe(false);
+    const finished = await db.query<any>(
+      `select finish_sheet_sync_job($1,$2,true) done`,
+      [first.id, first.claim_token],
+    );
+    expect(finished.rows[0].done).toBe(true);
+    const second = (
+      await db.query<any>(
+        `select id from claim_sheet_sync_job(10,$1::bigint[]) where trademark_id='sync-order-check'`,
+        [[...unrelatedIds, first.id]],
+      )
+    ).rows[0];
+    expect(second).toBeDefined();
+    expect(Number(second.id)).toBeGreaterThan(Number(first.id));
+  } finally {
+    await db.exec(`set role authenticated; set request.role='authenticated'`);
+  }
 });
 
 it("denies financial mutation and Drive lease claims to Viewer", async () => {

@@ -264,7 +264,7 @@ function buildRowFromRecord(record, existing) {
 
   function set(header, val) {
     var idx = DB_HEADERS.indexOf(header);
-    if (idx >= 0 && val !== undefined && val !== null) row[idx] = val;
+    if (idx >= 0 && val !== undefined && val !== null) row[idx] = sheetLiteral(val);
   }
 
   if (record.date      !== undefined) set("DATE",           record.date);
@@ -295,7 +295,16 @@ function buildRowFromRecord(record, existing) {
   // Always update LAST MODIFIED
   set("LAST MODIFIED", now);
 
-  return row;
+  // Existing cells may predate this guard, so sanitize the complete outgoing row.
+  return row.map(sheetLiteral);
+}
+
+// Imported case details are data, even if they resemble a Sheet formula.
+function sheetLiteral(value) {
+  if (typeof value !== "string") return value;
+  return /^[\s\x00-\x1f]*[=+\-@]/.test(value) || /^[\t\r\n]/.test(value)
+    ? "'" + value
+    : value;
 }
 
 // Maps the Supabase snake_case record to the existing 24-column Sheet layout.
@@ -324,8 +333,8 @@ function buildRowFromSupabase(record, existing) {
   row[DB_HEADERS.indexOf("TM11")] = record.tm11 ? "YES" : "";
   row[DB_HEADERS.indexOf("TM16")] = record.tm16 ? "YES" : "";
   row[DB_HEADERS.indexOf("TM56")] = record.tm56 ? "YES" : "";
-  row[DB_HEADERS.indexOf("JOURNAL NUMBER")] = record.journal_number || "";
-  row[DB_HEADERS.indexOf("JOURNAL DATE")] = record.journal_date || "";
+  row[DB_HEADERS.indexOf("JOURNAL NUMBER")] = sheetLiteral(record.journal_number || "");
+  row[DB_HEADERS.indexOf("JOURNAL DATE")] = sheetLiteral(record.journal_date || "");
   return row;
 }
 

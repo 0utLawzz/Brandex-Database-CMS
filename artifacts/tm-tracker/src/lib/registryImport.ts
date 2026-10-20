@@ -119,11 +119,26 @@ function normalizeHeader(h: string): string {
 
 /** Minimal RFC4180-ish CSV parse (handles quoted fields and newlines inside quotes). */
 export function parseCsv(text: string): string[][] {
+  const MAX_CSV_BYTES = 5 * 1024 * 1024;
+  const MAX_CSV_ROWS = 20000;
+  const MAX_CSV_COLUMNS = 100;
+  const MAX_CSV_CELL_LENGTH = 10000;
+  if (text.length > MAX_CSV_BYTES) throw new Error("CSV is too large (5 MB maximum).");
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
   let i = 0;
   let inQuotes = false;
+  const pushCell = () => {
+    if (row.length >= MAX_CSV_COLUMNS) throw new Error("CSV has too many columns (100 maximum).");
+    row.push(cell);
+    cell = "";
+  };
+  const pushRow = () => {
+    if (rows.length >= MAX_CSV_ROWS) throw new Error("CSV has too many rows (20,000 maximum).");
+    rows.push(row);
+    row = [];
+  };
   // strip BOM
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
 
@@ -141,6 +156,7 @@ export function parseCsv(text: string): string[][] {
         continue;
       }
       cell += ch;
+      if (cell.length > MAX_CSV_CELL_LENGTH) throw new Error("CSV cell is too long (10,000 characters maximum).");
       i += 1;
       continue;
     }
@@ -150,8 +166,7 @@ export function parseCsv(text: string): string[][] {
       continue;
     }
     if (ch === ",") {
-      row.push(cell);
-      cell = "";
+      pushCell();
       i += 1;
       continue;
     }
@@ -160,20 +175,19 @@ export function parseCsv(text: string): string[][] {
       continue;
     }
     if (ch === "\n") {
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
+      pushCell();
+      pushRow();
       i += 1;
       continue;
     }
     cell += ch;
+    if (cell.length > MAX_CSV_CELL_LENGTH) throw new Error("CSV cell is too long (10,000 characters maximum).");
     i += 1;
   }
   // last cell
   if (cell.length || row.length) {
-    row.push(cell);
-    rows.push(row);
+    pushCell();
+    pushRow();
   }
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
