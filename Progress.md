@@ -1102,3 +1102,9 @@ V2.0.1 is a correction/polish release on top of V2.0.0 with:
 - Updated workflow smoke expectations to current Monthly Billing and calendar-month rules. Local verification: 236 tests across 11 files, TypeScript check, frontend build, Edge Function syntax check and clean diff check. Deno-specific type check and hosted acceptance remain pending.
 - Production data, schema, Drive upload and frontend remain unchanged. Target verification, recoverable snapshot, old-ledger reconciliation and hosted Admin/Viewer acceptance are required before release.
 
+## 20 October 2026 - Existing-user recovery
+
+- Preview was verified against CMS Auth project `jzcrfbyypbbbittzbyyx`. Two existing confirmed users remain; no deletion or recreation.
+- Added reset-link request and new-password form to the staff sign-in screen. TypeScript, build and 236 tests passed locally.
+- Supabase Auth URL Configuration still pointed to localhost with no redirect allowlist when observed. Exact preview and production URLs must be configured and recovery tested before it is called live.
+

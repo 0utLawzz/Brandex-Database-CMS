@@ -2,6 +2,10 @@
 
 ## 20 October 2026 - CMS-base implementation checkpoint
 
+### Existing staff password recovery
+
+The CMS Auth project is `jzcrfbyypbbbittzbyyx`; the Vercel preview bundle was checked against this URL. Authentication > Users contains two confirmed existing staff accounts. Preserve both users and their IDs. The sign-in screen now offers a reset-link request and a new-password form; the owner enters the password privately. Before using it, Supabase Authentication > URL Configuration must set Site URL to `https://brandexsheet.vercel.app/` and add the exact preview redirect `https://brandexsheet-git-feat-confirmed-workflow-ledger-projectsb.vercel.app/`. The observed old Site URL was `http://localhost:3000` with no redirect URLs, which would misdirect recovery emails. Do not use wildcard redirects or create duplicate accounts. Verify a test email opens the preview, updates its password and signs in before calling recovery working.
+
 The owner chose the mature Database CMS as the base, with Client Ledger integrated into it. Mail Merge remains separate. The 17 October Suite-target note below is retained as history and is no longer a deployment instruction. Target database and frontend must be explicitly verified against current accounts and existing records before a release.
 
 ### Source checklist

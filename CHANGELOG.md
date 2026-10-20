@@ -1,5 +1,9 @@
 # Changelog
 
+## 20 October 2026 - Staff password recovery
+
+Added a sign-in recovery-link request and a user-entered new-password form without deleting or recreating existing CMS Auth users. Local TypeScript and production build passed; full test suite was rerun. The CMS Supabase Auth Site URL was observed as localhost with no allowed redirects, so hosted recovery requires the exact URL configuration described in `PROCESS.MD`. No password or recovery token was handled in source or chat.
+
 ## 20 October 2026 - CMS-base workflow and security remediation
 
 The owner chose the mature Database CMS as the base for the integrated Client Ledger; Mail Merge stays separate. This source-only change aligns smoke tests with Monthly Billing, repairs associate/direct-payment completion dates, serializes Sheet mirror work by case, protects CSV/Sheet output from formulas, bounds large imports/lists, validates common upload signatures and Drive folder ancestry, and adds clickjacking headers. Local verification: 236 tests across 11 files, TypeScript check, frontend production build, Edge Function syntax check and clean diff check passed. Deno-specific type check was unavailable on this machine. No production database migration, Drive function deployment or frontend cutover was performed; release still requires target verification, financial reconciliation, recoverable snapshot and hosted Admin/Viewer testing.
