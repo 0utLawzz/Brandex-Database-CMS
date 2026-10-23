@@ -1,11 +1,14 @@
 # Brandex Database CMS Progress
 
-**Last updated: 3 October 2026 — release fixes and workflow truth alignment**
+**Last updated: 24 October 2026 — dedicated case payments screen**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
 ## COMPLETED
 
+- Added a separate PAYMENTS route with server-side case search and pagination, Stage 1–4 payment-gate status, Admin-only manual updates, case-record links and a direct link to Agent Payments. Updates use the existing case payment API and retain the manual CMS / not Ledger-verified disclosure.
+- Corrected the record editor so Stage 2 agent assignment is no longer blocked by Stage 2 payment; this matches the canonical workflow rule. Kept the Stage 2 status indicator and clarified its pending wording.
+- Verification on 24 October: `pnpm typecheck`, `pnpm build`, `pnpm test` (211 tests / 8 files), and `git diff --check` passed. Local Vite server is running at `http://localhost:5173/payments`; the browser reached staff sign-in, so authenticated case/payment actions were not exercised.
 - Fixed the relative-age calendar regression surfaced during the final verification pass; month/day borrowing now uses the correct month length when dates cross a month boundary.
 - Applied the user-provided BrandEx Neo-Brutalism guide across the shared theme: cream surfaces, burnt-orange actions, teal statuses, Bebas Neue / Space Grotesk / DM Mono typography, and hard offset shadows.
 - Recolored and wired the selected logo variants: Logo 12 in the header, Logo 15 as favicon, Logo 14 on login/dashboard/print watermark, and Logo 20 for branding and social preview. Added Brandex.pk and Facebook links to the responsive footer. Numbered source variants are ignored; deployable palette-matched copies are tracked candidates.
