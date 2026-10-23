@@ -1,0 +1,7 @@
+{
+  "name": "Brandex Law Associates | Staff Trademark Registry",
+  "description": "Private staff portal for Brandex Law Associates trademark records and case management.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

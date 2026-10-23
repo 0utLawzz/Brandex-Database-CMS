@@ -1,12 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/tm-tracker run build",
-  "outputDirectory": "artifacts/tm-tracker/dist",
-  "installCommand": "pnpm install",
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite"
 }

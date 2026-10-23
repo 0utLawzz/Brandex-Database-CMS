@@ -6,7 +6,7 @@
 ![React](https://img.shields.io/badge/React-Vite-61DAFB?logo=react&logoColor=black)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ECF8E?logo=supabase&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel&logoColor=white)
-![pnpm](https://img.shields.io/badge/pnpm-workspace-F69220?logo=pnpm&logoColor=white)
+![npm](https://img.shields.io/badge/npm-standard-CB3837?logo=npm&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Production-success)
 
 > Fast, secure trademark case-management Datasheet for **Brandex Law Associates**.  
@@ -48,7 +48,7 @@ Brandex Datasheet is the primary operational system for managing trademark recor
 
 | Layer | Technology | Role |
 |-------|------------|------|
-| Frontend | React + Vite (artifacts/tm-tracker) | Staff UI on Vercel |
+| Frontend | React 19 + Vite (Root SPA) | Staff UI |
 | Database | Supabase Postgres | Primary record store + audit log |
 | Auth | Supabase Auth + RLS | Admin + User/Viewer; legacy Editor enum retained but not assignable |
 | Storage | Supabase Storage (private) | Trademark logos & files (signed URLs) |
