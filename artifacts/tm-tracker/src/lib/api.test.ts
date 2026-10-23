@@ -5,6 +5,9 @@ const { supabaseMock } = vi.hoisted(() => ({
     auth: {
       getUser: vi.fn(),
     },
+    functions: {
+      invoke: vi.fn(),
+    },
     from: vi.fn(),
     storage: {
       from: vi.fn(),
@@ -111,6 +114,8 @@ beforeEach(() => {
   // Early validation failures can leave unused responses for the next test.
   vi.resetAllMocks();
   supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  supabaseMock.functions.invoke.mockResolvedValue({ data: { payments: {} }, error: null });
+  supabaseMock.functions.invoke.mockResolvedValue({ data: { payments: {} }, error: null });
   supabaseMock.storage.from.mockReturnValue({
     createSignedUrls: vi.fn().mockResolvedValue({ data: [] }),
     createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/upload.png" } }),
@@ -304,11 +309,12 @@ describe("Brandex Supabase access patterns", () => {
   });
 
   it("raises a conflict when optimistic locking updates no row", async () => {
-    const selectQuery = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true }, error: null });
+    const selectQuery = createQuery({ data: { status: "STAGE 1", sub_status: "Acknowledgment", stage1_paid: true, tm_cpr_number: "123456" }, error: null });
     const updateQuery = createQuery({ data: null, error: null });
     supabaseMock.from
       .mockReturnValueOnce(selectQuery)
       .mockReturnValueOnce(updateQuery);
+    supabaseMock.functions.invoke.mockResolvedValue({ data: { payments: { "123456": { S1: { paid: true } } } }, error: null });
 
     await expect(
       updateTrademark("BX-1", { type: "X", clientCode: "C-7", caseNumber: "CASE-9", appName: "BRANDEX", city: "Islamabad", stage: "STAGE 2", subStage: "Assigned" }, 3),
@@ -937,7 +943,7 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
 describe("Batch 12: RecordView Workflow Consolidation", () => {
   it("updateTrademarkStatus — blocks transition to STAGE 2 when stage1_paid is false", async () => {
     const selectQuery = createQuery({
-      data: { stage1_paid: false, status: "STAGE 1", sub_status: "Acknowledgment" },
+      data: { stage1_paid: false, status: "STAGE 1", sub_status: "Acknowledgment", tm_cpr_number: "123456" },
       error: null,
     });
     supabaseMock.from.mockReturnValue(selectQuery);
@@ -949,7 +955,7 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
 
   it("updateTrademarkStatus — allows transition to STAGE 2 when stage1_paid is true", async () => {
     const selectQuery = createQuery({
-      data: { stage1_paid: true, status: "STAGE 1", sub_status: "Acknowledgment" },
+      data: { stage1_paid: true, status: "STAGE 1", sub_status: "Acknowledgment", tm_cpr_number: "123456" },
       error: null,
     });
     const updateQuery = createQuery({ data: null, error: null });
@@ -958,6 +964,7 @@ describe("Batch 12: RecordView Workflow Consolidation", () => {
       callCount++;
       return callCount === 1 ? selectQuery : updateQuery;
     });
+    supabaseMock.functions.invoke.mockResolvedValue({ data: { payments: { "123456": { S1: { paid: true } } } }, error: null });
 
     await updateTrademarkStatus("BX-1", "STAGE 2", "Assigned");
     expect(updateQuery.update).toHaveBeenCalledWith({
@@ -1208,7 +1215,7 @@ describe("Batch 13: Publication Workflow Integration", () => {
   });
 
   describe("Batch 1 (v2.0.1): Core Workflow + New Record Creation Corrections", () => {
-    it("A. New record defaults (STAGE 1, Filing, stage1_paid = true, filing_date)", async () => {
+    it("A. New record defaults to an unpaid Stage 1 gate until Ledger confirms a receipt", async () => {
       supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
       const insertQuery = createQuery({ data: { id: "new-tm-1", case_number: "TM-001" }, error: null });
       supabaseMock.from.mockReturnValue(insertQuery);
@@ -1227,8 +1234,8 @@ describe("Batch 13: Publication Workflow Integration", () => {
         expect.objectContaining({
           status: "STAGE 1",
           sub_status: "Filing",
-          stage1_paid: true,
-          stage1_paid_date: "2026-09-22",
+          stage1_paid: false,
+          stage1_paid_date: null,
         })
       );
     });

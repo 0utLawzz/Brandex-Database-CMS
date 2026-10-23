@@ -1,6 +1,7 @@
 /** Brandex browser data layer — Supabase is primary; Sheet mirroring is server-side. */
 
 import { isSupabaseConfigured, supabase, TRADEMARK_FILES_BUCKET } from "./supabase";
+import { refreshLedgerPaymentsForCase } from "./ledgerPayments";
 
 export interface Trademark {
   ID: string;
@@ -926,8 +927,8 @@ export async function createTrademark(input: TrademarkInput): Promise<{ id: stri
   // Prepare initial row data with Batch 1 defaults
   const rowPayload: Record<string, any> = {
     ...inputToRow({ ...input, stage: targetStage, subStage: targetSubStage }),
-    stage1_paid: input.stage1Paid ?? true,
-    stage1_paid_date: input.stage1PaidDate ?? filingDate,
+    stage1_paid: input.stage1Paid ?? false,
+    stage1_paid_date: input.stage1Paid ? input.stage1PaidDate ?? null : null,
   };
 
   if (input.stage2Paid !== undefined) rowPayload.stage2_paid = input.stage2Paid;
@@ -1029,7 +1030,7 @@ export async function updateTrademarkStatus(
 
   const { data: current, error: fetchErr } = await supabase
     .from("trademarks")
-    .select("status, sub_status, version, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes")
+    .select("status, sub_status, version, stage1_paid, stage2_paid, stage3_paid, stage4_paid, notes, tm_cpr_number")
     .eq("id", id)
     .single();
   throwIfError(fetchErr);
@@ -1037,6 +1038,13 @@ export async function updateTrademarkStatus(
   if (!current) throw new Error("Record not found.");
   const transitionError = workflowTransitionError(current.status, current.sub_status, stage, subStage);
   if (transitionError) throw new Error(transitionError);
+  if (current.status !== stage && ["STAGE 2", "STAGE 3", "STAGE 4"].includes(stage)) {
+    const payments = await refreshLedgerPaymentsForCase(id, current.tm_cpr_number);
+    current.stage1_paid = payments.S1?.paid === true;
+    current.stage2_paid = payments.S2?.paid === true;
+    current.stage3_paid = payments.S3?.paid === true;
+    current.stage4_paid = payments.S4?.paid === true;
+  }
   if (current.status !== stage) validatePaymentGate(stage, current);
 
   const canonicalSubStage = subStage ? normalizeWorkflowValue(subStage) : null;
@@ -1080,7 +1088,7 @@ export async function updateTrademark(
     throw new Error(`Invalid sub-stage "${input.subStage}" for ${input.stage}.`);
   }
   const { data: current, error: fetchErr } = await supabase.from("trademarks")
-    .select("status,sub_status,agent,notes,version,stage1_paid,stage2_paid,stage3_paid").eq("id", id).single();
+    .select("status,sub_status,agent,notes,version,stage1_paid,stage2_paid,stage3_paid,tm_cpr_number").eq("id", id).single();
   throwIfError(fetchErr);
   if (!current) throw new Error("Record not found.");
   const targetStage = input.stage ?? current.status;
@@ -1090,6 +1098,12 @@ export async function updateTrademark(
   }
   const transitionError = workflowTransitionError(current.status, current.sub_status, targetStage, targetSub);
   if (transitionError) throw new Error(transitionError);
+  if (targetStage !== current.status && ["STAGE 2", "STAGE 3", "STAGE 4"].includes(targetStage)) {
+    const payments = await refreshLedgerPaymentsForCase(id, current.tm_cpr_number);
+    current.stage1_paid = payments.S1?.paid === true;
+    current.stage2_paid = payments.S2?.paid === true;
+    current.stage3_paid = payments.S3?.paid === true;
+  }
   if (targetStage !== current.status) validatePaymentGate(targetStage, current);
   if (input.agent !== undefined && input.agent.trim().toUpperCase() !== (current.agent || "").toUpperCase()
       && (current.status !== "STAGE 2" || current.sub_status !== "Assigned")) {
@@ -1114,30 +1128,6 @@ export async function updateTrademark(
 export async function deleteTrademark(id: string): Promise<void> {
   ensureConfigured();
   const { error } = await supabase.from("trademarks").delete().eq("id", id);
-  throwIfError(error);
-}
-
-/**
- * Persist a single stage payment tick + date + optional reference.
- * Manual / placeholder only — payment is NOT auto-verified.
- * Does not touch the trademark version or trigger ConflictError.
- */
-export async function updateStagePayment(
-  id: string,
-  stage: 1 | 2 | 3 | 4,
-  paid: boolean,
-  paidDate?: string | null,
-  reference?: string | null,
-): Promise<void> {
-  ensureConfigured();
-  const patch: Record<string, boolean | string | null> = {
-    [`stage${stage}_paid`]: paid,
-    [`stage${stage}_paid_date`]: paid ? (paidDate ?? null) : null,
-  };
-  if (reference !== undefined) {
-    patch["payment_reference"] = reference ?? null;
-  }
-  const { error } = await supabase.from("trademarks").update(patch).eq("id", id);
   throwIfError(error);
 }
 

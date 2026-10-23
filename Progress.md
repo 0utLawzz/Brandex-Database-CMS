@@ -1,14 +1,16 @@
 # Brandex Database CMS Progress
 
-**Last updated: 24 October 2026 — dedicated case payments screen**
+**Last updated: 24 October 2026 — Client Ledger payment bridge source implementation**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
 ## COMPLETED
 
-- Added a separate PAYMENTS route with server-side case search and pagination, Stage 1–4 payment-gate status, Admin-only manual updates, case-record links and a direct link to Agent Payments. Updates use the existing case payment API and retain the manual CMS / not Ledger-verified disclosure.
+- Added a separate PAYMENTS route with server-side case search/pagination and read-only Stage 1–4 amounts and payment statuses from Brandex Client Ledger. The page links staff to enter receipts in Ledger; CMS mirrors the verified status into its workflow cache and rejects manual browser edits to payment flags.
+- Added CMS and Ledger Edge Function source for a server-to-server payment-status bridge keyed by normalized TM number. Stage progression refreshes from Ledger before checking the existing database gate; new cases no longer default Stage 1 to paid.
+- **Not live verified:** the connected Supabase account has no permission on the separate Ledger project. The two additive migrations, Edge Functions, and shared server-only secret have not been applied/deployed; see [Ledger integration setup](docs/LEDGER_INTEGRATION.md). The open CMS PR's Vercel preview remains preview-only.
 - Corrected the record editor so Stage 2 agent assignment is no longer blocked by Stage 2 payment; this matches the canonical workflow rule. Kept the Stage 2 status indicator and clarified its pending wording.
-- Verification on 24 October: `pnpm typecheck`, `pnpm build`, `pnpm test` (211 tests / 8 files), and `git diff --check` passed. Local Vite server is running at `http://localhost:5173/payments`; the browser reached staff sign-in, so authenticated case/payment actions were not exercised.
+- Before the Ledger bridge work, `pnpm typecheck`, `pnpm build`, `pnpm test` (211 tests / 8 files), and `git diff --check` passed for the original manual-payment screen. The updated Ledger bridge still needs these checks and a staff-authenticated live verification.
 - Fixed the relative-age calendar regression surfaced during the final verification pass; month/day borrowing now uses the correct month length when dates cross a month boundary.
 - Applied the user-provided BrandEx Neo-Brutalism guide across the shared theme: cream surfaces, burnt-orange actions, teal statuses, Bebas Neue / Space Grotesk / DM Mono typography, and hard offset shadows.
 - Recolored and wired the selected logo variants: Logo 12 in the header, Logo 15 as favicon, Logo 14 on login/dashboard/print watermark, and Logo 20 for branding and social preview. Added Brandex.pk and Facebook links to the responsive footer. Numbered source variants are ignored; deployable palette-matched copies are tracked candidates.
@@ -25,7 +27,7 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - General search failures show an explicit error and Retry action; a successful zero-result search continues to show the empty-results state.
 - Workflow rules in `docs/WORKFLOW_BUSINESS_RULES.md` are final and reflect the implemented database-enforced flow. The 25 September findings in `docs/PROJECT_TRUTH.md` are historical.
 - On 3 October, user-provided dashboard screenshots showed public sign-up and anonymous sign-in disabled, leaked-password protection toggled on, and only `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY` listed in Vercel. Reopen/save confirmation and deployment behavior are not independently verified.
-- Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. CMS payment flags are manual and are not Ledger-verified.
+- Agent directory, case assignment, fee tracking, dashboard, registry matching, publication, imports and private documents remain in scope as existing features. Agent payables remain distinct from Client Ledger stage payments.
 - The closure migrations recorded by Supabase are `20260929212118`, `20260929212404`, `20260929213046`, and `20261003121144` for TM-number cleanup and uniqueness.
 - Local verification after the current fixes: `pnpm test` 211 tests / 8 files; typecheck, production build, and `git diff --check` passed. No commit or push was made.
 
@@ -40,7 +42,7 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 
 ## FUTURE / PARKED
 
-- CMS ↔ Ledger integration remains deferred. No connector, Ledger data access, or verified payment read path is included; CMS payment flags are not Ledger truth.
+- CMS ↔ Ledger source integration is now authorized and implemented in the open source change. Live data access, production Supabase migrations/functions/secrets, and receipt acceptance flows remain pending; the CMS payment cache is not verified until that setup is completed.
 - Public read-only access is a future consideration only and is not enabled.
 - No workflow expansion or other speculative feature was started during closure.
 

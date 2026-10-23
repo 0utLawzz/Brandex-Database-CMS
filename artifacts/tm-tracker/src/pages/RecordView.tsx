@@ -356,7 +356,7 @@ export function RecordView() {
             </div>
 
             {/* 3. Stage Payments */}
-            <StagePaymentsSection record={record} canEdit={canEdit} />
+            <StagePaymentsSection record={record} />
 
             {/* 4. Workflow History — 4-column stage dashboard */}
             <WorkflowHistorySection workflowHistory={workflowHistory} />
