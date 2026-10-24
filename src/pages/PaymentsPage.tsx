@@ -9,7 +9,7 @@ import { getLedgerStagePayments, normalizeTmDigits } from "@/lib/ledgerPayments"
 
 const PAGE_SIZE = 50;
 const STAGES = [1, 2, 3, 4] as const;
-const LEDGER_URL = import.meta.env.VITE_BRANDEX_LEDGER_URL || "https://brandex-client-ledger.vercel.app";
+const LEDGER_URL = "https://brandex-client-ledger.vercel.app";
 
 export function PaymentsPage() {
   const [search, setSearch] = useState("");
