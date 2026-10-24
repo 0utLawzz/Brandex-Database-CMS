@@ -14,11 +14,11 @@ import {
   availableWorkflowSubStages,
   updateTrademarkStatus,
   updateTrademarkAgent,
-  updateStagePayment,
   listAgentProfiles,
   type TrademarkRecord,
   type TrademarkWorkflowEvent,
 } from "@/lib/api";
+import { getLedgerStagePayments, normalizeTmDigits } from "@/lib/ledgerPayments";
 import { formatDateShort } from "@/lib/utils";
 
 const STAGE_ORDER = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4"] as const;
@@ -581,19 +581,20 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
 
 interface StagePaymentsSectionProps {
   record: TrademarkRecord;
-  canEdit: boolean;
 }
 
-export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionProps) {
+export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
   const queryClient = useQueryClient();
-
-  const paymentMutation = useMutation({
-    mutationFn: (args: { stage: 1 | 2 | 3 | 4; paid: boolean; date: string }) =>
-      updateStagePayment(record.id, args.stage, args.paid, args.date || null),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
-      queryClient.invalidateQueries({ queryKey: ["trademark-workflow-history", record.id] });
+  const tmDigits = normalizeTmDigits(record.tmCprNo);
+  const { data: payments, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["ledger-payment-status", tmDigits],
+    queryFn: async () => {
+      const status = (await getLedgerStagePayments([tmDigits]))[tmDigits!];
+      await queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
+      return status;
     },
+    enabled: Boolean(tmDigits),
+    refetchInterval: 30_000,
   });
 
   return (
@@ -603,60 +604,43 @@ export function StagePaymentsSection({ record, canEdit }: StagePaymentsSectionPr
           <CreditCard className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
           <span>Stage Payments</span>
         </div>
-        <span className="font-mono text-sm print:text-[8px] font-bold uppercase text-[#B0740E] border border-[#B0740E] px-2 py-0.5 bg-white shadow-none print:shadow-none">
-          MANUAL CMS FLAGS — NOT LEDGER VERIFIED
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs print:text-[8px] font-bold uppercase text-[#0A6B52] border border-[#0A6B52] px-2 py-0.5 bg-white">BRANDEX CLIENT LEDGER</span>
+          <button type="button" onClick={() => void refetch()} disabled={!tmDigits || isFetching} className="font-mono text-xs font-bold uppercase underline disabled:opacity-50">{isFetching ? "Refreshing…" : "Refresh"}</button>
+        </div>
       </div>
 
       <div className="p-4 print:p-2">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
-          {(
-            [
-              { label: "STAGE 1", stageNum: 1 as const, paid: record.stage1Paid ?? false, date: record.stage1PaidDate ?? "" },
-              { label: "STAGE 2", stageNum: 2 as const, paid: record.stage2Paid ?? false, date: record.stage2PaidDate ?? "" },
-              { label: "STAGE 3", stageNum: 3 as const, paid: record.stage3Paid ?? false, date: record.stage3PaidDate ?? "" },
-              { label: "STAGE 4", stageNum: 4 as const, paid: record.stage4Paid ?? false, date: record.stage4PaidDate ?? "" },
-            ] as const
-          ).map(({ label, stageNum, paid, date }) => (
+        {!tmDigits ? (
+          <p className="border border-[#B0740E] bg-[#FFF0D0] p-3 font-mono text-xs text-[#6D4A00]">Add the six-digit TM number to link this case to Brandex Client Ledger.</p>
+        ) : error ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border border-red-300 bg-red-50 p-3 font-mono text-xs text-red-800"><span>Ledger verification is unavailable. Workflow payment gates are locked until it reconnects.</span><button type="button" onClick={() => void refetch()} className="font-bold underline">Retry</button></div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
+          {([1, 2, 3, 4] as const).map((stageNum) => {
+            const status = payments?.[`S${stageNum}` as const];
+            const paid = status?.paid === true;
+            return (
             <div
-              key={label}
+              key={stageNum}
               className={`border-2 p-3 print:p-1.5 shadow-none print:shadow-none ${
                 paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C] bg-[#FFF9F0]"
               }`}
             >
-              <div className="font-mono text-sm print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">{label}</div>
-              <label className={`flex items-center gap-2 mb-2 print:mb-0.5 ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}>
-                <input
-                  type="checkbox"
-                  checked={paid}
-                  disabled={!canEdit || paymentMutation.isPending}
-                  onChange={() =>
-                    paymentMutation.mutate({
-                      stage: stageNum,
-                      paid: !paid,
-                      date: paid ? "" : (date || new Date().toISOString().slice(0, 10)),
-                    })
-                  }
-                  className="w-4 h-4 print:w-3 print:h-3 accent-[#0A6B52]"
-                />
-                <span className={`font-mono text-sm print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>
-                  {paid ? "PAID" : "UNPAID"}
-                </span>
-              </label>
-              <input
-                type="date"
-                value={date}
-                disabled={!canEdit || !paid || paymentMutation.isPending}
-                onChange={(e) =>
-                  paymentMutation.mutate({ stage: stageNum, paid: true, date: e.target.value })
-                }
-                className="w-full h-8 print:h-5 px-2 print:px-1 border border-[#0C0C0C]/40 font-mono text-sm print:text-[8px] bg-white disabled:opacity-40"
-              />
+              <div className="font-mono text-sm print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">Stage {stageNum}</div>
+              <div className={`font-mono text-sm print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>{isLoading ? "CHECKING…" : paid ? "PAID" : "UNPAID"}</div>
+              <div className="mt-2 space-y-1 font-mono text-[10px] print:text-[8px] text-stone-600">
+                <div>Received: Rs. {Number(status?.amount_received ?? 0).toLocaleString()}</div>
+                <div>Due: Rs. {Number(status?.amount_due ?? 0).toLocaleString()}</div>
+                {status?.paid_date && <div>Received on: {status.paid_date}</div>}
+              </div>
             </div>
-          ))}
+            );
+          })}
+          </div>
+        )}
         </div>
       </div>
-    </div>
   );
 }
 

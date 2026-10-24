@@ -242,8 +242,8 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
 
   const watchStage = form.watch("stage");
   const watchImage = form.watch("image");
-  const availableSubStages = STATUS_WORKFLOW[watchStage] ?? [];
   const isStage2Paid = !creating && Boolean(trademark?.stage2Paid);
+  const availableSubStages = STATUS_WORKFLOW[watchStage] ?? [];
 
   // Auto-populate Client Name when Client Code changes
   const handleClientCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -548,7 +548,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                       >
                         {isStage2Paid
                           ? `Stage 2 Payment Confirmed (${trademark?.stage2PaidDate || "Recorded"})`
-                          : "Stage 2 payment is required before proceeding."}
+                          : "Stage 2 payment is not cleared yet."}
                       </span>
                     </div>
                     <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
@@ -561,25 +561,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
               {/* Assignment */}
               <div>
                 <SectionHead title="Assignment" />
-                {watchStage === "STAGE 2" && !isStage2Paid ? (
-                  <div className="p-3 bg-[#FFF0D0] border-2 border-[#B0740E] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-[#B0740E] shrink-0" />
-                        <span className="font-mono text-sm font-bold text-[#6C1C1F]">
-                          Stage 2 payment is required before proceeding.
-                        </span>
-                      </div>
-                      <span className="font-mono text-sm font-bold text-[#B0740E] border border-[#B0740E] px-1.5 py-0.5 bg-white shrink-0">
-                        MANUAL — NOT VERIFIED
-                      </span>
-                    </div>
-                    <div className="font-mono text-sm text-[#6d6658]">
-                      Agent assignment is locked until Stage 2 payment is cleared.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <FieldLabel>AGENT (MASTER SYSTEM)</FieldLabel>
                       <FormSelect
@@ -613,8 +595,7 @@ export function RecordModal({ recordId, isNew: forceNew, onClose, onSaved }: Rec
                         {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </FormSelect>
                     </div>
-                  </div>
-                )}
+                </div>
               </div>
 
               {/* Additional */}

@@ -74,10 +74,12 @@ RLS separately controls who may write.
 
 ## Payments and agents
 
-CMS owns cases, workflow, stage progression and gates.
-[Brandex-Ledger](https://github.com/0utLawzz/Brandex-Ledger) remains the intended source of actual
-client payments. CMS stage flags/dates are manual workflow placeholders; there is no verified
-Ledger integration. Do not duplicate Ledger or represent CMS flags as Ledger-confirmed payments.
+CMS owns cases, workflow, stage progression and gates. [Brandex Client Ledger](https://github.com/0utLawzz/Brandex-Client-Ledger)
+owns actual client payments. The CMS reads Ledger's stage-status RPC by normalized six-digit TM
+number through a server-to-server Edge Function bridge. CMS stage flags/dates are a protected cache
+used by the existing database workflow gate; staff cannot set them manually in the browser. Live
+receipt synchronization remains unverified until both Supabase migrations/functions/secrets are
+configured and the acceptance flows in [LEDGER_INTEGRATION.md](LEDGER_INTEGRATION.md) pass.
 
 Agent accounting is separate from client payments. Assign cases with per-case fees/rates.
 Ten cases at Rs.1000 with eight Accepted create Rs.8000 payable. The database creates one payable
@@ -139,5 +141,5 @@ Preserve legal identifiers and existing business behavior except explicitly scop
 Do not claim canonical Type / Client Code / Case Number presentation means default sorting:
 the current list sorts filing date descending, updated time descending, then identifier tiebreakers.
 Existing uppercase normalization and broader integrity questions are separate audit items.
-Ledger integration and publication/workbench presentation improvements remain separate follow-up
-scope; they do not make the implemented workflow rules incomplete. Do not change historical Git tags.
+The CMS ↔ Ledger integration is now an approved follow-up scope; publication/workbench improvements
+remain separate. Do not change historical Git tags.

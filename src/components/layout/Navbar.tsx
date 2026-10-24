@@ -13,6 +13,7 @@ import {
   Users2,
   LogOut,
   BookOpen,
+  CreditCard,
   Sparkles,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/assigned",    label: "ASSIGNED",    icon: Users2 },
   { href: "/agents",      label: "AGENTS",      icon: BriefcaseBusiness },
   { href: "/publication", label: "PUBLICATION", icon: BookOpen },
+  { href: "/payments",    label: "PAYMENTS",    icon: CreditCard },
   { href: "/logs",        label: "LOGS",        icon: ScrollText },
 ];
 
