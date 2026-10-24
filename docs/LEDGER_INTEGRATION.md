@@ -20,7 +20,7 @@ The Ledger and CMS Supabase projects are separate. Apply the additive migration 
 1. Generate a strong random integration secret and store the exact same value as a Supabase Edge Function secret in both projects. Do not add it to a `.env` committed to Git, a `VITE_*` variable, or browser-visible Vercel environment.
 2. In the Ledger project, set `CMS_LEDGER_INTEGRATION_SECRET` and deploy `cms-payment-status` with JWT verification disabled; the function authenticates each request with the shared secret and exposes only payment-status reads.
 3. In the CMS project, set `LEDGER_PAYMENT_STATUS_URL` to `https://<ledger-project-ref>.supabase.co/functions/v1/cms-payment-status` and set `LEDGER_CMS_INTEGRATION_SECRET` to the same secret. Deploy `ledger-payment-status` with JWT verification enabled.
-4. Configure Vercel Preview's public `VITE_BRANDEX_LEDGER_URL` if the Ledger link uses a different URL. No Ledger secret belongs in Vercel's browser environment.
+4. The Payments tab links to `https://brandex-client-ledger.vercel.app`. If the Ledger deployment URL changes, update the public link in `src/pages/PaymentsPage.tsx`; no Ledger secret belongs in Vercel's browser environment.
 5. Verify a known case with (a) no Ledger receipt, (b) a partial receipt, (c) a fully cleared stage, and (d) a voided/corrected receipt. Confirm that only fully cleared stages unlock the corresponding CMS stage gate, and that unavailable Ledger requests fail closed.
 
 Example CLI flow after selecting and linking the intended project (the migrations/functions are not auto-applied by Vercel):

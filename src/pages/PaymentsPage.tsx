@@ -97,6 +97,7 @@ export function PaymentsPage() {
                   <tbody>{cases.map((record) => {
                     const tm = normalizeTmDigits(record.tmCprNo);
                     const status = tm ? ledgerPayments?.[tm] : undefined;
+                    const unavailable = Boolean(tm && ledgerError);
                     return <tr key={record.id} className="border-b border-stone-300 align-middle last:border-0 hover:bg-[#F0E8D0]/60">
                       <td className="max-w-[360px] px-3 py-3">
                         <Link href={`/record/${record.id}`} className="group inline-flex items-center gap-1 font-bold text-[#0C0C0C] hover:text-[#0A6B52]">{record.appName || "UNTITLED CASE"}<ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" /></Link>
@@ -105,13 +106,13 @@ export function PaymentsPage() {
                       <td className="px-3 py-3"><div className="font-mono text-xs font-bold uppercase">{record.stage}</div><div className="mt-1 text-sm text-stone-600">{record.subStage || "—"}</div></td>
                       {STAGES.map((stage) => {
                         const stageStatus = status?.[`S${stage}` as const];
-                        const paid = stageStatus?.paid === true;
+                        const paid = !unavailable && stageStatus?.paid === true;
                         return <td key={stage} className="px-2 py-3 text-center">
                           <div className={`mx-auto flex min-w-[128px] flex-col items-center gap-1 border-2 px-2 py-2 font-mono text-xs ${paid ? "border-[#0A6B52] bg-[#D8F2E8] text-[#0A6B52]" : "border-stone-300 bg-white text-stone-600"}`}>
-                            <span className="font-bold uppercase">{isLedgerLoading ? "Checking…" : paid ? "Paid" : tm && ledgerError ? "Unavailable" : !tm ? "TM Required" : "Unpaid"}</span>
-                            <span>RECEIVED RS. {Number(stageStatus?.amount_received ?? 0).toLocaleString()}</span>
-                            <span>DUE RS. {Number(stageStatus?.amount_due ?? 0).toLocaleString()}</span>
-                            {stageStatus?.paid_date && <span>{stageStatus.paid_date}</span>}
+                            <span className="font-bold uppercase">{!tm ? "TM Required" : unavailable ? "Unavailable" : isLedgerLoading ? "Checking…" : paid ? "Paid" : "Unpaid"}</span>
+                            <span>RECEIVED RS. {unavailable ? "—" : Number(stageStatus?.amount_received ?? 0).toLocaleString()}</span>
+                            <span>DUE RS. {unavailable ? "—" : Number(stageStatus?.amount_due ?? 0).toLocaleString()}</span>
+                            {!unavailable && stageStatus?.paid_date && <span>{stageStatus.paid_date}</span>}
                           </div>
                         </td>;
                       })}
