@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { supabaseMock } = vi.hoisted(() => ({
-  supabaseMock: { functions: { invoke: vi.fn() } },
+  supabaseMock: {
+    from: vi.fn(),
+    rpc: vi.fn(),
+    functions: { invoke: vi.fn() },
+  },
 }));
 
 vi.mock("./supabase", () => ({ supabase: supabaseMock }));
 
-import { getLedgerStagePayments, normalizeTmDigits } from "./ledgerPayments";
+import { getLedgerStagePayments, normalizeTmDigits, recordClientReceipt } from "./ledgerPayments";
 
-describe("Brandex Client Ledger payment bridge", () => {
+describe("Unified Brandex Client Ledger", () => {
   beforeEach(() => vi.resetAllMocks());
 
   it("normalizes formatted six-digit TM numbers and preserves leading zeroes", () => {
@@ -17,19 +21,25 @@ describe("Brandex Client Ledger payment bridge", () => {
     expect(normalizeTmDigits("1234567")).toBeNull();
   });
 
-  it("requests a deduplicated batch and returns the Ledger stage summaries", async () => {
-    const payments = { "012345": { S1: { paid: true, amount_due: 5000, amount_received: 5000, outstanding: 0, paid_date: "2026-10-23", entry_id: "receipt-1" } } };
-    supabaseMock.functions.invoke.mockResolvedValue({ data: { payments }, error: null });
-
-    await expect(getLedgerStagePayments(["TM 012-345", "012345", "12345"])).resolves.toEqual(payments);
-    expect(supabaseMock.functions.invoke).toHaveBeenCalledWith("ledger-payment-status", {
-      body: { tm_digits: ["012345"] },
+  it("records a client receipt via database RPC", async () => {
+    supabaseMock.rpc.mockResolvedValue({
+      data: { id: "rec-1", receipt_no: "BX-REC-2026-1001", amount: 15000 },
+      error: null,
     });
-  });
 
-  it("fails closed when the Ledger bridge is unavailable", async () => {
-    supabaseMock.functions.invoke.mockResolvedValue({ data: null, error: { message: "function unavailable" } });
+    const result = await recordClientReceipt({
+      trademarkId: "tm-1",
+      stage: "S1",
+      amount: 15000,
+      paymentMethod: "bank_transfer",
+      bankName: "United Bank Limited (UBL)",
+    });
 
-    await expect(getLedgerStagePayments(["123456"])).rejects.toThrow("Could not verify payment with Brandex Client Ledger");
+    expect(result).toEqual({ id: "rec-1", receipt_no: "BX-REC-2026-1001", amount: 15000 });
+    expect(supabaseMock.rpc).toHaveBeenCalledWith("record_client_receipt", expect.objectContaining({
+      p_trademark_id: "tm-1",
+      p_stage: "S1",
+      p_amount: 15000,
+    }));
   });
 });

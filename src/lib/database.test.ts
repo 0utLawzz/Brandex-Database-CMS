@@ -17,7 +17,7 @@ beforeAll(async () => {
     alter table storage.objects enable row level security;
     grant usage on schema public,auth,storage to authenticated;
   `);
-  const directory = resolve(process.cwd(), '../../supabase/migrations');
+  const directory = resolve(process.cwd(), readdirSync(process.cwd()).includes('supabase') ? 'supabase/migrations' : '../../supabase/migrations');
   for (const file of readdirSync(directory).filter(f => f.endsWith('.sql')).sort()) {
     if (file === '20260929212118_admin_viewer_role_closure.sql') {
       await db.exec(`insert into auth.users(id) values ('00000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000000002');

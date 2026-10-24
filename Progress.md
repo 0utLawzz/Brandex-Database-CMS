@@ -1,16 +1,15 @@
 # Brandex Database CMS Progress
 
-**Last updated: 24 October 2026 — Client Ledger payment bridge source implementation**
+**Last updated: 24 October 2026 — Unified Client Ledger Integration (1 Database, 1 Place, 1 System)**
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
 ## COMPLETED
 
-- Added a separate PAYMENTS route with server-side case search/pagination and read-only Stage 1–4 amounts and payment statuses from Brandex Client Ledger. The page links staff to enter receipts in Ledger; CMS mirrors the verified status into its workflow cache and rejects manual browser edits to payment flags.
-- Added CMS and Ledger Edge Function source for a server-to-server payment-status bridge keyed by normalized TM number. Stage progression refreshes from Ledger before checking the existing database gate; new cases no longer default Stage 1 to paid.
-- **Database connection check (24 October 2026):** the CMS project `jzcrfbyypbbbittzbyyx` is active and contains the expected CMS tables/data. Its applied migrations stop at `20261003121144`; its only listed Edge Function is `sync-google-sheet`. The Ledger bridge migration and CMS function are therefore not installed in this database. The Ledger Supabase project is not accessible in the connected Supabase account, so cross-project receipt reads are not live-verified. See [Ledger integration setup](docs/LEDGER_INTEGRATION.md).
+- **Unified Client Ledger (1 Database, 1 Place, 1 System)**: Merged Brandex Client Ledger directly into the primary database via migration `20261024000100_unified_client_ledger.sql`. Receipts are stored in `client_ledger_entries` with automatic sequence generation (`REC-YYYY-XXXX`). A PostgreSQL trigger recalculates stage completion (S1, S2, S3, S4) directly on the case row, immediately unlocking the statutory workflow gate upon receipt creation.
+- **Interactive Payments & Receipts Interface**: Built `/payments` and `/record/:id` stage receipt modal (`RecordReceiptModal`) allowing staff to receive client stage payments directly (amount in PKR, channel, bank accounts, cheque/ref, auto-serial).
+- **Official Printable Receipt Vouchers**: Built `ReceiptPrintModal` generating official Brandex Law Associates payment receipts with authentic firm accounts (UBL, Meezan Bank, EasyPaisa, JazzCash) and authorized signatures.
 - Corrected the record editor so Stage 2 agent assignment is no longer blocked by Stage 2 payment; this matches the canonical workflow rule. Kept the Stage 2 status indicator and clarified its pending wording.
-- The original workspace passed `pnpm typecheck`, `pnpm build`, and `pnpm test` (214 tests) after the Ledger bridge changes. Following the upstream move to the root `src/` layout, root `pnpm lint` and `pnpm build` passed; this root package has no test script. Authenticated live Ledger verification remains pending backend setup.
 - Fixed the relative-age calendar regression surfaced during the final verification pass; month/day borrowing now uses the correct month length when dates cross a month boundary.
 - Applied the user-provided BrandEx Neo-Brutalism guide across the shared theme: cream surfaces, burnt-orange actions, teal statuses, Bebas Neue / Space Grotesk / DM Mono typography, and hard offset shadows.
 - Recolored and wired the selected logo variants: Logo 12 in the header, Logo 15 as favicon, Logo 14 on login/dashboard/print watermark, and Logo 20 for branding and social preview. Added Brandex.pk and Facebook links to the responsive footer. Numbered source variants are ignored; deployable palette-matched copies are tracked candidates.

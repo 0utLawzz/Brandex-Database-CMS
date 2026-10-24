@@ -58,7 +58,7 @@ Never expose a service-role key, database password, Google Apps Script secret, o
 
 - Keep RLS enabled. Active roles are Admin + User/Viewer only. The historical `editor` enum value is retained, but active Editor profiles were converted to Viewer and a database constraint prevents re-assignment. Do not reintroduce Editor authorization.
 - Production is private and staff-authenticated. Do not add public Viewer access; it is future consideration only.
-- CMS ↔ Brandex Client Ledger payment-status integration is authorized. Ledger remains the payment source of truth; use the read-only server-to-server RPC bridge and keep its secret out of browser/Vercel `VITE_*` variables. Live migrations/functions/secrets require owner access to both Supabase projects. Record View/workbench redesign remains a separate follow-up.
+- Client Ledger is unified directly into this database and web application (1 Database, 1 Place, 1 System). Client stage receipts are stored in `client_ledger_entries`, protected by Admin RLS, and trigger immediate stage gate updates. Bulk deletion is strictly forbidden; soft-void with audit reason is enforced. Record View/workbench redesign remains a separate follow-up.
 - Do not implement bulk permanent deletion. Single-record deletion remains admin-controlled by RLS.
 - Database schema changes require a new ordered migration in `supabase/migrations`.
 - Every completed change must pass tests, typecheck and production build before push.

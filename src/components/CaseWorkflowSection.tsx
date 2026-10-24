@@ -18,8 +18,10 @@ import {
   type TrademarkRecord,
   type TrademarkWorkflowEvent,
 } from "@/lib/api";
-import { getLedgerStagePayments, normalizeTmDigits } from "@/lib/ledgerPayments";
+import { getLedgerStagePayments, normalizeTmDigits, refreshLedgerPaymentsForCase } from "@/lib/ledgerPayments";
 import { formatDateShort } from "@/lib/utils";
+import { RecordReceiptModal } from "@/components/RecordReceiptModal";
+import { ReceiptPrintModal } from "@/components/ReceiptPrintModal";
 
 const STAGE_ORDER = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4"] as const;
 
@@ -577,7 +579,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   );
 }
 
-// ── 2. STAGE PAYMENTS (MANUAL — NOT VERIFIED) ────────────────────────────────
+// ── 2. STAGE PAYMENTS (UNIFIED CLIENT LEDGER) ────────────────────────────────
 
 interface StagePaymentsSectionProps {
   record: TrademarkRecord;
@@ -586,61 +588,158 @@ interface StagePaymentsSectionProps {
 export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
   const queryClient = useQueryClient();
   const tmDigits = normalizeTmDigits(record.tmCprNo);
-  const { data: payments, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["ledger-payment-status", tmDigits],
+  const [recordModalOpen, setRecordModalOpen] = useState(false);
+  const [targetStage, setTargetStage] = useState<"S1" | "S2" | "S3" | "S4">("S1");
+  const [printedReceipt, setPrintedReceipt] = useState<any | null>(null);
+
+  const { data: payments, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["ledger-payment-status", tmDigits || record.id],
     queryFn: async () => {
-      const status = (await getLedgerStagePayments([tmDigits]))[tmDigits!];
+      const status = tmDigits
+        ? (await getLedgerStagePayments([tmDigits]))[tmDigits]
+        : await refreshLedgerPaymentsForCase(record.id);
       await queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
       return status;
     },
-    enabled: Boolean(tmDigits),
+    staleTime: 10_000,
     refetchInterval: 30_000,
   });
 
+  const handleOpenReceipt = (stageNum: 1 | 2 | 3 | 4) => {
+    setTargetStage(`S${stageNum}` as any);
+    setRecordModalOpen(true);
+  };
+
+  const handleReceiptRecorded = (receiptData: any) => {
+    setPrintedReceipt(receiptData);
+    queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
+    queryClient.invalidateQueries({ queryKey: ["ledger-payment-status"] });
+  };
+
   return (
-    <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
-      <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex items-center justify-between print:px-2 print:py-1">
-        <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
-          <CreditCard className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
-          <span>Stage Payments</span>
+    <>
+      <div className="print-avoid-break border border-stone-300 bg-white shadow-none print:shadow-none">
+        <div className="px-4 py-3 border-b border-stone-300 bg-[#E8DFC7] flex flex-wrap items-center justify-between gap-2 print:px-2 print:py-1">
+          <div className="flex items-center gap-2 font-mono font-bold text-sm uppercase tracking-wider text-[#0C0C0C] print:text-[10px]">
+            <CreditCard className="w-4 h-4 text-[#6C1C1F] print:w-3.5 print:h-3.5" />
+            <span>Client Stage Receipts (Ledger)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs print:text-[8px] font-bold uppercase text-[#0A6B52] border border-[#0A6B52] px-2 py-0.5 bg-white">
+              UNIFIED DATABASE
+            </span>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              className="font-mono text-xs font-bold uppercase underline disabled:opacity-50 cursor-pointer"
+            >
+              {isFetching ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs print:text-[8px] font-bold uppercase text-[#0A6B52] border border-[#0A6B52] px-2 py-0.5 bg-white">BRANDEX CLIENT LEDGER</span>
-          <button type="button" onClick={() => void refetch()} disabled={!tmDigits || isFetching} className="font-mono text-xs font-bold uppercase underline disabled:opacity-50">{isFetching ? "Refreshing…" : "Refresh"}</button>
+
+        <div className="p-4 print:p-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
+            {([1, 2, 3, 4] as const).map((stageNum) => {
+              const status = payments?.[`S${stageNum}` as const];
+              const paid =
+                status?.paid === true ||
+                Boolean(record[`stage${stageNum}Paid` as keyof TrademarkRecord]);
+              const paidDate =
+                status?.paid_date ||
+                (record[`stage${stageNum}PaidDate` as keyof TrademarkRecord] as string) ||
+                null;
+              const amountRec = Number(status?.amount_received ?? 0);
+
+              return (
+                <div
+                  key={stageNum}
+                  className={`border-2 p-3 print:p-1.5 flex flex-col justify-between shadow-[2px_2px_0_#0C0C0C] ${
+                    paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C] bg-[#FFF9F0]"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="font-mono text-xs print:text-[8px] font-bold uppercase">
+                        Stage {stageNum}
+                      </div>
+                      <div
+                        className={`font-mono text-xs print:text-[9px] font-bold uppercase ${
+                          paid ? "text-[#0A6B52]" : "text-[#6d6658]"
+                        }`}
+                      >
+                        {isLoading ? "…" : paid ? "PAID" : "UNPAID"}
+                      </div>
+                    </div>
+
+                    <div className="mt-1 space-y-0.5 font-mono text-[11px] print:text-[8px] text-stone-700">
+                      <div>Received: PKR {amountRec > 0 ? amountRec.toLocaleString() : paid ? "CLEARED" : "0"}</div>
+                      {paidDate && <div>Date: {paidDate}</div>}
+                      {status?.receipt_no && (
+                        <div className="text-[10px] text-[#0A6B52] font-bold">
+                          {status.receipt_no}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-[#0C0C0C]/15 flex items-center justify-between gap-1 print:hidden">
+                    {paid ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPrintedReceipt({
+                            receiptNo: status?.receipt_no || `REC-${record.caseNumber || "BX"}-S${stageNum}`,
+                            caseTitle: record.appName || `Case ${record.caseNumber}`,
+                            tmNumber: record.tmCprNo,
+                            clientCode: record.clientCode,
+                            amount: amountRec || 15000,
+                            stage: `S${stageNum}`,
+                            entryDate: paidDate || new Date().toISOString().slice(0, 10),
+                            paymentMethod: status?.payment_method || "Bank Transfer",
+                            bankName: status?.bank_name || "United Bank Limited (UBL)",
+                            chequeNo: status?.cheque_no,
+                          })
+                        }
+                        className="w-full text-center py-1 bg-white border border-[#0A6B52] text-[#0A6B52] font-mono text-[10px] font-bold uppercase hover:bg-[#0A6B52] hover:text-white transition-colors cursor-pointer"
+                      >
+                        VOUCHER
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReceipt(stageNum)}
+                        className="w-full text-center py-1 bg-[#C94A00] text-white border border-[#0C0C0C] font-mono text-[10px] font-bold uppercase shadow-[1px_1px_0_#0C0C0C] hover:brightness-110 cursor-pointer"
+                      >
+                        + RECEIVE
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="p-4 print:p-2">
-        {!tmDigits ? (
-          <p className="border border-[#B0740E] bg-[#FFF0D0] p-3 font-mono text-xs text-[#6D4A00]">Add the six-digit TM number to link this case to Brandex Client Ledger.</p>
-        ) : error ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 border border-red-300 bg-red-50 p-3 font-mono text-xs text-red-800"><span>Ledger verification is unavailable. Workflow payment gates are locked until it reconnects.</span><button type="button" onClick={() => void refetch()} className="font-bold underline">Retry</button></div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
-          {([1, 2, 3, 4] as const).map((stageNum) => {
-            const status = payments?.[`S${stageNum}` as const];
-            const paid = status?.paid === true;
-            return (
-            <div
-              key={stageNum}
-              className={`border-2 p-3 print:p-1.5 shadow-none print:shadow-none ${
-                paid ? "border-[#0A6B52] bg-[#0D9970]/10" : "border-[#0C0C0C] bg-[#FFF9F0]"
-              }`}
-            >
-              <div className="font-mono text-sm print:text-[8px] font-bold uppercase mb-2 print:mb-0.5">Stage {stageNum}</div>
-              <div className={`font-mono text-sm print:text-[9px] font-bold ${paid ? "text-[#0A6B52]" : "text-[#6d6658]"}`}>{isLoading ? "CHECKING…" : paid ? "PAID" : "UNPAID"}</div>
-              <div className="mt-2 space-y-1 font-mono text-[10px] print:text-[8px] text-stone-600">
-                <div>Received: Rs. {Number(status?.amount_received ?? 0).toLocaleString()}</div>
-                <div>Due: Rs. {Number(status?.amount_due ?? 0).toLocaleString()}</div>
-                {status?.paid_date && <div>Received on: {status.paid_date}</div>}
-              </div>
-            </div>
-            );
-          })}
-          </div>
-        )}
-        </div>
-      </div>
+      <RecordReceiptModal
+        isOpen={recordModalOpen}
+        onClose={() => setRecordModalOpen(false)}
+        trademarkId={record.id}
+        caseTitle={record.appName || `Case ${record.caseNumber}`}
+        tmNumber={record.tmCprNo}
+        clientCode={record.clientCode}
+        initialStage={targetStage}
+        onReceiptRecorded={handleReceiptRecorded}
+      />
+
+      <ReceiptPrintModal
+        isOpen={Boolean(printedReceipt)}
+        onClose={() => setPrintedReceipt(null)}
+        receipt={printedReceipt}
+      />
+    </>
   );
 }
 
