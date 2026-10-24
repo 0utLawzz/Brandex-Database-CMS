@@ -388,8 +388,8 @@ export function AgentsPage() {
               <table className="w-full text-left font-mono text-sm whitespace-nowrap">
                 <thead className="bg-[#0C0C0C] text-[#F0E8D0]">
                   <tr>
-                    {["CASE", "APP NAME", "DESCRIPTION", "BILLED", "PAID", "BALANCE", "DATE", "PAID", "ACTIONS"].map((h) => (
-                      <th key={h} className="px-2 py-2 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0">
+                    {["CASE", "APP NAME", "DESCRIPTION", "BILLED", "PAID", "BALANCE", "DATE", "STATUS", "ACTIONS"].map((h, i) => (
+                      <th key={`${h}-${i}`} className="px-2 py-2 border-r border-[#1A1A1A] font-bold tracking-wider uppercase text-sm last:border-r-0">
                         {h}
                       </th>
                     ))}
