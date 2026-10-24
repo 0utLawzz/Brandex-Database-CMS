@@ -177,6 +177,8 @@ export interface TrademarkListParams {
   appClass?: string;
   tmForm?: TmFormKey;
   includeDetails?: boolean;
+  /** Skip signing case images for list pages that do not render thumbnails. */
+  signImages?: boolean;
 }
 
 export interface TrademarkPage {
@@ -504,7 +506,7 @@ function rowToRecord(row: SupabaseTrademarkRow, signedImage = ""): TrademarkReco
     oppositionDeadline: row.opposition_deadline ?? null,
     demandNoteReceived: row.demand_note_received ?? false,
     demandNoteDate: row.demand_note_date ?? null,
-    // Stage payment placeholder fields (manual — not auto-verified)
+    // Ledger-verified stage payment cache fields (updated by the trusted bridge)
     stage1Paid: row.stage1_paid ?? false,
     stage1PaidDate: row.stage1_paid_date ?? null,
     stage2Paid: row.stage2_paid ?? false,
@@ -720,7 +722,7 @@ export async function listTrademarkPage(params: TrademarkListParams = {}): Promi
   const { data, error, count } = await query;
   throwIfError(error);
   return {
-    records: await mapRows((data ?? []) as unknown as SupabaseTrademarkRow[], true),
+    records: await mapRows((data ?? []) as unknown as SupabaseTrademarkRow[], params.signImages ?? true),
     total: count ?? 0,
     page,
     pageSize,

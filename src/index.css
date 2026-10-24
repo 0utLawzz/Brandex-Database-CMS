@@ -43,6 +43,7 @@
   --font-sans: 'Space Grotesk', sans-serif;
   --font-serif: 'Bebas Neue', sans-serif;
   --font-mono: 'DM Mono', monospace;
+  --font-display: 'Syne', sans-serif;
 
   --radius-sm: 0px;
   --radius-md: 0px;
@@ -138,6 +139,23 @@
 
 .nb-shadow {
   box-shadow: var(--shadow-nb);
+}
+
+.bg-dot-grid {
+  background-image: radial-gradient(#0C0C0C 1.2px, transparent 0);
+  background-size: 32px 32px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--nb-cream-alt);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--nb-black);
+  border: 2px solid var(--nb-cream-alt);
 }
 
 .nb-button {

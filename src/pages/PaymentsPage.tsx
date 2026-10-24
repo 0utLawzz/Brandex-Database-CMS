@@ -24,7 +24,7 @@ export function PaymentsPage() {
 
   const { data, isLoading, isFetching, error } = useQuery<TrademarkPage>({
     queryKey: ["payments-case-page", page, term],
-    queryFn: () => listTrademarkPage({ page, pageSize: PAGE_SIZE, search: term || undefined }),
+    queryFn: () => listTrademarkPage({ page, pageSize: PAGE_SIZE, search: term || undefined, signImages: false }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
