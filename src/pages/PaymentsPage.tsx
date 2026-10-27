@@ -25,7 +25,6 @@ export function PaymentsPage() {
   const [term, setTerm] = useState("");
   const [page, setPage] = useState(1);
   const [selectedCase, setSelectedCase] = useState<TrademarkRecord | null>(null);
-  const [targetStage, setTargetStage] = useState<"S1" | "S2" | "S3" | "S4">("S1");
   const [recordModalOpen, setRecordModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -66,9 +65,8 @@ export function PaymentsPage() {
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const handleOpenRecordReceipt = (record: TrademarkRecord, stageNum: 1 | 2 | 3 | 4) => {
+  const handleOpenRecordReceipt = (record: TrademarkRecord) => {
     setSelectedCase(record);
-    setTargetStage(`S${stageNum}` as any);
     setRecordModalOpen(true);
   };
 
@@ -252,7 +250,7 @@ export function PaymentsPage() {
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => handleOpenRecordReceipt(record, stageNum)}
+                                      onClick={() => handleOpenRecordReceipt(record)}
                                       className="mt-1 px-2 py-0.5 bg-[#C94A00] text-white border border-[#0C0C0C] text-[10px] font-bold uppercase shadow-[1px_1px_0_#0C0C0C] hover:brightness-110 cursor-pointer"
                                     >
                                       OPEN LEDGER
@@ -268,7 +266,7 @@ export function PaymentsPage() {
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleOpenRecordReceipt(record, 1)}
+                                onClick={() => handleOpenRecordReceipt(record)}
                                 className="px-2.5 py-1 bg-[#0A6B52] text-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 flex items-center gap-1 cursor-pointer"
                               >
                                 <ExternalLink className="w-3 h-3" />
@@ -319,11 +317,8 @@ export function PaymentsPage() {
         <RecordReceiptModal
           isOpen={recordModalOpen}
           onClose={() => setRecordModalOpen(false)}
-          trademarkId={selectedCase.id}
-          caseTitle={selectedCase.appName || `Case ${selectedCase.caseNumber}`}
           tmNumber={selectedCase.tmCprNo}
           clientCode={selectedCase.clientCode}
-          initialStage={targetStage}
         />
       )}
 
