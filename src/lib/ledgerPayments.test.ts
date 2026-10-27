@@ -8,7 +8,7 @@ const { supabaseMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("./supabase", () => ({ supabase: supabaseMock }));
+vi.mock("@/lib/supabase", () => ({ supabase: supabaseMock }));
 
 import { getLedgerStagePayments, isStageFullyPaid, normalizeTmDigits, recordClientReceipt } from "./ledgerPayments";
 
