@@ -21,7 +21,6 @@ import {
 import { getLedgerStagePayments, normalizeTmDigits, refreshLedgerPaymentsForCase } from "@/lib/ledgerPayments";
 import { formatDateShort } from "@/lib/utils";
 import { RecordReceiptModal } from "@/components/RecordReceiptModal";
-import { ReceiptPrintModal } from "@/components/ReceiptPrintModal";
 
 const STAGE_ORDER = ["STAGE 1", "STAGE 2", "STAGE 3", "STAGE 4"] as const;
 
@@ -42,6 +41,18 @@ interface CaseWorkflowSectionProps {
 
 export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProps) {
   const queryClient = useQueryClient();
+
+  const gateTmDigits = normalizeTmDigits(record.tmCprNo);
+  const { data: gatePayments, isLoading: isGatePaymentLoading, isError: isGatePaymentError } = useQuery({
+    queryKey: ["ledger-payment-status", gateTmDigits || record.id],
+    queryFn: async () => {
+      if (!gateTmDigits) throw new Error("A valid six-digit TM number is required to verify Ledger payments.");
+      return (await getLedgerStagePayments([gateTmDigits]))[gateTmDigits] ?? {};
+    },
+    enabled: Boolean(gateTmDigits),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
 
   // Modals state
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -70,6 +81,15 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   // Status Transition mutation
   const statusMutation = useMutation({
     mutationFn: async () => {
+      const requiredStage = targetStage === "STAGE 2" ? "S1" : targetStage === "STAGE 3" ? "S2" : targetStage === "STAGE 4" ? "S3" : null;
+      if (targetStage !== record.stage && requiredStage) {
+        const tm = normalizeTmDigits(record.tmCprNo);
+        if (!tm) throw new Error("A valid six-digit TM number is required to verify payment before progression.");
+        const latest = await getLedgerStagePayments([tm]);
+        if (latest[tm]?.[requiredStage as "S1" | "S2" | "S3"]?.paid !== true) {
+          throw new Error(requiredStage + " payment is not fully cleared in Brandex Client Ledger. Case progression was not changed.");
+        }
+      }
       await updateTrademarkStatus(record.id, targetStage, targetSubStage || null, targetStage === "STOPPED" ? stoppedReason : undefined);
     },
     onSuccess: () => {
@@ -120,14 +140,13 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
 
   const getPaymentGateWarning = (target: string): string | null => {
     if (target === record.stage) return null;
-    if (target === "STAGE 2" && !record.stage1Paid) {
-      return "Stage 2 cannot be started until Stage 1 payment is cleared.";
-    }
-    if (target === "STAGE 3" && !record.stage2Paid) {
-      return "Stage 3 cannot be started until Stage 2 payment is cleared.";
-    }
-    if (target === "STAGE 4" && !record.stage3Paid) {
-      return "Stage 4 cannot be started until Stage 3 payment is cleared.";
+    const requiredStage = target === "STAGE 2" ? "S1" : target === "STAGE 3" ? "S2" : target === "STAGE 4" ? "S3" : null;
+    if (!requiredStage) return null;
+    if (!gateTmDigits) return "Payment cannot be verified: this case needs a valid six-digit TM number.";
+    if (isGatePaymentLoading) return "Checking the authoritative Brandex Client Ledger. Please wait.";
+    if (isGatePaymentError) return "Payment status could not be verified with Brandex Client Ledger. Progression is blocked until verification succeeds.";
+    if (gatePayments?.[requiredStage as "S1" | "S2" | "S3"]?.paid !== true) {
+      return requiredStage + " payment must be fully cleared in Brandex Client Ledger before " + target + " progression.";
     }
     return null;
   };
@@ -590,7 +609,6 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
   const tmDigits = normalizeTmDigits(record.tmCprNo);
   const [recordModalOpen, setRecordModalOpen] = useState(false);
   const [targetStage, setTargetStage] = useState<"S1" | "S2" | "S3" | "S4">("S1");
-  const [printedReceipt, setPrintedReceipt] = useState<any | null>(null);
 
   const { data: payments, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["ledger-payment-status", tmDigits || record.id],
@@ -610,11 +628,6 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
     setRecordModalOpen(true);
   };
 
-  const handleReceiptRecorded = (receiptData: any) => {
-    setPrintedReceipt(receiptData);
-    queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
-    queryClient.invalidateQueries({ queryKey: ["ledger-payment-status"] });
-  };
 
   return (
     <>
@@ -626,7 +639,7 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs print:text-[8px] font-bold uppercase text-[#0A6B52] border border-[#0A6B52] px-2 py-0.5 bg-white">
-              UNIFIED DATABASE
+              AUTHORITATIVE LEDGER
             </span>
             <button
               type="button"
@@ -643,13 +656,9 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
             {([1, 2, 3, 4] as const).map((stageNum) => {
               const status = payments?.[`S${stageNum}` as const];
-              const paid =
-                status?.paid === true ||
-                Boolean(record[`stage${stageNum}Paid` as keyof TrademarkRecord]);
-              const paidDate =
-                status?.paid_date ||
-                (record[`stage${stageNum}PaidDate` as keyof TrademarkRecord] as string) ||
-                null;
+              const verified = Boolean(status);
+              const paid = status?.paid === true;
+              const paidDate = status?.paid_date ?? null;
               const amountRec = Number(status?.amount_received ?? 0);
 
               return (
@@ -669,7 +678,7 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
                           paid ? "text-[#0A6B52]" : "text-[#6d6658]"
                         }`}
                       >
-                        {isLoading ? "…" : paid ? "PAID" : "UNPAID"}
+                        {isLoading ? "CHECKING…" : verified ? paid ? "PAID" : "NOT PAID" : "UNVERIFIED"}
                       </div>
                     </div>
 
@@ -685,36 +694,13 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
                   </div>
 
                   <div className="mt-3 pt-2 border-t border-[#0C0C0C]/15 flex items-center justify-between gap-1 print:hidden">
-                    {paid ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPrintedReceipt({
-                            receiptNo: status?.receipt_no || `REC-${record.caseNumber || "BX"}-S${stageNum}`,
-                            caseTitle: record.appName || `Case ${record.caseNumber}`,
-                            tmNumber: record.tmCprNo,
-                            clientCode: record.clientCode,
-                            amount: amountRec || 15000,
-                            stage: `S${stageNum}`,
-                            entryDate: paidDate || new Date().toISOString().slice(0, 10),
-                            paymentMethod: status?.payment_method || "Bank Transfer",
-                            bankName: status?.bank_name || "United Bank Limited (UBL)",
-                            chequeNo: status?.cheque_no,
-                          })
-                        }
-                        className="w-full text-center py-1 bg-white border border-[#0A6B52] text-[#0A6B52] font-mono text-[10px] font-bold uppercase hover:bg-[#0A6B52] hover:text-white transition-colors cursor-pointer"
-                      >
-                        VOUCHER
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenReceipt(stageNum)}
-                        className="w-full text-center py-1 bg-[#C94A00] text-white border border-[#0C0C0C] font-mono text-[10px] font-bold uppercase shadow-[1px_1px_0_#0C0C0C] hover:brightness-110 cursor-pointer"
-                      >
-                        + RECEIVE
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenReceipt(stageNum)}
+                      className="w-full text-center py-1 bg-[#C94A00] text-white border border-[#0C0C0C] font-mono text-[10px] font-bold uppercase shadow-[1px_1px_0_#0C0C0C] hover:brightness-110 cursor-pointer"
+                    >
+                      OPEN CLIENT LEDGER
+                    </button>
                   </div>
                 </div>
               );
@@ -731,14 +717,8 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
         tmNumber={record.tmCprNo}
         clientCode={record.clientCode}
         initialStage={targetStage}
-        onReceiptRecorded={handleReceiptRecorded}
       />
 
-      <ReceiptPrintModal
-        isOpen={Boolean(printedReceipt)}
-        onClose={() => setPrintedReceipt(null)}
-        receipt={printedReceipt}
-      />
     </>
   );
 }
