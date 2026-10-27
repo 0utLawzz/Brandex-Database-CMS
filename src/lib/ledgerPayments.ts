@@ -48,108 +48,31 @@ export function normalizeTmDigits(value: string | null | undefined): string | nu
 export async function getLedgerStagePayments(tmNumbers: Array<string | null | undefined>): Promise<LedgerPaymentsByTm> {
   const normalized = [...new Set(tmNumbers.map(normalizeTmDigits).filter((value): value is string => value !== null))];
   if (normalized.length === 0) return {};
-
-  try {
-    // 1. Unified 1-Database Direct Query: Check client_ledger_entries joined with trademarks
-    const { data: cases, error: tmError } = await supabase
-      .from("trademarks")
-      .select("id, tm_cpr_number_norm, stage1_paid, stage1_paid_date, stage2_paid, stage2_paid_date, stage3_paid, stage3_paid_date, stage4_paid, stage4_paid_date")
-      .in("tm_cpr_number_norm", normalized);
-
-    if (!tmError && cases && cases.length > 0) {
-      const caseIds = cases.map((c) => c.id);
-      const { data: entries, error: entriesError } = await supabase
-        .from("client_ledger_entries")
-        .select("*")
-        .in("trademark_id", caseIds)
-        .is("voided_at", null);
-
-      if (!entriesError && entries !== null) {
-        const result: LedgerPaymentsByTm = {};
-        for (const tm of normalized) {
-          result[tm] = {};
-        }
-
-        const entriesByCase = new Map<string, ClientLedgerEntry[]>();
-        for (const entry of entries as ClientLedgerEntry[]) {
-          const list = entriesByCase.get(entry.trademark_id) ?? [];
-          list.push(entry);
-          entriesByCase.set(entry.trademark_id, list);
-        }
-
-        for (const c of cases) {
-          const tm = c.tm_cpr_number_norm;
-          if (!tm) continue;
-          const caseEntries = entriesByCase.get(c.id) ?? [];
-          const stageMap: Partial<Record<"S1" | "S2" | "S3" | "S4", LedgerStagePayment>> = {};
-
-          for (const s of ["S1", "S2", "S3", "S4"] as const) {
-            const stageNum = s === "S1" ? 1 : s === "S2" ? 2 : s === "S3" ? 3 : 4;
-            const sEntries = caseEntries.filter((e) => e.stage === s);
-            const due = sEntries.reduce((sum, e) => sum + Number(e.amount_due || 0), 0);
-            const rec = sEntries.reduce((sum, e) => sum + Number(e.amount_received || 0), 0);
-            const lastRec = sEntries
-              .filter((e) => e.entry_type === "receiving" && Number(e.amount_received || 0) > 0)
-              .sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime())[0];
-
-            const cachedPaid = Boolean(c[`stage${stageNum}_paid` as keyof typeof c]);
-            const cachedDate = (c[`stage${stageNum}_paid_date` as keyof typeof c] as string) || null;
-
-            const isPaid = (rec > 0 && (due === 0 || rec >= due)) || cachedPaid;
-
-            stageMap[s] = {
-              amount_due: due,
-              amount_received: rec,
-              outstanding: Math.max(0, due - rec),
-              paid: isPaid,
-              paid_date: lastRec?.entry_date ?? cachedDate,
-              entry_id: lastRec?.id ?? null,
-              receipt_no: lastRec?.receipt_no ?? null,
-              payment_method: lastRec?.payment_method ?? null,
-              bank_name: lastRec?.bank_name ?? null,
-              cheque_no: lastRec?.cheque_no ?? null,
-            };
-          }
-          result[tm] = stageMap;
-        }
-        return result;
-      }
+  // Financial status must come only from ledger entries. Fail closed if unavailable.
+  const { data: cases, error: casesError } = await supabase.from("trademarks").select("id, tm_cpr_number_norm").in("tm_cpr_number_norm", normalized);
+  if (casesError) throw new Error(`Unable to verify ledger status: ${casesError.message}`);
+  const result: LedgerPaymentsByTm = Object.fromEntries(normalized.map((tm) => [tm, {}]));
+  if (!cases?.length) return result;
+  const { data: entries, error: entriesError } = await supabase.from("client_ledger_entries").select("*").in("trademark_id", cases.map((c) => c.id)).is("voided_at", null);
+  if (entriesError) throw new Error(`Unable to verify ledger entries: ${entriesError.message}`);
+  const byCase = new Map<string, ClientLedgerEntry[]>();
+  for (const entry of (entries ?? []) as ClientLedgerEntry[]) { const list = byCase.get(entry.trademark_id) ?? []; list.push(entry); byCase.set(entry.trademark_id, list); }
+  for (const record of cases) {
+    const tm = record.tm_cpr_number_norm; if (!tm) continue;
+    const caseEntries = byCase.get(record.id) ?? [];
+    const stageMap: Partial<Record<"S1" | "S2" | "S3" | "S4", LedgerStagePayment>> = {};
+    for (const stage of ["S1", "S2", "S3", "S4"] as const) {
+      const rows = caseEntries.filter((entry) => entry.stage === stage);
+      const due = rows.reduce((sum, entry) => sum + Number(entry.amount_due || 0), 0);
+      const received = rows.reduce((sum, entry) => sum + Number(entry.amount_received || 0), 0);
+      const last = rows.filter((entry) => entry.entry_type === "receiving" && Number(entry.amount_received || 0) > 0).sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime())[0];
+      const paid = due > 0 && received >= due;
+      stageMap[stage] = { amount_due: due, amount_received: received, outstanding: Math.max(0, due - received), paid, paid_date: paid ? (last?.entry_date ?? null) : null, entry_id: last?.id ?? null, receipt_no: last?.receipt_no ?? null, payment_method: last?.payment_method ?? null, bank_name: last?.bank_name ?? null, cheque_no: last?.cheque_no ?? null };
     }
-  } catch {
-    // If table not yet present or query fails, fall through to Edge Function
+    result[tm] = stageMap;
   }
-
-  // 2. Fallback to Edge Function if external ledger bridge is active
-  try {
-    const { data, error } = await supabase.functions.invoke("ledger-payment-status", {
-      body: { tm_digits: normalized },
-    });
-    if (!error && data?.payments) {
-      return data.payments as LedgerPaymentsByTm;
-    }
-  } catch {
-    // ignore
-  }
-
-  // 3. Fallback to cached columns in trademarks table
-  const { data: cachedCases } = await supabase
-    .from("trademarks")
-    .select("tm_cpr_number_norm, stage1_paid, stage1_paid_date, stage2_paid, stage2_paid_date, stage3_paid, stage3_paid_date, stage4_paid, stage4_paid_date")
-    .in("tm_cpr_number_norm", normalized);
-
-  const fallback: LedgerPaymentsByTm = {};
-  for (const c of cachedCases ?? []) {
-    if (!c.tm_cpr_number_norm) continue;
-    fallback[c.tm_cpr_number_norm] = {
-      S1: { paid: Boolean(c.stage1_paid), paid_date: c.stage1_paid_date ?? null, amount_due: 0, amount_received: c.stage1_paid ? 1 : 0, outstanding: 0, entry_id: null },
-      S2: { paid: Boolean(c.stage2_paid), paid_date: c.stage2_paid_date ?? null, amount_due: 0, amount_received: c.stage2_paid ? 1 : 0, outstanding: 0, entry_id: null },
-      S3: { paid: Boolean(c.stage3_paid), paid_date: c.stage3_paid_date ?? null, amount_due: 0, amount_received: c.stage3_paid ? 1 : 0, outstanding: 0, entry_id: null },
-      S4: { paid: Boolean(c.stage4_paid), paid_date: c.stage4_paid_date ?? null, amount_due: 0, amount_received: c.stage4_paid ? 1 : 0, outstanding: 0, entry_id: null },
-    };
-  }
-  return fallback;
+  return result;
 }
-
 export async function refreshLedgerPaymentsForCase(
   caseId: string,
   tmNumber?: string | null
@@ -180,7 +103,7 @@ export async function refreshLedgerPaymentsForCase(
           amount_due: due,
           amount_received: rec,
           outstanding: Math.max(0, due - rec),
-          paid: rec > 0 && (due === 0 || rec >= due),
+          paid: due > 0 && rec >= due,
           paid_date: lastRec?.entry_date ?? null,
           entry_id: lastRec?.id ?? null,
         };
@@ -238,7 +161,7 @@ export async function recordClientReceipt(params: RecordReceiptParams) {
     p_payment_method: params.paymentMethod || "cash",
     p_bank_name: params.bankName || null,
     p_cheque_no: params.chequeNo || null,
-    p_receipt_no: params.receiptNo || null,
+    p_receipt_no: null,
     p_details: params.details || null,
     p_notes: params.notes || null,
   });
@@ -247,34 +170,8 @@ export async function recordClientReceipt(params: RecordReceiptParams) {
     return rpcData;
   }
 
-  // Fallback direct insert if RPC not present
-  const receiptNo =
-    params.receiptNo ||
-    `BX-REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-  const { data, error } = await supabase
-    .from("client_ledger_entries")
-    .insert({
-      trademark_id: params.trademarkId,
-      stage: params.stage,
-      entry_type: "receiving",
-      entry_date: params.entryDate || new Date().toISOString().slice(0, 10),
-      amount_due: 0,
-      amount_received: params.amount,
-      payment_method: params.paymentMethod || "cash",
-      bank_name: params.bankName || null,
-      cheque_no: params.chequeNo || null,
-      receipt_no: receiptNo,
-      details: params.details || null,
-      notes: params.notes || null,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to record receipt: ${error.message}`);
-  }
-  return data;
+  if (rpcError) throw new Error(`Receipt was not recorded by the authoritative ledger: ${rpcError.message}`);
+  return rpcData;
 }
 
 /**
