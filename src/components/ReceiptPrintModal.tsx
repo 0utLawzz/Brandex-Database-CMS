@@ -32,6 +32,7 @@ export function ReceiptPrintModal({ isOpen, onClose, receipt }: ReceiptPrintModa
   const amount = Number(receipt.amount || 0);
   const date = receipt.entry_date || receipt.entryDate || new Date().toISOString().slice(0, 10);
   const stage = receipt.stage || "S1";
+  const stageNames: Record<string, string> = { S1: "Stage 1 — Filing and Acknowledgement", S2: "Stage 2 — Assignment and Outcome", S3: "Stage 3 — Publication and Demand Note", S4: "Stage 4 — Certificate (CER) Processing" };
   const method = receipt.payment_method || receipt.paymentMethod || "Bank Transfer";
   const bank = receipt.bank_name || receipt.bankName || "Brandex Bank Account";
   const ref = receipt.cheque_no || receipt.chequeNo || "";
@@ -114,13 +115,7 @@ export function ReceiptPrintModal({ isOpen, onClose, receipt }: ReceiptPrintModa
             <div className="flex items-center justify-between">
               <span className="text-stone-600 uppercase">Stage Allocation:</span>
               <span className="font-bold text-[#0A6B52] uppercase bg-[#0D9970]/10 border border-[#0A6B52] px-2 py-0.5">
-                {stage === "S1"
-                  ? "Stage 1 (Filing & Examination)"
-                  : stage === "S2"
-                  ? "Stage 2 (Assignment & Hearing)"
-                  : stage === "S3"
-                  ? "Stage 3 (Publication & Opposition)"
-                  : "Stage 4 (Certificate Dispatch)"}
+                {stageNames[stage] || stage}
               </span>
             </div>
           </div>
@@ -141,7 +136,7 @@ export function ReceiptPrintModal({ isOpen, onClose, receipt }: ReceiptPrintModa
                 PKR {amount.toLocaleString()}
               </div>
               <div className="font-mono text-[10px] font-bold uppercase text-[#0A6B52] mt-1">
-                STATUS: FULLY CLEARED / VERIFIED
+                STATUS: PAYMENT RECEIVED
               </div>
             </div>
           </div>
