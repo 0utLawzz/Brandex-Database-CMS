@@ -96,7 +96,7 @@ export function PaymentsPage() {
                 CLIENT PAYMENTS &amp; RECEIPTS
               </h1>
               <p className="mt-2 text-xs font-mono text-stone-700 max-w-3xl">
-                Integrated stage billing and receipts. Posting an official receipt directly unlocks the case's statutory workflow progression gate in real time.
+                Recording a receipt updates the ledger. Case progression still requires acknowledgement, review, and existing workflow checks.
               </p>
             </div>
 
