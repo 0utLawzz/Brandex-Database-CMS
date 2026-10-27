@@ -22,13 +22,7 @@ jobs:
       - run: npm ci
       - name: TypeScript check
         run: npm run lint
-      - name: Install isolated Vitest runner
-        run: |
-          mkdir -p /tmp/ledger-test-runner
-          cd /tmp/ledger-test-runner
-          npm init -y
-          npm install vitest@4.1.11
-      - name: Run ledger payment unit test
-        run: /tmp/ledger-test-runner/node_modules/.bin/vitest run src/lib/ledgerPayments.test.ts
+      - name: Ledger payment unit tests
+        run: npm run test:ledger
       - name: Production build
         run: npm run build
