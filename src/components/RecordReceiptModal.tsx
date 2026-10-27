@@ -5,12 +5,8 @@ const CLIENT_LEDGER_URL = "https://brandex-client-ledger.vercel.app";
 interface RecordReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
-  trademarkId: string;
-  caseTitle: string;
   tmNumber?: string | null;
   clientCode?: string | null;
-  initialStage?: "S1" | "S2" | "S3" | "S4";
-  onReceiptRecorded?: (receipt: any) => void;
 }
 
 /**
