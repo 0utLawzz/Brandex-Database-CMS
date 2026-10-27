@@ -2,11 +2,13 @@
 
 **Status:** Owner-confirmed requirements. This document defines desired financial behavior; it does not claim every requirement is already implemented or production-verified.
 
-**Scope:** Client financial accounts and ledger behavior inside Brandex Database CMS. Existing case workflow rules remain defined in [Workflow Business Rules](WORKFLOW_BUSINESS_RULES.md). This document does not authorize code changes, schema changes, migrations, deployment, or production data edits by itself.
+**Scope:** Client financial accounts and ledger behavior in the separate [Brandex Client Ledger](https://github.com/0utLawzz/Brandex-Client-Ledger), plus its read-only payment-status integration with Brandex Database CMS. Existing case workflow rules remain defined in [Workflow Business Rules](WORKFLOW_BUSINESS_RULES.md). This document does not authorize production migrations, deployment, or production data edits by itself.
 
 ## 1. Source of truth
 
 - The financial ledger is the authoritative source for client charges, valid receipts, adjustments, refunds/reversals, and client balances.
+- The separate Brandex Client Ledger repository/application is the one authoritative financial system. CMS must consume verified status through its authenticated Edge Function bridge; CMS-local ledger rows must not be used for new receipts, balances, or stage-payment decisions.
+- A CMS-local `client_ledger_entries` table/migration already exists in repository history. Treat it as a legacy competing implementation until its records and deployment status are audited; never drop it, migrate its data, or silently merge balances as part of this PR.
 - A case's workflow status or cached stage-paid flag must not fabricate, erase, or silently alter financial truth.
 - Workflow may be corrected independently, but ledger totals must remain consistent with recorded financial events.
 - A predefined fee is a fee agreement, not a charge. A charge exists only when it becomes due under the agreed processing/work rule.
