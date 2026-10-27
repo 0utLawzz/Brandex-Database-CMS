@@ -1,28 +1,40 @@
-# Unified Client Ledger — Implementation Snapshot
+# Brandex Client Ledger — CMS Integration Snapshot
 
-**Purpose:** describe the currently committed architecture, not define all required ledger behavior. Owner-confirmed financial behavior is in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md). AI reference routing is in [DOCUMENTATION_AUTHORITY.md](DOCUMENTATION_AUTHORITY.md).
+**Architecture decision (owner-confirmed 28 October 2026):** the separate [Brandex Client Ledger](https://github.com/0utLawzz/Brandex-Client-Ledger) is the only financial source of truth. CMS consumes verified payment status through an authenticated, server-side bridge. Desired financial behavior is specified in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md); workflow rules remain in [WORKFLOW_BUSINESS_RULES.md](WORKFLOW_BUSINESS_RULES.md).
 
-## Current implementation described by the repository
+## Intended read path
 
-The migration `supabase/migrations/20261024000100_unified_client_ledger.sql` creates `public.client_ledger_entries` in the CMS Supabase database. The table links each entry to a trademark/case through `trademark_id REFERENCES public.trademarks(id)`, stores `charge` or `receiving` entries with stage codes S1–S4, and includes soft-void metadata. A receipt sequence and trigger/RPC-based stage-paid synchronization are also defined in the migration.
+1. CMS frontend calls its Supabase Edge Function `ledger-payment-status` with the signed-in user's bearer token and normalized six-digit TM numbers.
+2. The CMS function verifies the user and Admin/Viewer profile, then calls the Ledger-side `cms-payment-status` function using the shared server-only integration secret.
+3. The Ledger function calls its read-only `get_stage_payment_status` RPC and returns aggregate stage amounts/status.
+4. CMS may synchronize `stage*_paid`, `stage*_paid_date`, and `payment_reference` as workflow cache fields. These cache values are not the financial source of truth.
+5. Before attempting a gated stage transition, the CMS UI must obtain a fresh successful response from the Ledger bridge. If the bridge cannot verify payment, the UI must block the transition and show an explicit verification error.
 
-The source code in `src/lib/ledgerPayments.ts` queries the unified table first, attempts an Edge Function fallback, and then has a cached case-flag fallback. This is an implementation observation, not a recommendation that all fallbacks are correct. In particular, a cached paid flag and fabricated nonzero receipt amount must not override financial ledger truth; see the owner-confirmed rules in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md).
+## Receipt and financial writes
 
-## Important scope boundary
+- New client charges, receipts, refunds, reversals, waivers, and client balances belong in the separate Brandex Client Ledger.
+- CMS must not create local client receipts or print a fabricated receipt as if it were issued by the Ledger. CMS links staff to the authoritative Ledger for receipt entry and official receipt printing.
+- Agent payables and agent payments remain separate from client receipts.
 
-The current case-linked table is not, by itself, proof of the requested consolidated client-account model. The owner-confirmed target includes a client-level account across all cases, agreed stage fee schedules, due-only charge creation, stage fee caps, valid partial receipt allocation, explicit audited adjustments/refunds, duplicate case ownership protection, audited transfers, and Full Ledger / Selected Ledger printing.
+## Legacy CMS-local implementation — do not treat as authoritative
 
-Do not state that these requirements are implemented merely because a unified table or receipt modal exists. Inspect the current schema, code, RLS, triggers/RPCs, and tests; classify each requirement separately as source-inspected, automated-tested, database-verified, flow-verified, or deployment-verified.
+The CMS repository contains `supabase/migrations/20261024000100_unified_client_ledger.sql`, which creates `public.client_ledger_entries` and local receipt RPCs. This is a legacy competing implementation and conflicts with the owner's confirmed architecture. The migration is retained for history; it must not be used for new financial writes or financial status decisions.
 
-## Security and audit principles
+Do not drop the table, delete its migration, or merge its rows into the separate Ledger automatically. First inspect whether the migration was applied, whether any real financial records exist, and how each record reconciles with the authoritative Ledger. Any cleanup or transfer requires an explicit, audited migration plan and owner approval.
 
-- Preserve RLS and role checks.
-- Keep financial history auditable; do not permanently erase a financial event to correct it.
-- Any void, refund, reversal, waiver, or ownership transfer must use an explicit authorized operation and preserve the audit trail.
-- Receipt numbering must be enforced by the authoritative server/database path; UI-generated values must not bypass sequence/uniqueness guarantees.
-- Do not expose database/service-role credentials to the browser.
-- Do not execute migrations or change production data without explicit owner approval.
+## Verification boundaries
 
-## Verification status
+- **Source inspected:** code and configuration are present in the repository.
+- **Automated tested:** named unit tests ran; this does not verify remote Ledger credentials or live data.
+- **Database verified:** target Supabase objects and grants were inspected.
+- **Deployment verified:** both Edge Functions are deployed with the expected URLs and matching secret values, and an authenticated end-to-end status request succeeded.
+- **Workflow verified:** a gated stage transition was exercised with both cleared and uncleared Ledger statuses.
 
-This document does not certify live production synchronization or complete client-wide ledger behavior. Use [Progress](../Progress.md) for the reported work queue, then independently verify the relevant behavior before marking any requirement complete.
+Until the relevant checks are actually completed, do not claim live synchronization or strict database-level enforcement is verified. The current database workflow guard still consumes CMS cache fields, so direct API/database paths must be audited separately to ensure stale cache cannot bypass the external Ledger check.
+
+## Security
+
+- Never expose the shared integration secret or either project's service-role key to the browser or any `VITE_*` variable.
+- Preserve CMS authentication and Admin/Viewer checks and the Ledger-side secret check.
+- Do not execute production migrations, alter production data, or deploy without explicit owner approval.
+
