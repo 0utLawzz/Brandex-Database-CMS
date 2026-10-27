@@ -598,7 +598,7 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   );
 }
 
-// ── 2. STAGE PAYMENTS (UNIFIED CLIENT LEDGER) ────────────────────────────────
+// ── 2. STAGE PAYMENTS (AUTHORITATIVE EXTERNAL CLIENT LEDGER) ──────────────────
 
 interface StagePaymentsSectionProps {
   record: TrademarkRecord;
@@ -608,7 +608,6 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
   const queryClient = useQueryClient();
   const tmDigits = normalizeTmDigits(record.tmCprNo);
   const [recordModalOpen, setRecordModalOpen] = useState(false);
-  const [targetStage, setTargetStage] = useState<"S1" | "S2" | "S3" | "S4">("S1");
 
   const { data: payments, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["ledger-payment-status", tmDigits || record.id],
@@ -623,8 +622,7 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
     refetchInterval: 30_000,
   });
 
-  const handleOpenReceipt = (stageNum: 1 | 2 | 3 | 4) => {
-    setTargetStage(`S${stageNum}` as any);
+  const handleOpenReceipt = () => {
     setRecordModalOpen(true);
   };
 
@@ -696,7 +694,7 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
                   <div className="mt-3 pt-2 border-t border-[#0C0C0C]/15 flex items-center justify-between gap-1 print:hidden">
                     <button
                       type="button"
-                      onClick={() => handleOpenReceipt(stageNum)}
+                      onClick={handleOpenReceipt}
                       className="w-full text-center py-1 bg-[#C94A00] text-white border border-[#0C0C0C] font-mono text-[10px] font-bold uppercase shadow-[1px_1px_0_#0C0C0C] hover:brightness-110 cursor-pointer"
                     >
                       OPEN CLIENT LEDGER
@@ -712,11 +710,8 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
       <RecordReceiptModal
         isOpen={recordModalOpen}
         onClose={() => setRecordModalOpen(false)}
-        trademarkId={record.id}
-        caseTitle={record.appName || `Case ${record.caseNumber}`}
         tmNumber={record.tmCprNo}
         clientCode={record.clientCode}
-        initialStage={targetStage}
       />
 
     </>
