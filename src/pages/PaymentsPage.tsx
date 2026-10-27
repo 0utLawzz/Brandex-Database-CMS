@@ -9,17 +9,13 @@ import {
   ExternalLink,
   Loader2,
   Search,
-  Plus,
   RefreshCw,
-  Printer,
-  CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { listTrademarkPage } from "@/lib/api";
 import type { TrademarkPage, TrademarkRecord } from "@/lib/api";
 import { getLedgerStagePayments, normalizeTmDigits, type LedgerStagePayment } from "@/lib/ledgerPayments";
 import { RecordReceiptModal } from "@/components/RecordReceiptModal";
-import { ReceiptPrintModal } from "@/components/ReceiptPrintModal";
 
 const PAGE_SIZE = 50;
 const STAGES = [1, 2, 3, 4] as const;
@@ -31,7 +27,6 @@ export function PaymentsPage() {
   const [selectedCase, setSelectedCase] = useState<TrademarkRecord | null>(null);
   const [targetStage, setTargetStage] = useState<"S1" | "S2" | "S3" | "S4">("S1");
   const [recordModalOpen, setRecordModalOpen] = useState(false);
-  const [printedReceipt, setPrintedReceipt] = useState<any | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -77,10 +72,6 @@ export function PaymentsPage() {
     setRecordModalOpen(true);
   };
 
-  const handleReceiptRecorded = (receiptData: any) => {
-    setPrintedReceipt(receiptData);
-  };
-
   return (
     <AppShell>
       <div className="flex-1 overflow-auto bg-[#F0E8D0]">
@@ -90,13 +81,13 @@ export function PaymentsPage() {
             <div>
               <div className="mb-1 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-widest text-[#0A6B52]">
                 <CreditCard className="h-4 w-4" />
-                <span>UNIFIED CLIENT LEDGER &middot; 1 DATABASE SYSTEM</span>
+                <span>AUTHORITATIVE CLIENT LEDGER &middot; READ-ONLY CMS STATUS</span>
               </div>
               <h1 className="font-serif text-4xl sm:text-5xl font-bold uppercase leading-none text-[#0C0C0C]">
                 CLIENT PAYMENTS &amp; RECEIPTS
               </h1>
               <p className="mt-2 text-xs font-mono text-stone-700 max-w-3xl">
-                Recording a receipt updates the ledger. Case progression still requires acknowledgement, review, and existing workflow checks.
+                Client charges and receipts are managed in the separate Brandex Client Ledger. This page displays verified payment status only.
               </p>
             </div>
 
@@ -112,6 +103,9 @@ export function PaymentsPage() {
                 />
               </label>
 
+              <a href="https://brandex-client-ledger.vercel.app" target="_blank" rel="noopener noreferrer" className="h-10 px-3 border-2 border-[#0C0C0C] bg-[#0A6B52] text-white font-mono text-xs font-bold uppercase shadow-[2px_2px_0_#0C0C0C] flex items-center gap-1.5">
+                <ExternalLink className="w-3.5 h-3.5" /> OPEN CLIENT LEDGER
+              </a>
               <button
                 type="button"
                 onClick={() => void refreshLedger()}
@@ -119,29 +113,26 @@ export function PaymentsPage() {
                 className="h-10 px-3 border-2 border-[#0C0C0C] bg-white font-mono text-xs font-bold uppercase shadow-[2px_2px_0_#0C0C0C] flex items-center gap-1.5 hover:bg-stone-100 disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLedgerFetching ? "animate-spin" : ""}`} />
-                <span>{isLedgerFetching ? "SYNCING…" : "REFRESH"}</span>
+                <span>{isLedgerFetching ? "CHECKING…" : "REFRESH STATUS"}</span>
               </button>
             </div>
           </header>
 
-          {/* Unified Ledger Banner */}
+          {/* Authoritative Ledger Banner */}
           <section className="flex flex-wrap items-start justify-between gap-3 border-2 border-[#0C0C0C] bg-[#FAF6EE] p-4 shadow-[4px_4px_0_#0C0C0C]">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#0A6B52]" />
+              <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#0A6B52]" />
               <div className="font-mono text-xs">
-                <p className="font-bold uppercase text-[#0A6B52]">
-                  Directly Unified in Primary Database
-                </p>
+                <p className="font-bold uppercase text-[#0A6B52]">Separate Brandex Client Ledger is authoritative</p>
                 <p className="mt-0.5 text-stone-700">
-                  Receipts are recorded directly into the <code className="bg-stone-200 px-1 py-0.5 text-[#0C0C0C]">client_ledger_entries</code> table. No separate Edge Function or cross-project token needed.
+                  CMS does not create client charges, receipts, refunds, or balances. If Ledger status cannot be verified, the page shows it as unverified instead of relying on cached case flags.
                 </p>
               </div>
             </div>
-            <div className="font-mono text-xs text-[#0A6B52] font-bold uppercase self-center bg-[#0D9970]/10 border border-[#0A6B52] px-3 py-1">
-              LIVE DATABASE CONNECTION
+            <div className="self-center border border-[#0A6B52] bg-[#0D9970]/10 px-3 py-1 font-mono text-xs font-bold uppercase text-[#0A6B52]">
+              READ-ONLY PAYMENT STATUS
             </div>
           </section>
-
           {/* Ledger Table */}
           <section className="overflow-hidden border-2 border-[#0C0C0C] bg-[#FAF6EE] shadow-[6px_6px_0_#0C0C0C]">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#0C0C0C] bg-[#E8DFC7] px-4 py-3 font-mono text-xs font-bold uppercase">
@@ -226,13 +217,9 @@ export function PaymentsPage() {
                           {STAGES.map((stageNum) => {
                             const stageKey = `S${stageNum}` as "S1" | "S2" | "S3" | "S4";
                             const stageStatus: LedgerStagePayment | undefined = status?.[stageKey];
-                            const isPaid =
-                              stageStatus?.paid === true ||
-                              Boolean(record[`stage${stageNum}Paid` as keyof TrademarkRecord]);
-                            const paidDate =
-                              stageStatus?.paid_date ||
-                              (record[`stage${stageNum}PaidDate` as keyof TrademarkRecord] as string) ||
-                              null;
+                            const isVerified = Boolean(stageStatus);
+                            const isPaid = stageStatus?.paid === true;
+                            const paidDate = stageStatus?.paid_date ?? null;
                             const amountRec = Number(stageStatus?.amount_received || 0);
 
                             return (
@@ -245,7 +232,7 @@ export function PaymentsPage() {
                                   }`}
                                 >
                                   <span className="font-bold uppercase tracking-wider">
-                                    {isPaid ? "PAID" : "UNPAID"}
+                                    {!isVerified ? "UNVERIFIED" : isPaid ? "PAID" : "NOT PAID"}
                                   </span>
 
                                   {isPaid ? (
@@ -268,7 +255,7 @@ export function PaymentsPage() {
                                       onClick={() => handleOpenRecordReceipt(record, stageNum)}
                                       className="mt-1 px-2 py-0.5 bg-[#C94A00] text-white border border-[#0C0C0C] text-[10px] font-bold uppercase shadow-[1px_1px_0_#0C0C0C] hover:brightness-110 cursor-pointer"
                                     >
-                                      + RECEIVE
+                                      OPEN LEDGER
                                     </button>
                                   )}
                                 </div>
@@ -284,8 +271,8 @@ export function PaymentsPage() {
                                 onClick={() => handleOpenRecordReceipt(record, 1)}
                                 className="px-2.5 py-1 bg-[#0A6B52] text-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 flex items-center gap-1 cursor-pointer"
                               >
-                                <Plus className="w-3 h-3" />
-                                <span>RECEIPT</span>
+                                <ExternalLink className="w-3 h-3" />
+                                <span>OPEN LEDGER</span>
                               </button>
                             </div>
                           </td>
@@ -337,16 +324,9 @@ export function PaymentsPage() {
           tmNumber={selectedCase.tmCprNo}
           clientCode={selectedCase.clientCode}
           initialStage={targetStage}
-          onReceiptRecorded={handleReceiptRecorded}
         />
       )}
 
-      {/* Receipt Print Voucher Modal */}
-      <ReceiptPrintModal
-        isOpen={Boolean(printedReceipt)}
-        onClose={() => setPrintedReceipt(null)}
-        receipt={printedReceipt}
-      />
     </AppShell>
   );
 }
