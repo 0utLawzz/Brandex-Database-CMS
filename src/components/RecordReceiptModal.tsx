@@ -290,7 +290,7 @@ export function RecordReceiptModal({
               className="px-5 py-2 bg-[#0A6B52] text-white border-2 border-[#0C0C0C] font-mono text-xs font-bold uppercase shadow-[3px_3px_0_#0C0C0C] hover:brightness-110 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Check className="w-4 h-4" />
-              {mutation.isPending ? "POSTING RECEIPT…" : "POST RECEIPT & UNLOCK STAGE"}
+              {mutation.isPending ? "POSTING RECEIPT…" : "POST RECEIPT"}
             </button>
           </div>
         </form>
