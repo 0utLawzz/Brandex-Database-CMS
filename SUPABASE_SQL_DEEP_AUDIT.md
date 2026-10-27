@@ -8,7 +8,7 @@
 **Auditor:** AI Pair Programming Architect (Antigravity)  
 **Primary Directory Inspected:** `supabase/` (All 8 ordered SQL migrations, Edge Functions, configuration)  
 **Cross-References:** `WORKFLOW_V2_ARCHITECTURE_AUDIT.md`, `API_BUSINESS_LOGIC_AUDIT.md`  
-**Rule of Authority:** In any discrepancy between previous markdown reports and the actual SQL definitions, the **SQL source code is the ultimate ground truth**.
+**Historical evidence note:** SQL definitions are evidence of implemented database behavior at the audit snapshot, not authority for desired business behavior or proof of current production state. Current AI routing is defined by [AGENTS.md](AGENTS.md) and [Documentation Authority](docs/DOCUMENTATION_AUTHORITY.md); financial requirements are defined by [Ledger Requirements](docs/LEDGER_REQUIREMENTS.md).
 
 ---
 
