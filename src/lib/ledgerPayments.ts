@@ -35,15 +35,18 @@ export type ClientLedgerEntry = {
 
 export type LedgerPaymentsByTm = Record<string, Partial<Record<"S1" | "S2" | "S3" | "S4", LedgerStagePayment>>>;
 
+export function isStageFullyPaid(amountDue: number, amountReceived: number): boolean {
+  return amountDue > 0 && amountReceived >= amountDue;
+}
+
 export function normalizeTmDigits(value: string | null | undefined): string | null {
   const digits = value?.replace(/\D/g, "") ?? "";
   return digits.length === 6 ? digits : null;
 }
 
 /**
- * Fetch stage payment summaries. First attempts direct querying from the unified
- * client_ledger_entries table in the same database. If not yet migrated, falls back
- * to the Edge Function bridge.
+ * Fetch stage payment summaries from the authoritative ledger only. Query errors
+ * are surfaced; cached workflow flags are never used as financial truth.
  */
 export async function getLedgerStagePayments(tmNumbers: Array<string | null | undefined>): Promise<LedgerPaymentsByTm> {
   const normalized = [...new Set(tmNumbers.map(normalizeTmDigits).filter((value): value is string => value !== null))];
@@ -66,7 +69,7 @@ export async function getLedgerStagePayments(tmNumbers: Array<string | null | un
       const due = rows.reduce((sum, entry) => sum + Number(entry.amount_due || 0), 0);
       const received = rows.reduce((sum, entry) => sum + Number(entry.amount_received || 0), 0);
       const last = rows.filter((entry) => entry.entry_type === "receiving" && Number(entry.amount_received || 0) > 0).sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime())[0];
-      const paid = due > 0 && received >= due;
+      const paid = isStageFullyPaid(due, received);
       stageMap[stage] = { amount_due: due, amount_received: received, outstanding: Math.max(0, due - received), paid, paid_date: paid ? (last?.entry_date ?? null) : null, entry_id: last?.id ?? null, receipt_no: last?.receipt_no ?? null, payment_method: last?.payment_method ?? null, bank_name: last?.bank_name ?? null, cheque_no: last?.cheque_no ?? null };
     }
     result[tm] = stageMap;
@@ -103,7 +106,7 @@ export async function refreshLedgerPaymentsForCase(
           amount_due: due,
           amount_received: rec,
           outstanding: Math.max(0, due - rec),
-          paid: due > 0 && rec >= due,
+          paid: isStageFullyPaid(due, rec),
           paid_date: lastRec?.entry_date ?? null,
           entry_id: lastRec?.id ?? null,
         };
