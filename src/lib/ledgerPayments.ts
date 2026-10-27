@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { isStageFullyPaid, normalizeTmDigits } from "./ledgerPaymentRules.mjs";
+export { isStageFullyPaid, normalizeTmDigits } from "./ledgerPaymentRules.mjs";
 
 export type LedgerStagePayment = {
   amount_due: number;
@@ -13,36 +15,11 @@ export type LedgerStagePayment = {
   cheque_no?: string | null;
 };
 
-export type ClientLedgerEntry = {
-  id: string;
-  trademark_id: string;
-  entry_date: string;
-  entry_type: "charge" | "receiving";
-  stage: "S1" | "S2" | "S3" | "S4";
-  amount_due: number;
-  amount_received: number;
-  payment_method: string | null;
-  bank_name: string | null;
-  cheque_no: string | null;
-  receipt_no: string | null;
-  details: string | null;
-  notes: string | null;
-  voided_at: string | null;
-  void_reason: string | null;
-  created_at: string;
-  created_by?: string | null;
-};
+
 
 export type LedgerPaymentsByTm = Record<string, Partial<Record<"S1" | "S2" | "S3" | "S4", LedgerStagePayment>>>;
 
-export function isStageFullyPaid(amountDue: number, amountReceived: number): boolean {
-  return amountDue > 0 && amountReceived >= amountDue;
-}
 
-export function normalizeTmDigits(value: string | null | undefined): string | null {
-  const digits = value?.replace(/\D/g, "") ?? "";
-  return digits.length === 6 ? digits : null;
-}
 
 /**
  * Read payment status from the separate Brandex Client Ledger through the
