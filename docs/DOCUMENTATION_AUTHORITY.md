@@ -13,6 +13,8 @@ For every task, follow this order—not every document in the repository:
 5. [`Progress.md`](../Progress.md) and [`docs/PROJECT_TRUTH.md`](PROJECT_TRUTH.md) only to understand reported status and evidence limits.
 6. Historical audits, release notes, memories, and old logs only when investigating history or regressions.
 
+Historical files are indexed in [`docs/archive/README.md`](archive/README.md). Keep their paths stable until inbound links and unique evidence are mapped; their claims do not override current owner decisions or canonical requirements.
+
 Do not load every document by default. Follow only the references needed for the current task.
 
 ## 2. Authority order depends on the question
