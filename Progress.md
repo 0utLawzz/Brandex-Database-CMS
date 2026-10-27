@@ -1,3 +1,12 @@
+## Current Ledger Architecture Decision — 28 October 2026
+
+**Owner-confirmed source of truth:** the separate [Brandex Client Ledger](https://github.com/0utLawzz/Brandex-Client-Ledger) owns client charges, receipts, adjustments, refunds, and balances. CMS must use its authenticated `ledger-payment-status` bridge for verified stage status; `stage*_paid` fields are cache only.
+
+**Historical note:** earlier entries below that describe a completed “Unified Client Ledger (1 Database)” and CMS-local receipt creation are superseded architecture claims. The CMS-local migration/table remains in repository history but must not be used for new financial writes or as the authority for payment status. Do not delete or reconcile any existing records until deployment state and records have been audited with an approved plan.
+
+**PR #6 verification status:** external-ledger read path and receipt-entry handoff are being corrected on `feat/client-ledger-workflow-foundation`. A duplicate `stageNames` declaration was fixed. Build, tests, typecheck, authenticated browser flow, bridge secrets/deployment, and database-level stale-cache enforcement still require verification; no production migration or deployment is authorized by this status note.
+
+---
 # Brandex Database CMS Progress
 
 **Last updated: 28 October 2026 — Documentation Authority Cleanup**
