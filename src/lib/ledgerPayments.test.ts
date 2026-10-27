@@ -27,25 +27,37 @@ describe("Unified Brandex Client Ledger", () => {
     expect(normalizeTmDigits("1234567")).toBeNull();
   });
 
-  it("records a client receipt via database RPC", async () => {
-    supabaseMock.rpc.mockResolvedValue({
-      data: { id: "rec-1", receipt_no: "BX-REC-2026-1001", amount: 15000 },
+  it("reads payment status only from the authoritative external Ledger bridge", async () => {
+    supabaseMock.functions.invoke.mockResolvedValue({
+      data: { payments: {
+        "123456": {
+          S1: { amount_due: 10000, amount_received: 5000, paid: true, paid_date: "2026-10-01" },
+          S2: { amount_due: 0, amount_received: 500, paid: true, paid_date: "2026-10-02" },
+          S3: { amount_due: 2500, amount_received: 2500, paid: true, paid_date: "2026-10-03" },
+          S4: { amount_due: 0, amount_received: 0, paid: false, paid_date: null },
+        },
+      } },
       error: null,
     });
 
-    const result = await recordClientReceipt({
-      trademarkId: "tm-1",
-      stage: "S1",
-      amount: 15000,
-      paymentMethod: "bank_transfer",
-      bankName: "United Bank Limited (UBL)",
-    });
+    const result = await getLedgerStagePayments(["TM 123-456"]);
 
-    expect(result).toEqual({ id: "rec-1", receipt_no: "BX-REC-2026-1001", amount: 15000 });
-    expect(supabaseMock.rpc).toHaveBeenCalledWith("record_client_receipt", expect.objectContaining({
-      p_trademark_id: "tm-1",
-      p_stage: "S1",
-      p_amount: 15000,
-    }));
+    expect(supabaseMock.functions.invoke).toHaveBeenCalledWith("ledger-payment-status", { body: { tm_digits: ["123456"] } });
+    expect(result["123456"].S1?.paid).toBe(false);
+    expect(result["123456"].S2?.paid).toBe(false);
+    expect(result["123456"].S3?.paid).toBe(true);
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the external Ledger bridge is unavailable", async () => {
+    supabaseMock.functions.invoke.mockResolvedValue({ data: null, error: { message: "unavailable" } });
+    await expect(getLedgerStagePayments(["123456"])).rejects.toThrow("Unable to verify payments with Brandex Client Ledger");
+  });
+
+  it("does not write client receipts into the CMS database", async () => {
+    await expect(recordClientReceipt({ trademarkId: "tm-1", stage: "S1", amount: 15000, paymentMethod: "bank_transfer" }))
+      .rejects.toThrow("must be recorded in the authoritative Brandex Client Ledger");
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 });
