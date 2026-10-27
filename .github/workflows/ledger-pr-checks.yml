@@ -1,0 +1,27 @@
+name: Ledger PR checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/client-ledger-workflow-foundation]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: TypeScript check
+        run: npm run lint
+      - name: Ledger payment unit test
+        run: npm exec --yes --package=vitest@4.1.11 -- vitest run src/lib/ledgerPayments.test.ts
+      - name: Production build
+        run: npm run build
