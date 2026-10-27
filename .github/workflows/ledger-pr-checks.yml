@@ -16,12 +16,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: TypeScript check
         run: npm run lint
       - name: Ledger payment unit test
-        run: npm exec --yes --package=vitest@4.1.11 -- vitest run src/lib/ledgerPayments.test.ts
+        run: npm install --no-save --package-lock=false vitest@4.1.11
+      - name: Run ledger payment unit test
+        run: ./node_modules/.bin/vitest run src/lib/ledgerPayments.test.ts
       - name: Production build
         run: npm run build
