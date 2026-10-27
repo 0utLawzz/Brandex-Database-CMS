@@ -103,7 +103,10 @@ Deno.serve(async (request) => {
     const patch: Record<string, boolean | string | null> = {};
     for (const stage of [1, 2, 3, 4] as const) {
       const status = payment[`S${stage}`] ?? {};
-      const paid = status.paid === true;
+      const amountDue = Number(status.amount_due ?? 0);
+      const amountReceived = Number(status.amount_received ?? 0);
+      // A receipt against a zero-charge stage is not proof that the stage fee cleared.
+      const paid = amountDue > 0 && amountReceived >= amountDue;
       const paidDate = paid ? status.paid_date ?? null : null;
       if (caseRecord[`stage${stage}_paid`] !== paid) patch[`stage${stage}_paid`] = paid;
       if (caseRecord[`stage${stage}_paid_date`] !== paidDate) patch[`stage${stage}_paid_date`] = paidDate;
