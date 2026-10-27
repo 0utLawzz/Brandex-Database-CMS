@@ -33,7 +33,6 @@ export function ReceiptPrintModal({ isOpen, onClose, receipt }: ReceiptPrintModa
   const date = receipt.entry_date || receipt.entryDate || new Date().toISOString().slice(0, 10);
   const stage = receipt.stage || "S1";
   const stageNames: Record<string, string> = { S1: "Stage 1 — Filing and Acknowledgement", S2: "Stage 2 — Assignment and Outcome", S3: "Stage 3 — Publication and Demand Note", S4: "Stage 4 — Certificate (CER) Processing" };
-  const stageNames: Record<string, string> = { S1: "Stage 1 — Filing and Acknowledgement", S2: "Stage 2 — Assignment and Outcome", S3: "Stage 3 — Publication and Demand Note", S4: "Stage 4 — Certificate (CER) Processing" };
   const method = receipt.payment_method || receipt.paymentMethod || "Bank Transfer";
   const bank = receipt.bank_name || receipt.bankName || "Brandex Bank Account";
   const ref = receipt.cheque_no || receipt.chequeNo || "";
