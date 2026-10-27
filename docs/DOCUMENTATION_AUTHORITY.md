@@ -46,7 +46,7 @@ Never describe source inspection as live verification. Never infer production de
 |---|---|---|
 | Case stages, sub-stages, transitions, STOPPED, workflow guards | [Workflow Business Rules](WORKFLOW_BUSINESS_RULES.md) | Relevant UI/mutation code, ordered migrations, triggers/RPCs, tests |
 | Client accounts, ledger charges, receipts, fee caps, outstanding balances, refunds, print statements | [Ledger Requirements](LEDGER_REQUIREMENTS.md) | Ledger code, schema/migrations, RLS, triggers/RPCs, receipt UI and tests |
-| Existing ledger architecture and integration state | [Ledger Integration](LEDGER_INTEGRATION.md), read with [Ledger Requirements](LEDGER_REQUIREMENTS.md) | Current migration and implementation; record any conflict in the audit |
+| Ledger source of truth and CMS bridge | [Ledger Requirements](LEDGER_REQUIREMENTS.md) and [Ledger Integration](LEDGER_INTEGRATION.md) | Separate Brandex Client Ledger owns financial records; inspect both repositories and the bridge. CMS-local unified-ledger migration is legacy, not authority. Verify deployments before claiming live integration |
 | Current project status, pending work, release checks | [Progress](../Progress.md) | Verify the named source/test/deployment evidence before acting |
 | Historical baseline or why a prior audit differs | [Project Truth](PROJECT_TRUTH.md) and [Workflow Gap Matrix](WORKFLOW_GAP_MATRIX.md) | Current code/migrations; these files contain historical material |
 | Auth, roles, RLS, storage, secrets | [Security](../SECURITY.md) and [AGENTS.md](../AGENTS.md) | Actual RLS policies, storage policies, RPC grants, environment usage |
