@@ -31,6 +31,7 @@ This file is the mandatory entry point for every AI agent and automated contribu
 - Supabase Postgres, Auth, RLS, migrations, and Storage are security-critical. Never expose service-role keys, database passwords, Apps Script secrets, or cron secrets in browser variables or committed files.
 - Active role model documented for the application is Admin + User/Viewer; do not reintroduce Editor authorization or public access without explicit approval.
 - Google Sheets is an asynchronous mirror, not the primary browser datastore.
+- **Financial source of truth:** the separate [Brandex Client Ledger](https://github.com/0utLawzz/Brandex-Client-Ledger) owns client charges, receipts, adjustments, refunds, and balances. CMS payment status is read through the authenticated Ledger bridge. The CMS-local `client_ledger_entries` migration/table is a legacy competing implementation, not authority for new financial writes; do not delete or reconcile any existing records without an approved audited plan.
 - Preserve trademark identifiers as stored. Non-empty TM numbers are unique by digits-only normalized value; normalization is for matching/uniqueness, not rewriting the stored legal identifier.
 
 ## Change and verification discipline
