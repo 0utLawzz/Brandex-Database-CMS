@@ -120,4 +120,23 @@ case_number)` references are valid when their TM numbers differ.
 
 ## Publication display and workbench
 
-Required publication model: thumbnail/enlargement where available, journal number/date, type/icon, client code, case number, application name, appropriate six-digit TM number formatting, class presentation/actions, prominent stage/sub-stage, internal deadline/days remaining, status and available actions. Do not invent workflow history from TM form matching.
+Required publication model: thumbnail/enlargement where available, journal number/date,
+type/icon, client code, case number, application name, appropriate six-digit TM number formatting,
+class presentation/actions, prominent stage/sub-stage, internal deadline/days remaining,
+status and available actions. Do not alter stored legal identifiers to obtain formatting.
+
+**CASE DATA FIRST. UI FURNITURE SECOND.**  
+Responsive classes and consistent branding do not prove readability.  
+Primary case data, current stage, manual payment state and next valid action must be readily legible
+at normal desktop size. Tiny 8–10px metadata, nested borders and shadows require a later UI audit
+and transformation, not an unrequested Phase 0 redesign.
+
+## History, integrity and scope
+
+Keep status history distinct from the full audit log. Preserve timestamped reasons and case history.
+Preserve legal identifiers and existing business behavior except explicitly scoped corrections.
+Do not claim canonical Type / Client Code / Case Number presentation means default sorting:
+the current list sorts filing date descending, updated time descending, then identifier tiebreakers.
+Existing uppercase normalization and broader integrity questions are separate audit items.
+The CMS ↔ Ledger integration is an approved follow-up scope; publication/workbench improvements
+remain separate. Do not change historical Git tags.
