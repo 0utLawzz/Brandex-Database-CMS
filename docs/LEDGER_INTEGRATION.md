@@ -1,18 +1,28 @@
-# Brandex Unified Client Ledger Architecture (1 Database, 1 Place, 1 System)
+# Unified Client Ledger — Implementation Snapshot
 
-Brandex Client Ledger is integrated directly into the Brandex Database CMS. 
-Instead of operating two disconnected databases with cross-project network polling, the Ledger tables, triggers, and receipt vouchers are unified directly inside the primary CMS Supabase database.
+**Purpose:** describe the currently committed architecture, not define all required ledger behavior. Owner-confirmed financial behavior is in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md). AI reference routing is in [DOCUMENTATION_AUTHORITY.md](DOCUMENTATION_AUTHORITY.md).
 
-## Architecture
+## Current implementation described by the repository
 
-- **Primary Table**: `public.client_ledger_entries` (linked via foreign key `trademark_id REFERENCES public.trademarks(id) ON DELETE CASCADE`).
-- **Receipt Sequence**: `public.client_receipt_seq` generating official serial numbers (`REC-YYYY-XXXX`).
-- **Instant Gate Synchronization**: A PostgreSQL database trigger (`trg_sync_trademark_from_ledger`) automatically recalculates paid statuses across S1, S2, S3, and S4 upon any receipt creation, update, or soft-void, instantly unlocking or locking the statutory workflow progression gates.
-- **Audit & Anti-Tamper**: Single records cannot be permanently deleted from the database. Corrections are recorded as soft-voids (`voided_at`, `void_reason`) by administrators, preserving financial audit trails.
-- **Voucher Generation**: Authentic printable receipt vouchers for clients, displaying Brandex Law Associates bank accounts (UBL, Meezan Bank, EasyPaisa, JazzCash).
+The migration `supabase/migrations/20261024000100_unified_client_ledger.sql` creates `public.client_ledger_entries` in the CMS Supabase database. The table links each entry to a trademark/case through `trademark_id REFERENCES public.trademarks(id)`, stores `charge` or `receiving` entries with stage codes S1–S4, and includes soft-void metadata. A receipt sequence and trigger/RPC-based stage-paid synchronization are also defined in the migration.
 
-## Benefits
+The source code in `src/lib/ledgerPayments.ts` queries the unified table first, attempts an Edge Function fallback, and then has a cached case-flag fallback. This is an implementation observation, not a recommendation that all fallbacks are correct. In particular, a cached paid flag and fabricated nonzero receipt amount must not override financial ledger truth; see the owner-confirmed rules in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md).
 
-1. **Zero Cross-Project Sync Failures**: No shared API secrets or Edge Function outages between separate Supabase projects.
-2. **Instant Consistency**: A receipt posted in `/payments` or on `/record/:id` unlocks the workflow gate immediately in the same database transaction.
-3. **Single Source of Truth**: All trademark cases, documents, journals, and client financial receipts live in one backup and one management dashboard.
+## Important scope boundary
+
+The current case-linked table is not, by itself, proof of the requested consolidated client-account model. The owner-confirmed target includes a client-level account across all cases, agreed stage fee schedules, due-only charge creation, stage fee caps, valid partial receipt allocation, explicit audited adjustments/refunds, duplicate case ownership protection, audited transfers, and Full Ledger / Selected Ledger printing.
+
+Do not state that these requirements are implemented merely because a unified table or receipt modal exists. Inspect the current schema, code, RLS, triggers/RPCs, and tests; classify each requirement separately as source-inspected, automated-tested, database-verified, flow-verified, or deployment-verified.
+
+## Security and audit principles
+
+- Preserve RLS and role checks.
+- Keep financial history auditable; do not permanently erase a financial event to correct it.
+- Any void, refund, reversal, waiver, or ownership transfer must use an explicit authorized operation and preserve the audit trail.
+- Receipt numbering must be enforced by the authoritative server/database path; UI-generated values must not bypass sequence/uniqueness guarantees.
+- Do not expose database/service-role credentials to the browser.
+- Do not execute migrations or change production data without explicit owner approval.
+
+## Verification status
+
+This document does not certify live production synchronization or complete client-wide ledger behavior. Use [Progress](../Progress.md) for the reported work queue, then independently verify the relevant behavior before marking any requirement complete.

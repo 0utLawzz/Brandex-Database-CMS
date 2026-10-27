@@ -1,6 +1,10 @@
 # Brandex Database CMS Progress
 
-**Last updated: 24 October 2026 — Unified Client Ledger Integration (1 Database, 1 Place, 1 System)**
+**Last updated: 28 October 2026 — Documentation Authority Cleanup**
+
+> **Documentation authority notice:** AI contributors must start at [AGENTS.md](AGENTS.md) and follow [Documentation Authority](docs/DOCUMENTATION_AUTHORITY.md). Owner-confirmed financial behavior is in [Ledger Requirements](docs/LEDGER_REQUIREMENTS.md); case workflow requirements are in [Workflow Business Rules](docs/WORKFLOW_BUSINESS_RULES.md). This cleanup changes documentation and AI routing only. It does not implement the client-wide ledger requirements or verify live production ledger behavior. Older status snapshots below remain historical unless their evidence is rechecked.
+
+**Historical progress snapshot:** 24 October 2026 — Unified Client Ledger Integration (1 Database, 1 Place, 1 System)
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 

@@ -1,77 +1,46 @@
-# Brandex Project Guidelines (AGENTS.md)
+# Brandex AI Contributor Rules
 
-**Mandatory first action for every AI agent or automated contributor:**
+This file is the mandatory entry point for every AI agent and automated contributor. Read this file first, then follow the task-specific reference route in [Documentation Authority](docs/DOCUMENTATION_AUTHORITY.md). Do not read every historical audit as if it were a current instruction.
 
-1. Read the current-status section of `Progress.md`, `docs/PROJECT_TRUTH.md`, and `docs/WORKFLOW_BUSINESS_RULES.md`. Historical logs are context, not verification.
-2. Understand what is already completed and what is still pending.
-3. Do not re-do completed work.
-4. Prefer the highest-priority pending items listed under “Required release checks” and “Medium-priority improvements”.
-5. Never start work on items under “Held for a separately approved phase” without explicit human approval.
+## Non-negotiable rules
 
-Follow the current user-authorized phase. Do not treat historical completion claims as acceptance evidence.
+1. Follow the current human request and explicit approvals. If a request conflicts with a safety boundary or leaves a consequential business decision unclear, stop and ask.
+2. Do not silently change business rules, legal workflow, financial calculations, permissions, database schema, or production configuration.
+3. Do not run production migrations, alter production data, deploy, merge a PR, or change secrets unless explicitly authorized for that action.
+4. Treat historical audits, old release notes, memory notes, issue discussions, and past progress logs as context only—not current requirements or proof.
+5. Separate **required behavior**, **implemented behavior**, and **verified behavior**. Never infer one from another.
+6. When documents conflict, use the resolution procedure in [Documentation Authority](docs/DOCUMENTATION_AUTHORITY.md). Do not choose the most convenient interpretation.
+7. Before coding, inspect the relevant implementation, database migrations/policies/RPCs, and tests. If the implementation contradicts the canonical requirement, report the gap; do not silently rewrite the requirement to match the code.
+8. Keep unrelated changes out of scope. Preserve existing data, identifiers, workflow guards, audit history, and compatibility unless the owner approves a change.
+9. Prefer a reviewable branch and pull request for multi-file or high-impact changes. Never claim a change was deployed or live-tested unless that actually happened.
 
----
+## Documentation entry points
 
-## Architecture
+- **Which reference to use / conflict resolution:** [docs/DOCUMENTATION_AUTHORITY.md](docs/DOCUMENTATION_AUTHORITY.md)
+- **Current user-confirmed client ledger requirements:** [docs/LEDGER_REQUIREMENTS.md](docs/LEDGER_REQUIREMENTS.md)
+- **Existing case workflow requirements:** [docs/WORKFLOW_BUSINESS_RULES.md](docs/WORKFLOW_BUSINESS_RULES.md)
+- **Current status and pending work (summary, not source of truth):** [Progress.md](Progress.md)
+- **Evidence levels and historical audit context:** [docs/PROJECT_TRUTH.md](docs/PROJECT_TRUTH.md)
+- **Release/browser checks:** [SMOKE_TEST_CHECKLIST.md](SMOKE_TEST_CHECKLIST.md)
 
-- React, TypeScript, Vite and Tailwind CSS in `artifacts/tm-tracker`
-- Supabase Postgres is the source of truth
-- Supabase Auth and Row Level Security protect staff data
-- Supabase Storage stores private trademark images
-- Google Sheets is a server-side asynchronous mirror, not a browser data source
-- Vercel hosts the production frontend at `https://brandexsheet.vercel.app`
+## Repository facts
 
-## Commands
+- Current repository layout has root-level `src/`, `supabase/`, and `scripts/`; verify paths before using older references to `artifacts/tm-tracker/`.
+- The checked-in root manifest is `package.json` and the lockfile is `package-lock.json`. Use the commands and scripts that actually exist in the checked-out manifest. Do not assume pnpm/workspace scripts or a test script exists.
+- Vercel configuration currently uses `npm install` and `npm run build`; do not change package-manager/deployment settings as part of documentation-only work.
+- Supabase Postgres, Auth, RLS, migrations, and Storage are security-critical. Never expose service-role keys, database passwords, Apps Script secrets, or cron secrets in browser variables or committed files.
+- Active role model documented for the application is Admin + User/Viewer; do not reintroduce Editor authorization or public access without explicit approval.
+- Google Sheets is an asynchronous mirror, not the primary browser datastore.
+- Preserve trademark identifiers as stored. Non-empty TM numbers are unique by digits-only normalized value; normalization is for matching/uniqueness, not rewriting the stored legal identifier.
 
-Use pnpm only.
+## Change and verification discipline
 
-```bash
-pnpm install --frozen-lockfile
-pnpm dev
-pnpm test
-pnpm typecheck
-pnpm build
-```
+- For documentation-only work, check links, headings, references, and consistency; do not claim application tests passed if they were not run.
+- For code changes, run the relevant tests and the actual manifest-supported typecheck/lint/build commands. Report commands that do not exist rather than inventing them.
+- For schema changes, inspect existing migrations and add an ordered migration only after authorization. Never execute it against production without explicit approval.
+- Update `Progress.md` only with evidence-backed status. Mark source inspection, automated tests, database verification, and browser-flow verification separately.
+- Use concise commit messages in the repository's existing style; do not amend or retag historical releases.
 
-## Environment
+## Stop condition
 
-The frontend may receive only:
-
-```dotenv
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
-```
-
-Never expose a service-role key, database password, Google Apps Script secret, or cron secret through a `VITE_*` variable.
-
-## Data rules
-
-- Preserve legal identifiers exactly: `type`, `client_code`, `case_number`, and `tm_cpr_number`.
-- Non-empty `tm_cpr_number` values are unique after digits-only normalization; keep the stored identifier unchanged. Repeated case references are valid when TM numbers differ.
-- The canonical Datasheet order is Type, then Client Code, then Case Number.
-- Use server-side filtering and pagination for record lists. Never download the full trademark table for a dashboard or paginated screen.
-- Fetch full notes, journal JSON and signed images only when a record is opened.
-- Preserve all existing fields during refactors.
-- TM5, TM6, TM11, TM16 and TM56 are stored boolean controls; do not invent legal labels without practice-owner approval.
-
-## Security and changes
-
-- Keep RLS enabled. Active roles are Admin + User/Viewer only. The historical `editor` enum value is retained, but active Editor profiles were converted to Viewer and a database constraint prevents re-assignment. Do not reintroduce Editor authorization.
-- Production is private and staff-authenticated. Do not add public Viewer access; it is future consideration only.
-- Client Ledger is unified directly into this database and web application (1 Database, 1 Place, 1 System). Client stage receipts are stored in `client_ledger_entries`, protected by Admin RLS, and trigger immediate stage gate updates. Bulk deletion is strictly forbidden; soft-void with audit reason is enforced. Record View/workbench redesign remains a separate follow-up.
-- Do not implement bulk permanent deletion. Single-record deletion remains admin-controlled by RLS.
-- Database schema changes require a new ordered migration in `supabase/migrations`.
-- Every completed change must pass tests, typecheck and production build before push.
-- Commit messages use `[Type] Brief description`.
-
-## Brand system
-
-- Near-black: `#0C0C0C`; warm cream: `#F0E8D0`; deep cream: `#E8DFC7`; off-white panels: `#FAF6EE`.
-- Burnt orange: `#C94A00`; dark teal: `#0A6B52`; bright teal: `#0D9970`; bold yellow: `#D4A800`.
-- Use Bebas Neue for headings, Space Grotesk for body text, and DM Mono for labels and code.
-- Preserve the permanent dark navbar, hard offset shadows, square inputs, and 6px maximum radius for cards/buttons.
-- Use the palette-matched `public/branding/brandex-logo-*.png` assets; numbered `Logo_*.PNG` source variants are ignored.
-
-## Status awareness
-
-Consult `Progress.md` and `docs/PROJECT_TRUTH.md` for evidence-backed status; do not use the historical log as a roadmap. Update Progress.md whenever a task is finished.
+If two authoritative sources still disagree after following `docs/DOCUMENTATION_AUTHORITY.md`, do not implement either interpretation. Record the exact conflict, its impact, and the single decision needed from the owner.

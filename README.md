@@ -1,4 +1,4 @@
-> Current requirements and verification limits: [Project Truth](docs/PROJECT_TRUTH.md), [canonical workflow](docs/WORKFLOW_BUSINESS_RULES.md), and [Progress](Progress.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
+> **AI contributors: start here:** [AGENTS.md](AGENTS.md) → [Documentation Authority](docs/DOCUMENTATION_AUTHORITY.md). Canonical client financial requirements: [Ledger Requirements](docs/LEDGER_REQUIREMENTS.md). Case workflow rules: [Workflow Business Rules](docs/WORKFLOW_BUSINESS_RULES.md). Current status summary: [Progress](Progress.md); historical evidence and verification limits: [Project Truth](docs/PROJECT_TRUTH.md). Active roles are Admin + User/Viewer; Editor is a historical enum value only.
 
 # Brandex Database CMS
 

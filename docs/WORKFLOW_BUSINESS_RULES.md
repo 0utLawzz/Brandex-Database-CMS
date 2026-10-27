@@ -1,8 +1,8 @@
 # Brandex Workflow Business Rules
 
-Canonical implemented business rules, reconciled 3 October 2026 with the workflow enforcement
-migration and PostgreSQL-backed tests. These are the final workflow rules; do not treat them as
-future work or change their logic without explicit owner approval.
+Canonical case-workflow requirements and existing enforcement rules. Do not treat this file as a complete financial-ledger specification. Client financial requirements are defined in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md), and reference selection/conflict resolution is defined in [DOCUMENTATION_AUTHORITY.md](DOCUMENTATION_AUTHORITY.md).
+
+**Evidence boundary:** workflow requirements, code implementation, database enforcement, and production verification are distinct. A rule described here is not proof that every current deployed path has been verified. Consult [Progress](../Progress.md) and the [Project Truth evidence standard](PROJECT_TRUTH.md), then inspect the current implementation and migrations before making claims.
 
 DONE requires requirement, code, database, UI, tests, actual flow verification and aligned documentation.
 Use 🟢 DONE + VERIFIED, 🟡 PARTIAL, 🔴 NOT IMPLEMENTED, ⚠️ IMPLEMENTED BUT NOT VERIFIED, or ❌ CONTRADICTED.
@@ -74,15 +74,12 @@ RLS separately controls who may write.
 
 ## Payments and agents
 
-CMS owns cases, workflow, stage progression and gates. [Brandex Client Ledger](https://github.com/0utLawzz/Brandex-Client-Ledger)
-owns actual client payments. The CMS reads Ledger's stage-status RPC by normalized six-digit TM
-number through a server-to-server Edge Function bridge. CMS stage flags/dates are a protected cache
-used by the existing database workflow gate; staff cannot set them manually in the browser. Live
-receipt synchronization remains unverified until both Supabase migrations/functions/secrets are
-configured and the acceptance flows in [LEDGER_INTEGRATION.md](LEDGER_INTEGRATION.md) pass.
+Client financial behavior is defined in [LEDGER_REQUIREMENTS.md](LEDGER_REQUIREMENTS.md). The ledger is the financial source of truth; workflow fields or cached paid flags must not fabricate charges, receipts, or balances.
 
-Agent accounting is separate from client payments. Assign cases with per-case fees/rates.
-Ten cases at Rs.1000 with eight Accepted create Rs.8000 payable. The database creates one payable
+The repository contains a unified-table implementation described in [LEDGER_INTEGRATION.md](LEDGER_INTEGRATION.md), but its presence does not establish that all owner-confirmed ledger requirements are implemented or that production behavior has been verified. The current implementation must be inspected before any ledger change. In particular, do not assume a client-wide account exists merely because `client_ledger_entries` exists, and do not claim live receipt/production synchronization is verified without direct evidence. The older cross-project Edge Function description is not authority to restore a separate payment architecture.
+
+Agent accounting remains separate from client payments. Assign cases with per-case fees/rates.
+Ten cases at Rs.1000 with eight Accepted create Rs8000 payable. The database creates one payable
 when each eligible case reaches Accepted. Admin-recorded Agent Payments reduce a payable via the
 `record_agent_payment` RPC, which rejects non-positive, over-balance, and over-precision amounts
 and records payment history. Agent Payment entry is in the ASSIGNED page's Accepted / Agent
@@ -128,8 +125,8 @@ type/icon, client code, case number, application name, appropriate six-digit TM 
 class presentation/actions, prominent stage/sub-stage, internal deadline/days remaining,
 status and available actions. Do not alter stored legal identifiers to obtain formatting.
 
-**CASE DATA FIRST. UI FURNITURE SECOND.**
-Responsive classes and consistent branding do not prove readability.
+**CASE DATA FIRST. UI FURNITURE SECOND.**  
+Responsive classes and consistent branding do not prove readability.  
 Primary case data, current stage, manual payment state and next valid action must be readily legible
 at normal desktop size. Tiny 8–10px metadata, nested borders and shadows require a later UI audit
 and transformation, not an unrequested Phase 0 redesign.
@@ -141,5 +138,5 @@ Preserve legal identifiers and existing business behavior except explicitly scop
 Do not claim canonical Type / Client Code / Case Number presentation means default sorting:
 the current list sorts filing date descending, updated time descending, then identifier tiebreakers.
 Existing uppercase normalization and broader integrity questions are separate audit items.
-The CMS ↔ Ledger integration is now an approved follow-up scope; publication/workbench improvements
+The CMS ↔ Ledger integration is an approved follow-up scope; publication/workbench improvements
 remain separate. Do not change historical Git tags.
