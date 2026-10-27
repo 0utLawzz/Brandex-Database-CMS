@@ -122,8 +122,8 @@ export type RecordReceiptParams = {
 };
 
 /**
- * Record a client receipt directly in the unified database.
- * Calls the secure RPC function or inserts directly, updating the workflow cache in real-time.
+ * Compatibility guard: CMS must not create financial records in the legacy local ledger.
+ * All official client receipts must be recorded in the separate authoritative Ledger.
  */
 export async function recordClientReceipt(_params: RecordReceiptParams): Promise<never> {
   throw new Error("Client receipts must be recorded in the authoritative Brandex Client Ledger. CMS receipt posting is read-only until a secure write bridge is approved and deployed.");
