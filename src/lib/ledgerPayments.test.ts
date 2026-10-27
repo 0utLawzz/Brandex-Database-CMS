@@ -10,10 +10,16 @@ const { supabaseMock } = vi.hoisted(() => ({
 
 vi.mock("./supabase", () => ({ supabase: supabaseMock }));
 
-import { getLedgerStagePayments, normalizeTmDigits, recordClientReceipt } from "./ledgerPayments";
+import { getLedgerStagePayments, isStageFullyPaid, normalizeTmDigits, recordClientReceipt } from "./ledgerPayments";
 
 describe("Unified Brandex Client Ledger", () => {
   beforeEach(() => vi.resetAllMocks());
+
+  it("does not mark an uncharged or partially paid stage as paid", () => {
+    expect(isStageFullyPaid(0, 500)).toBe(false);
+    expect(isStageFullyPaid(10000, 5000)).toBe(false);
+    expect(isStageFullyPaid(10000, 10000)).toBe(true);
+  });
 
   it("normalizes formatted six-digit TM numbers and preserves leading zeroes", () => {
     expect(normalizeTmDigits("TM 012-345")).toBe("012345");
