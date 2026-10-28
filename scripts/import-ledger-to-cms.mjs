@@ -85,7 +85,7 @@ const clientCodeById = new Map(clients.map((client) => [client.id, client.client
 
 const cmsByTm = new Map();
 for (const cmsCase of cmsCases) {
-  const tm = cmsCase.tm_cpr_number_norm ?? digits(cmsCase.tm_cpr_number);
+  const tm = digits(cmsCase.tm_cpr_number_norm || cmsCase.tm_cpr_number);
   if (!tm) continue;
   const list = cmsByTm.get(tm) ?? [];
   list.push(cmsCase);
@@ -102,7 +102,7 @@ for (let offset = 0; offset < cases.length; offset += 500) {
 }
 
 const mappedCases = cases.map((row) => {
-  const tm = row.tm_no_normalized ?? digits(row.tm_no);
+  const tm = digits(row.tm_no_normalized || row.tm_no);
   const candidates = tm ? cmsByTm.get(tm) ?? [] : [];
   const prior = existingCaseState.get(row.id);
   let status = "unmatched";
