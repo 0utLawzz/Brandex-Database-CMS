@@ -115,6 +115,10 @@ BEGIN
     IF TG_OP = 'INSERT' AND NEW.cms_trademark_id IS NOT NULL THEN
       RAISE EXCEPTION 'Use the audited ledger case link operation.';
     ELSIF TG_OP = 'UPDATE' AND NEW.cms_trademark_id IS DISTINCT FROM OLD.cms_trademark_id THEN
+      -- Allow FK ON DELETE SET NULL to detach history when a CMS trademark is deleted.
+      IF NEW.cms_trademark_id IS NULL AND pg_trigger_depth() > 1 THEN
+        RETURN NEW;
+      END IF;
       RAISE EXCEPTION 'Use the audited ledger case link operation.';
     END IF;
   END IF;
@@ -129,7 +133,7 @@ CREATE OR REPLACE FUNCTION public.prevent_unverified_stage_payment_changes()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 BEGIN
   IF current_setting('brandex.internal_ledger_sync', true) = 'true'
-     OR auth.role() IS DISTINCT FROM 'authenticated' THEN
+     OR current_user NOT IN ('anon','authenticated') THEN
     RETURN NEW;
   END IF;
   IF TG_OP = 'INSERT' THEN
@@ -405,7 +409,11 @@ CREATE POLICY ledger_link_audit_read ON public.ledger_case_link_audit FOR SELECT
 
 GRANT SELECT, INSERT, UPDATE ON public.ledger_series, public.ledger_clients,
   public.ledger_client_stage_rates, public.ledger_cases, public.ledger_entries TO authenticated;
+GRANT ALL ON public.ledger_series, public.ledger_clients, public.ledger_client_stage_rates,
+  public.ledger_cases, public.ledger_entries, public.ledger_case_link_audit TO service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.ledger_receipt_seq TO service_role;
 GRANT SELECT ON public.ledger_case_link_audit, public.client_ledger_entries TO authenticated;
+REVOKE ALL ON FUNCTION public.sync_trademark_from_ledger(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.link_ledger_case_to_trademark(uuid,text,text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text,uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.record_ledger_receiving(uuid,uuid,date,text,numeric,text,text,text,uuid,uuid) FROM PUBLIC, anon;
