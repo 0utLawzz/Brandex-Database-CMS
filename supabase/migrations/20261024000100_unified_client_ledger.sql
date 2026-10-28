@@ -122,7 +122,7 @@ BEGIN
 END;
 $$;
 CREATE TRIGGER ledger_cases_guard_link
-  BEFORE UPDATE OF cms_trademark_id ON public.ledger_cases
+  BEFORE INSERT OR UPDATE ON public.ledger_cases
   FOR EACH ROW EXECUTE FUNCTION public.guard_ledger_case_link_change();
 
 CREATE OR REPLACE FUNCTION public.prevent_unverified_stage_payment_changes()
