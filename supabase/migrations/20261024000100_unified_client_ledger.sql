@@ -97,7 +97,7 @@ RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_te
 DECLARE
   v_max_suffix bigint;
 BEGIN
-  SELECT max((regexp_match(receipt_no, '([0-9]+)$'))[1]::bigint)
+  SELECT max(substring(receipt_no FROM '([0-9]+)$')::bigint)
     INTO v_max_suffix
     FROM public.ledger_entries
    WHERE receipt_no IS NOT NULL;
