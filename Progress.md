@@ -17,7 +17,9 @@ This is the current, evidence-based status. Historical audit snapshots and batch
 - Client/case/entry lists use pagination; voided ledger entries remain visible for audit/printing while excluded from active balance totals.
 - CMS payment-status helper now returns stage statuses only for cases with an explicit `approved_link`; it does not infer a link from matching TM numbers or cached flags.
 - Live read-only database check on 28 October: 7 ledger clients, 13 ledger cases, 41 ledger entries, 0 approved links, 13 unlinked/review cases. Test data per owner; no records were changed.
-- Vercel Preview was READY for an earlier commit on this branch; latest commit preview and typecheck/build still require confirmation. GitHub Actions returned no workflow runs for the checked head.
+- Vercel Preview is READY for the current implementation/CI commit: https://brandexsheet-4f3l5iaw8-projectsb.vercel.app/payments (preview only; production unchanged).
+- GitHub Actions CI run 40620282581 completed successfully: dependency install, `npm run lint` (TypeScript check), and `npm run build` all passed.
+- Authenticated Admin/Viewer browser flows and a real receipt submission were not executed through the available browser integration; treat these as outstanding manual acceptance tests.
 - No production deployment, migration, database write, auto-link, legacy flag change, or secret change was performed.
 - Remaining acceptance: latest-preview build result, typecheck/build verification, authenticated Admin and Viewer browser flows, test receipt against disposable test data, and owner decision before merging/deploying.
 - Known scope limit: charge creation/caps, fee-due automation, adjustments/refunds/reversals, client transfers, and fully compliant statement accounting remain incomplete; do not describe the ledger requirements as fully implemented.
