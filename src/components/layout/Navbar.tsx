@@ -57,34 +57,34 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#0C0C0C] h-16 border-b-[3px] border-[#0C0C0C] text-[#FAF6EE] flex items-center px-4 sm:px-6 gap-6 sm:gap-8 shrink-0 print:hidden">
+      <header className="header-strip sticky top-0 z-40 bg-[#000000] min-h-[60px] border-b-[3px] border-[#000000] text-white flex items-center px-4 sm:px-8 gap-6 sm:gap-8 shrink-0 print:hidden justify-between">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-3 shrink-0 text-[#FAF6EE] no-underline hover:opacity-95 transition-opacity">
-          <div className="w-8 h-8 bg-[#C94A00] border-2 border-[#FAF6EE] rounded-[4px] flex items-center justify-center font-serif text-xl leading-none text-white shadow-[2px_2px_0_#0C0C0C]">
+        <Link href="/" className="flex items-center gap-3 shrink-0 text-white no-underline hover:opacity-95 transition-opacity">
+          <div className="w-8 h-8 bg-[#E14E27] border-2 border-white rounded-[2px] flex items-center justify-center font-serif text-xl leading-none text-white shadow-[2px_2px_0_#000000]">
             B
           </div>
           <div className="flex flex-col">
-            <span className="font-serif text-lg sm:text-xl tracking-wider leading-none text-[#FAF6EE]">
+            <h1 className="font-serif text-2xl sm:text-3xl tracking-wider leading-none text-white m-0">
               BRANDEX LAW ASSOCIATES
-            </span>
-            <span className="font-mono text-[10px] text-[#D4A800] uppercase tracking-widest font-bold leading-tight">
+            </h1>
+            <span className="font-mono text-[10px] text-[#D6A200] uppercase tracking-widest font-bold leading-tight mt-0.5">
               STAFF TRADEMARK REGISTRY
             </span>
           </div>
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden xl:flex flex-1 items-center justify-center gap-1.5">
+        <nav className="header-nav hidden xl:flex flex-1 items-center justify-center gap-2">
           {NAV_ITEMS.map(({ href, label }) => {
             const active = isActive(href);
             return (
               <Link
                 key={href}
                 href={href}
-                className={`px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider transition-all ${
+                className={`px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-all ${
                   active
-                    ? "bg-[#C94A00] text-[#FAF6EE] border-2 border-[#0C0C0C] shadow-[2px_2px_0_#FAF6EE]"
-                    : "text-[#999999] hover:text-[#FAF6EE] border-b-2 border-transparent hover:border-[#C94A00]"
+                    ? "bg-[#E14E27] text-white border-2 border-white shadow-[2px_2px_0_#000000]"
+                    : "text-[#999999] hover:text-white border-b-2 border-transparent hover:border-[#E14E27]"
                 }`}
               >
                 {label}
@@ -95,12 +95,17 @@ export function Navbar() {
 
         {/* Header Actions */}
         <div className="flex items-center gap-2.5 ml-auto shrink-0">
+          <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 bg-[#111111] border border-white/20 text-[#D6A200] font-mono text-[11px] font-bold tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-[#008169] animate-pulse shrink-0" />
+            <span>ACTIVE REGISTRY</span>
+          </div>
+
           {isAdmin && (
             <button
               onClick={() => setBrandingModalOpen(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A800] border-2 border-white text-[#0C0C0C] font-mono font-bold text-xs uppercase px-3 py-1.5 cursor-pointer shadow-[2px_2px_0_#0C0C0C] hover:brightness-105 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-[#D6A200] border-2 border-white text-black font-mono font-bold text-xs uppercase px-3 py-1.5 cursor-pointer shadow-[2px_2px_0_#000000] hover:brightness-105 active:translate-x-0.5 active:translate-y-0.5 transition-all"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#0C0C0C]" />
+              <Sparkles className="w-3.5 h-3.5 text-black" />
               BRANDING
             </button>
           )}
@@ -108,7 +113,7 @@ export function Navbar() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="hidden sm:inline-flex items-center gap-1.5 bg-[#C94A00] border-2 border-white text-[#FAF6EE] font-mono font-bold text-xs uppercase px-3 py-1.5 cursor-pointer shadow-[2px_2px_0_#0C0C0C] hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-60"
+            className="hidden sm:inline-flex items-center gap-1.5 bg-[#E14E27] border-2 border-white text-white font-mono font-bold text-xs uppercase px-3 py-1.5 cursor-pointer shadow-[2px_2px_0_#000000] hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-60"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
             {refreshing ? "REFRESHING…" : "REFRESH DATA"}
@@ -117,13 +122,13 @@ export function Navbar() {
           <button
             onClick={() => supabase.auth.signOut()}
             title="Sign out"
-            className="hidden sm:inline-flex items-center justify-center border-2 border-[#FAF6EE]/40 p-1.5 text-[#FAF6EE]/80 hover:text-white hover:border-[#FAF6EE] transition-all"
+            className="hidden sm:inline-flex items-center justify-center border-2 border-white/40 p-1.5 text-white/80 hover:text-white hover:border-white transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
 
           <button
-            className="xl:hidden p-2 text-[#FAF6EE] hover:text-white"
+            className="xl:hidden p-2 text-white hover:text-white"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle menu"
           >
@@ -139,7 +144,7 @@ export function Navbar() {
       />
 
       {mobileOpen && (
-        <div className="xl:hidden fixed inset-0 top-16 z-50 bg-[#0C0C0C] border-t-[3px] border-[#0C0C0C] flex flex-col p-4 print:hidden">
+        <div className="xl:hidden fixed inset-0 top-16 z-50 bg-[#000000] border-t-[3px] border-[#000000] flex flex-col p-4 print:hidden">
           <nav className="flex-1 space-y-2">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = isActive(href);
@@ -150,8 +155,8 @@ export function Navbar() {
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 font-mono font-bold text-sm tracking-wider uppercase transition-all ${
                     active
-                      ? "bg-[#C94A00] text-white border-2 border-white shadow-[3px_3px_0_#D4A800]"
-                      : "text-[#999999] hover:text-white border-2 border-transparent hover:border-[#C94A00]"
+                      ? "bg-[#E14E27] text-white border-2 border-white shadow-[3px_3px_0_#000000]"
+                      : "text-[#999999] hover:text-white border-2 border-transparent hover:border-[#E14E27]"
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
@@ -165,7 +170,7 @@ export function Navbar() {
             {isAdmin && (
               <button
                 onClick={() => { setBrandingModalOpen(true); setMobileOpen(false); }}
-                className="w-full bg-[#D4A800] border-2 border-white text-[#0C0C0C] font-mono font-bold text-xs uppercase py-2.5 flex items-center justify-center gap-2"
+                className="w-full bg-[#D6A200] border-2 border-white text-black font-mono font-bold text-xs uppercase py-2.5 flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
                 BRANDING SETTINGS
@@ -174,7 +179,7 @@ export function Navbar() {
             <button
               onClick={() => { handleRefresh(); setMobileOpen(false); }}
               disabled={refreshing}
-              className="w-full bg-[#C94A00] border-2 border-white text-white font-mono font-bold text-xs uppercase py-2.5 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-[#E14E27] border-2 border-white text-white font-mono font-bold text-xs uppercase py-2.5 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "REFRESHING…" : "REFRESH DATA"}

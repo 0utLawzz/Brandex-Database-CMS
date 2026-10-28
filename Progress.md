@@ -8,7 +8,24 @@
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
-## CURRENT TASK — Full Brandex Client Ledger System in Payments Section (28 October 2026)
+## CURRENT TASK — Brandex Law Staff Registry Dashboard (Design Variation 6) (28 October 2026)
+
+**Status: COMPLETED & VERIFIED (225 TESTS PASSING; APP COMPILED & LIVE ON PORT 3000).**
+
+- Applied Variation 6 Neo-Brutalist design specification across the application:
+  1. **Palette Tokens**: `--bg: #FFFDF0`, `--ink: #000000`, `--accent: #E14E27`, `--gold: #D6A200`, `--teal: #008169`, hard offset shadows (`4px 4px 0 #000`, `8px 8px 0 #E14E27`, `5px 5px 0 #008169`, `5px 5px 0 #D6A200`), 3px solid black borders.
+  2. **Typography**: Paired `Bebas Neue` (display headings and giant metric counts), `Space Grotesk` (body), and `Space Mono` (monospace labels, dates, system tags, and counters). Added Google Fonts link in `index.html` and `@import` in `src/index.css`.
+  3. **Header Strip (`.header-strip`)**: Black background (`#000000`), Bebas Neue title "Brandex Law Associates", Space Mono uppercase navigation items with active accent (`#E14E27`), active registry indicator badge, branding settings modal, refresh data, and sign-out controls.
+  4. **Main 3-Column Layout (`.main-layout`)**:
+     - **Left Sidebar (`.sidebar-block`)**: `#fdfaf0` background, 3px solid black border, "DIRECT ACTIONS" section tag, action nav stack (`Add Record +` in `#E14E27`, `Assigned Queue`, `Publication`, `Payments`, `Search Registry`, `View Datasheet`), "JURISDICTION" regional breakdown (Lahore, Islamabad, Karachi, Multan, Rawalpindi with percentage visual progress bars), and live registry sync status.
+     - **Center Stage (`.center-stage`)**: `#FFFDF0` background, Hero KPI banner with giant Bebas Neue count (`09` or dynamic total records) and right-aligned "Active Records" heading with `#E14E27` shadow, Agent/Class filter selectors, 3 mini KPI cards (Stage 1 Filing in `#008169` teal, Stage 2 Hearing in `#D6A200` gold, Stage 3 Opposition in `#E14E27` red), secondary status strip for Stage 4 Certified & Inactive & 7D Modified, black workflow progression container (`#111111`) with multi-color segmented progress bar, and statutory form matches grid (TM5, TM6, TM11, TM16, TM56).
+     - **Right Drawer (`.right-drawer`)**: `#FAF9F6` background, 3px solid black border, "EVENT LOGS" with "SYSTEM ACTIVE" badge, all events link, and audit feed with gold date badges (`Space Mono`), colored action badges, case references, and actor/timestamp metadata.
+  5. **Status Footer (`.status-footer`)**: Black background (`#000000`), height 56px, Space Mono uppercase, glowing green live connection indicator dot (`LIVE CONNECTED: ISLAMABAD | KARACHI | LAHORE | RAWALPINDI | MULTAN`), version tag (`BRANDEX.PK REGISTRY SYSTEM V2.04`), and copyright notice.
+- Automated tests: 225 passing tests across 9 test files (`npm test`).
+- Typecheck (`tsc --noEmit`) and applet compilation (`vite build`) pass with 0 errors.
+- Dev server verified running and returning HTTP 200 on port 3000.
+
+## PREVIOUS TASK — Full Brandex Client Ledger System in Payments Section (28 October 2026)
 
 **Status: FULLY INTEGRATED & VERIFIED (225 TESTS PASSING; PRODUCTION UNCHANGED).**
 

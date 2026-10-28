@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;700&family=DM+Mono:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;500;700&family=DM+Mono:wght@500;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -42,50 +42,60 @@
 
   --font-sans: 'Space Grotesk', sans-serif;
   --font-serif: 'Bebas Neue', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', 'DM Mono', monospace;
+  --font-display: 'Bebas Neue', sans-serif;
 
   --radius-sm: 0px;
   --radius-md: 0px;
-  --radius-lg: 6px;
-  --radius-xl: 6px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 }
 
 :root {
-  --background: 45 52% 88%;
-  --foreground: 0 0% 5%;
-  --border: 0 0% 5%;
-  --input: 40 14% 96%;
-  --ring: 22 100% 39.4%;
-  --card: 40 14% 96%;
-  --card-foreground: 0 0% 5%;
-  --card-border: 0 0% 5%;
-  --popover: 40 14% 96%;
-  --popover-foreground: 0 0% 5%;
-  --popover-border: 0 0% 5%;
-  --primary: 22 100% 39.4%;
+  --bg: #FFFDF0;
+  --ink: #000000;
+  --accent: #E14E27;
+  --muted-ink: rgba(0, 0, 0, 0.6);
+  --gold: #D6A200;
+  --teal: #008169;
+
+  --background: 48 100% 97%;
+  --foreground: 0 0% 0%;
+  --border: 0 0% 0%;
+  --input: 48 30% 98%;
+  --ring: 12 78% 52%;
+  --card: 48 30% 98%;
+  --card-foreground: 0 0% 0%;
+  --card-border: 0 0% 0%;
+  --popover: 48 30% 98%;
+  --popover-foreground: 0 0% 0%;
+  --popover-border: 0 0% 0%;
+  --primary: 12 78% 52%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 164 83% 23%;
-  --secondary-foreground: 45 47% 88%;
-  --muted: 44 42% 84.5%;
+  --secondary: 169 100% 25%;
+  --secondary-foreground: 48 100% 97%;
+  --muted: 48 20% 92%;
   --muted-foreground: 0 0% 35%;
-  --accent: 47.5 100% 41.6%;
+  --accent: 46 100% 42%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 100% 50%;
-  --destructive-foreground: 45 47% 88%;
+  --destructive-foreground: 0 0% 100%;
 
   --radius: 0px;
-  --nb-cream: #F0E8D0;
-  --nb-cream-alt: #E8DFC7;
-  --nb-black: #0C0C0C;
-  --nb-orange: #C94A00;
-  --brand-maroon: #C94A00;
-  --brand-gold: #D4A800;
-  --nb-teal-dark: #0A6B52;
-  --nb-teal: #0D9970;
-  --nb-yellow: #D4A800;
-  --shadow-nb: 5px 5px 0px 0px var(--nb-black);
-  --shadow-nb-hover: 8px 8px 0px 0px var(--nb-black);
+  --nb-cream: #FFFDF0;
+  --nb-cream-alt: #FDF9EC;
+  --nb-black: #000000;
+  --nb-orange: #E14E27;
+  --brand-maroon: #E14E27;
+  --brand-gold: #D6A200;
+  --nb-teal-dark: #00604E;
+  --nb-teal: #008169;
+  --nb-yellow: #D6A200;
+  --shadow-nb: 4px 4px 0px 0px #000000;
+  --shadow-nb-hover: 6px 6px 0px 0px #000000;
+  --shadow-accent: 8px 8px 0px 0px #E14E27;
+  --shadow-teal: 5px 5px 0px 0px #008169;
+  --shadow-gold: 5px 5px 0px 0px #D6A200;
 }
 
 .dark {
@@ -172,6 +182,93 @@
 .nb-input:focus {
   outline: 2px solid var(--nb-orange);
   outline-offset: 2px;
+}
+
+/* ── Variation 6 Neo-Brutalist Layout Components ────────────────────── */
+.header-strip {
+  background: var(--ink);
+  color: #FFFFFF;
+  padding: 12px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-strip h1 {
+  font-family: 'Bebas Neue', cursive, sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.05em;
+}
+
+.header-nav {
+  display: flex;
+  gap: 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sidebar-block {
+  border-right: 3px solid var(--ink);
+  padding: 32px 24px;
+  background: #fdfaf0;
+}
+
+.section-tag {
+  display: inline-block;
+  background: var(--ink);
+  color: #FFFFFF;
+  padding: 4px 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.nav-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  padding: 12px;
+  border: 2px solid var(--ink);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+  background: #FFFFFF;
+  box-shadow: 4px 4px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.nav-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.nav-item:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.center-stage {
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.status-footer {
+  background: var(--ink);
+  color: #FFFFFF;
+  border-top: 3px solid var(--ink);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
 }
 
 /* Re-map existing page-level utility colors to the restrained Brandex palette. */
