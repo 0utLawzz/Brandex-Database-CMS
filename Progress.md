@@ -8,6 +8,22 @@
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
+## CURRENT TASK — Client Ledger Payments UI (28 October 2026)
+
+**Status: IMPLEMENTED ON DRAFT BRANCH; NOT RELEASE-ACCEPTED.**
+
+- Replaced the CMS Payments page's trademark-only list with a client-account workspace reading `ledger_clients`, `ledger_cases`, and `ledger_entries`.
+- Added client search, per-client cases, consolidated active charge/receipt totals, transaction history, full-ledger and selected-row printing, and receipt entry through the existing `record_ledger_receiving` RPC.
+- Client/case/entry lists use pagination; voided ledger entries remain visible for audit/printing while excluded from active balance totals.
+- CMS payment-status helper now returns stage statuses only for cases with an explicit `approved_link`; it does not infer a link from matching TM numbers or cached flags.
+- Live read-only database check on 28 October: 7 ledger clients, 13 ledger cases, 41 ledger entries, 0 approved links, 13 unlinked/review cases. Test data per owner; no records were changed.
+- Vercel Preview is READY for the current implementation/CI commit: https://brandexsheet-4f3l5iaw8-projectsb.vercel.app/payments (preview only; production unchanged).
+- GitHub Actions CI run 40620282581 completed successfully: dependency install, `npm run lint` (TypeScript check), and `npm run build` all passed.
+- Authenticated Admin/Viewer browser flows and a real receipt submission were not executed through the available browser integration; treat these as outstanding manual acceptance tests.
+- No production deployment, migration, database write, auto-link, legacy flag change, or secret change was performed.
+- Remaining acceptance: latest-preview build result, typecheck/build verification, authenticated Admin and Viewer browser flows, test receipt against disposable test data, and owner decision before merging/deploying.
+- Known scope limit: charge creation/caps, fee-due automation, adjustments/refunds/reversals, client transfers, and fully compliant statement accounting remain incomplete; do not describe the ledger requirements as fully implemented.
+
 ## COMPLETED
 
 - **Unified Client Ledger (1 Database, 1 Place, 1 System)**: Merged Brandex Client Ledger directly into the primary database via migration `20261024000100_unified_client_ledger.sql`. Receipts are stored in `client_ledger_entries` with automatic sequence generation (`REC-YYYY-XXXX`). A PostgreSQL trigger recalculates stage completion (S1, S2, S3, S4) directly on the case row, immediately unlocking the statutory workflow gate upon receipt creation.
