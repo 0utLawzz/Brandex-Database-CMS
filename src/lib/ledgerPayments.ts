@@ -74,19 +74,32 @@ export async function getLedgerStagePayments(tmNumbers: Array<string | null | un
   if (caseError) throw new Error(`Could not read CMS cases: ${caseError.message}`);
 
   const result: LedgerPaymentsByTm = {};
-  for (const tm of normalized) result[tm] = {};
   if (!cases?.length) return result;
+
+  // A CMS trademark is not a Ledger case merely because it has a TM number.
+  // Only an explicit, audited approved link authorizes payment status/receipt actions.
+  const { data: linkedCases, error: linkError } = await supabase
+    .from("ledger_cases")
+    .select("cms_trademark_id")
+    .in("cms_trademark_id", cases.map((row) => row.id))
+    .eq("reconciliation_status", "approved_link");
+  if (linkError) throw new Error(`Could not verify Ledger case links: ${linkError.message}`);
+
+  const linkedTrademarkIds = [...new Set((linkedCases ?? [])
+    .map((row) => row.cms_trademark_id)
+    .filter((id): id is string => Boolean(id)))];
+  if (linkedTrademarkIds.length === 0) return result;
 
   const { data: entries, error: entryError } = await supabase
     .from("client_ledger_entries")
     .select("*")
-    .in("trademark_id", cases.map((row) => row.id))
+    .in("trademark_id", linkedTrademarkIds)
     .is("voided_at", null);
   if (entryError) throw new Error(`Could not read ledger entries: ${entryError.message}`);
 
   for (const row of cases) {
     const tm = row.tm_cpr_number_norm;
-    if (!tm) continue;
+    if (!tm || !linkedTrademarkIds.includes(row.id)) continue;
     const caseEntries = (entries ?? []).filter((entry) => entry.trademark_id === row.id) as ClientLedgerEntry[];
     result[tm] = {
       S1: summarizeStage(caseEntries, "S1"),
@@ -107,6 +120,15 @@ export async function refreshLedgerPaymentsForCase(
     const payments = await getLedgerStagePayments([tm]);
     return payments[tm] ?? {};
   }
+
+  const { data: linkedCase, error: linkError } = await supabase
+    .from("ledger_cases")
+    .select("id")
+    .eq("cms_trademark_id", caseId)
+    .eq("reconciliation_status", "approved_link")
+    .maybeSingle();
+  if (linkError) throw new Error(`Could not verify Ledger case link: ${linkError.message}`);
+  if (!linkedCase) return {};
 
   const { data: entries, error } = await supabase
     .from("client_ledger_entries")
