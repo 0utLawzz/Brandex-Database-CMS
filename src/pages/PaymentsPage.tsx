@@ -226,13 +226,8 @@ export function PaymentsPage() {
                           {STAGES.map((stageNum) => {
                             const stageKey = `S${stageNum}` as "S1" | "S2" | "S3" | "S4";
                             const stageStatus: LedgerStagePayment | undefined = status?.[stageKey];
-                            const isPaid =
-                              stageStatus?.paid === true ||
-                              Boolean(record[`stage${stageNum}Paid` as keyof TrademarkRecord]);
-                            const paidDate =
-                              stageStatus?.paid_date ||
-                              (record[`stage${stageNum}PaidDate` as keyof TrademarkRecord] as string) ||
-                              null;
+                            const isPaid = stageStatus?.paid === true;
+                            const paidDate = stageStatus?.paid_date ?? null;
                             const amountRec = Number(stageStatus?.amount_received || 0);
 
                             return (

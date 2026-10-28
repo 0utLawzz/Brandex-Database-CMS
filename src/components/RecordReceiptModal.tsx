@@ -47,6 +47,7 @@ export function RecordReceiptModal({
   const [bankName, setBankName] = useState<string>(BANK_CHOICES[0].name);
   const [chequeNo, setChequeNo] = useState<string>("");
   const [receiptNo, setReceiptNo] = useState<string>("");
+  const [requestId, setRequestId] = useState<string>("");
   const [details, setDetails] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -59,8 +60,8 @@ export function RecordReceiptModal({
       setChequeNo("");
       setNotes("");
       setErrorMsg(null);
-      const suggestedNo = `REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      setReceiptNo(suggestedNo);
+      setReceiptNo("");
+      setRequestId(crypto.randomUUID());
       setDetails(`${STAGE_NAMES[initialStage]} receipt for ${caseTitle}`);
     }
   }, [isOpen, initialStage, caseTitle]);
@@ -85,7 +86,7 @@ export function RecordReceiptModal({
           bankName,
           chequeNo,
           entryDate,
-          receiptNo,
+          receiptNo: receiptData?.receipt_no ?? "",
           notes,
         });
       }
@@ -115,7 +116,7 @@ export function RecordReceiptModal({
       paymentMethod,
       bankName: paymentMethod === "cash" ? "Cash" : bankName,
       chequeNo: chequeNo || undefined,
-      receiptNo: receiptNo || undefined,
+      requestId,
       details,
       notes,
     });
@@ -223,9 +224,9 @@ export function RecordReceiptModal({
               </label>
               <input
                 type="text"
-                placeholder="BX-REC-2026-..."
-                value={receiptNo}
-                onChange={(e) => setReceiptNo(e.target.value)}
+                placeholder="Generated when receipt is posted"
+                value={receiptNo || "Generated when posted"}
+                readOnly
                 className="w-full h-10 px-3 bg-white border-2 border-[#0C0C0C] font-mono text-xs font-bold shadow-[2px_2px_0_#0C0C0C] focus:outline-none uppercase"
               />
             </div>
