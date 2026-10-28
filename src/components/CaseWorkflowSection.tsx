@@ -643,13 +643,8 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4 print:gap-1.5">
             {([1, 2, 3, 4] as const).map((stageNum) => {
               const status = payments?.[`S${stageNum}` as const];
-              const paid =
-                status?.paid === true ||
-                Boolean(record[`stage${stageNum}Paid` as keyof TrademarkRecord]);
-              const paidDate =
-                status?.paid_date ||
-                (record[`stage${stageNum}PaidDate` as keyof TrademarkRecord] as string) ||
-                null;
+              const paid = status?.paid === true;
+              const paidDate = status?.paid_date ?? null;
               const amountRec = Number(status?.amount_received ?? 0);
 
               return (
