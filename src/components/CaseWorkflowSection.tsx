@@ -59,6 +59,15 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const [agentRate, setAgentRate] = useState(String(record.agentRate ?? ""));
   const [agentError, setAgentError] = useState<string | null>(null);
 
+  // Always derive workflow payment gates from the authoritative Ledger, not cached trademark flags.
+  const { data: liveStagePayments, isLoading: isLedgerPaymentLoading, isError: isLedgerPaymentError } = useQuery({
+    queryKey: ["workflow-ledger-payment-status", normalizeTmDigits(record.tmCprNo) || record.id],
+    queryFn: () => refreshLedgerPaymentsForCase(record.id, record.tmCprNo),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+  });
+
   // Agents list for assignment
   const { data: agents = [] } = useQuery({
     queryKey: ["agents-master"],
@@ -120,14 +129,21 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
 
   const getPaymentGateWarning = (target: string): string | null => {
     if (target === record.stage) return null;
-    if (target === "STAGE 2" && !record.stage1Paid) {
-      return "Stage 2 cannot be started until Stage 1 payment is cleared.";
+
+    const requiredStage =
+      target === "STAGE 2" ? "S1" :
+      target === "STAGE 3" ? "S2" :
+      target === "STAGE 4" ? "S3" : null;
+    if (!requiredStage) return null;
+
+    if (isLedgerPaymentError) {
+      return "Unable to verify payment with the authoritative Ledger. Refresh the case and try again.";
     }
-    if (target === "STAGE 3" && !record.stage2Paid) {
-      return "Stage 3 cannot be started until Stage 2 payment is cleared.";
+    if (isLedgerPaymentLoading || !liveStagePayments) {
+      return "Checking the authoritative Ledger payment status. Please wait.";
     }
-    if (target === "STAGE 4" && !record.stage3Paid) {
-      return "Stage 4 cannot be started until Stage 3 payment is cleared.";
+    if (liveStagePayments[requiredStage]?.paid !== true) {
+      return `${target} cannot be started until ${requiredStage.replace("S", "Stage ")} payment is verified as cleared in the Ledger.`;
     }
     return null;
   };
