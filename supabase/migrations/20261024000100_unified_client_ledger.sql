@@ -93,8 +93,12 @@ CREATE TABLE public.ledger_entries (
 );
 
 CREATE INDEX ledger_entries_client_date_idx ON public.ledger_entries(client_id, entry_date DESC, created_at DESC);
+CREATE INDEX ledger_clients_series_idx ON public.ledger_clients(series_id) WHERE series_id IS NOT NULL;
+CREATE INDEX ledger_cases_client_idx ON public.ledger_cases(client_id);
 CREATE INDEX ledger_entries_case_stage_idx ON public.ledger_entries(case_id, stage);
 CREATE INDEX ledger_entries_active_idx ON public.ledger_entries(case_id, stage) WHERE voided_at IS NULL;
+CREATE INDEX ledger_entries_linked_entry_idx ON public.ledger_entries(linked_entry_id) WHERE linked_entry_id IS NOT NULL;
+CREATE INDEX ledger_entries_created_by_idx ON public.ledger_entries(created_by) WHERE created_by IS NOT NULL;
 CREATE UNIQUE INDEX ledger_entries_receipt_no_unique
   ON public.ledger_entries(receipt_no) WHERE receipt_no IS NOT NULL;
 
@@ -107,6 +111,8 @@ CREATE TABLE public.ledger_case_link_audit (
   changed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   changed_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX ledger_case_link_audit_case_idx ON public.ledger_case_link_audit(ledger_case_id);
+CREATE INDEX ledger_case_link_audit_trademark_idx ON public.ledger_case_link_audit(cms_trademark_id);
 
 CREATE OR REPLACE FUNCTION public.guard_ledger_case_link_change()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
@@ -385,9 +391,9 @@ ALTER TABLE public.ledger_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ledger_case_link_audit ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY ledger_series_read ON public.ledger_series FOR SELECT TO authenticated
-  USING (public.current_brandex_role()::text IN ('admin','viewer'));
+  USING ((select public.current_brandex_role())::text IN ('admin','viewer'));
 CREATE POLICY ledger_series_admin ON public.ledger_series FOR ALL TO authenticated
-  USING (public.current_brandex_role()::text='admin') WITH CHECK (public.current_brandex_role()::text='admin');
+  USING (public.current_brandex_role()::text='admin') WITH CHECK ((select public.current_brandex_role())::text='admin');
 CREATE POLICY ledger_clients_read ON public.ledger_clients FOR SELECT TO authenticated
   USING (public.current_brandex_role()::text IN ('admin','viewer'));
 CREATE POLICY ledger_clients_admin ON public.ledger_clients FOR ALL TO authenticated
