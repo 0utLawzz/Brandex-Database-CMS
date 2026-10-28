@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { supabaseMock } = vi.hoisted(() => ({
+const { supabaseMock, refreshLedgerPaymentsForCaseMock } = vi.hoisted(() => ({
   supabaseMock: {
     auth: {
       getUser: vi.fn(),
@@ -13,6 +13,7 @@ const { supabaseMock } = vi.hoisted(() => ({
       from: vi.fn(),
     },
   },
+  refreshLedgerPaymentsForCaseMock: vi.fn(),
 }));
 
 vi.mock("./supabase", () => ({
@@ -20,6 +21,14 @@ vi.mock("./supabase", () => ({
   TRADEMARK_FILES_BUCKET: "trademark-files",
   supabase: supabaseMock,
 }));
+
+vi.mock("./ledgerPayments", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./ledgerPayments")>();
+  return {
+    ...actual,
+    refreshLedgerPaymentsForCase: refreshLedgerPaymentsForCaseMock,
+  };
+});
 
 import {
   ConflictError,
@@ -113,8 +122,13 @@ beforeEach(() => {
   // Clear queued mockReturnValueOnce responses as well as call history.
   // Early validation failures can leave unused responses for the next test.
   vi.resetAllMocks();
+  refreshLedgerPaymentsForCaseMock.mockResolvedValue({
+    S1: { paid: true },
+    S2: { paid: true },
+    S3: { paid: true },
+    S4: { paid: true },
+  });
   supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-  supabaseMock.functions.invoke.mockResolvedValue({ data: { payments: {} }, error: null });
   supabaseMock.functions.invoke.mockResolvedValue({ data: { payments: {} }, error: null });
   supabaseMock.storage.from.mockReturnValue({
     createSignedUrls: vi.fn().mockResolvedValue({ data: [] }),
@@ -942,6 +956,9 @@ describe("Batch 11: Stage Documents Workflow & Normalization", () => {
 
 describe("Batch 12: RecordView Workflow Consolidation", () => {
   it("updateTrademarkStatus — blocks transition to STAGE 2 when stage1_paid is false", async () => {
+    refreshLedgerPaymentsForCaseMock.mockResolvedValueOnce({
+      S1: { paid: false },
+    });
     const selectQuery = createQuery({
       data: { stage1_paid: false, status: "STAGE 1", sub_status: "Acknowledgment", tm_cpr_number: "123456" },
       error: null,

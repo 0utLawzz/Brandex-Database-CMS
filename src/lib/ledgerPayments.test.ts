@@ -10,7 +10,13 @@ const { supabaseMock } = vi.hoisted(() => ({
 
 vi.mock("./supabase", () => ({ supabase: supabaseMock }));
 
-import { getLedgerStagePayments, normalizeTmDigits, recordClientReceipt } from "./ledgerPayments";
+import {
+  getLedgerStagePayments,
+  normalizeTmDigits,
+  recordClientReceipt,
+  createLedgerClient,
+  recordLedgerCharge,
+} from "./ledgerPayments";
 
 describe("Unified Brandex Client Ledger", () => {
   beforeEach(() => vi.resetAllMocks());
@@ -42,4 +48,132 @@ describe("Unified Brandex Client Ledger", () => {
       p_amount: 15000,
     }));
   });
+
+  it("creates a client and agreed stage rates", async () => {
+    const insertMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: "client-1" }, error: null }),
+      }),
+    });
+    const ratesInsertMock = vi.fn().mockResolvedValue({ error: null });
+
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === "ledger_clients") return { insert: insertMock };
+      if (table === "ledger_client_stage_rates") return { insert: ratesInsertMock };
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const res = await createLedgerClient({
+      clientCode: "NXA-001",
+      clientName: "Nexus Corp",
+      city: "Karachi",
+      rates: { S1: 10000, S2: 15000, S3: 20000, S4: 25000 },
+    });
+
+    expect(res).toEqual({ id: "client-1" });
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      client_code: "NXA-001",
+      client_name: "Nexus Corp",
+      city: "Karachi",
+    }));
+    expect(ratesInsertMock).toHaveBeenCalledWith(expect.arrayContaining([
+      { client_id: "client-1", stage: "S1", amount: 10000 },
+      { client_id: "client-1", stage: "S2", amount: 15000 },
+      { client_id: "client-1", stage: "S3", amount: 20000 },
+      { client_id: "client-1", stage: "S4", amount: 25000 },
+    ]));
+  });
+
+  it("records a client stage charge", async () => {
+    const insertMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: "entry-1" }, error: null }),
+      }),
+    });
+    supabaseMock.from.mockReturnValue({ insert: insertMock });
+
+    const res = await recordLedgerCharge({
+      clientId: "client-1",
+      caseId: "case-1",
+      stage: "S1",
+      amount: 10000,
+      details: "Stage 1 agreed filing fee",
+    });
+
+    expect(res).toEqual({ id: "entry-1" });
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      client_id: "client-1",
+      case_id: "case-1",
+      entry_type: "charge",
+      stage: "S1",
+      amount_due: 10000,
+    }));
+  });
+
+  it("creates a new ledger series", async () => {
+    const insertMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: "series-b" }, error: null }),
+      }),
+    });
+    supabaseMock.from.mockReturnValue({ insert: insertMock });
+
+    const { createLedgerSeries } = await import("./ledgerPayments");
+    const res = await createLedgerSeries({
+      code: "B",
+      name: "B-Series",
+      prefix: "B-",
+    });
+
+    expect(res).toEqual({ id: "series-b" });
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      code: "B",
+      name: "B-Series",
+      prefix: "B-",
+    }));
+  });
+
+  it("records a receiving via record_ledger_receiving RPC", async () => {
+    supabaseMock.rpc.mockResolvedValue({
+      data: {
+        id: "rec-1",
+        receipt_no: "REC-2026-1002",
+        amount: 25000,
+        stage: "S1",
+        entry_date: "2026-10-28",
+      },
+      error: null,
+    });
+
+    const { recordLedgerReceiving } = await import("./ledgerPayments");
+    const res = await recordLedgerReceiving({
+      clientId: "client-1",
+      amount: 25000,
+      stage: "S1",
+      paymentMethod: "UBL - Brandex Pk",
+      details: "Stage 1 payment via UBL",
+    });
+
+    expect(res.receipt_no).toBe("REC-2026-1002");
+    expect(supabaseMock.rpc).toHaveBeenCalledWith("record_ledger_receiving", expect.objectContaining({
+      p_client_id: "client-1",
+      p_amount: 25000,
+      p_stage: "S1",
+      p_payment_method: "UBL - Brandex Pk",
+    }));
+  });
+
+  it("links a ledger case to a CMS trademark via link_ledger_case_to_trademark RPC", async () => {
+    supabaseMock.rpc.mockResolvedValue({ data: null, error: null });
+
+    const { linkCaseToCmsTrademark } = await import("./ledgerPayments");
+    await linkCaseToCmsTrademark("case-uuid-1", "cms-tm-id-1", "Admin verified against physical file");
+
+    expect(supabaseMock.rpc).toHaveBeenCalledWith("link_ledger_case_to_trademark", {
+      p_ledger_case_id: "case-uuid-1",
+      p_trademark_id: "cms-tm-id-1",
+      p_reason: "Admin verified against physical file",
+    });
+  });
 });
+

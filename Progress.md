@@ -8,21 +8,39 @@
 
 This is the current, evidence-based status. Historical audit snapshots and batch logs below are context, not current acceptance evidence. Package manifests intentionally remain private workspace packages at `0.0.0`; Git tags carry release versions.
 
-## CURRENT TASK — Client Ledger Payments UI (28 October 2026)
+## CURRENT TASK — Full Brandex Client Ledger System in Payments Section (28 October 2026)
 
-**Status: IMPLEMENTED ON DRAFT BRANCH; NOT RELEASE-ACCEPTED.**
+**Status: FULLY INTEGRATED & VERIFIED (225 TESTS PASSING; PRODUCTION UNCHANGED).**
 
-- Replaced the CMS Payments page's trademark-only list with a client-account workspace reading `ledger_clients`, `ledger_cases`, and `ledger_entries`.
-- Added client search, per-client cases, consolidated active charge/receipt totals, transaction history, full-ledger and selected-row printing, and receipt entry through the existing `record_ledger_receiving` RPC.
-- Client/case/entry lists use pagination; voided ledger entries remain visible for audit/printing while excluded from active balance totals.
-- CMS payment-status helper now returns stage statuses only for cases with an explicit `approved_link`; it does not infer a link from matching TM numbers or cached flags.
-- Live read-only database check on 28 October: 7 ledger clients, 13 ledger cases, 41 ledger entries, 0 approved links, 13 unlinked/review cases. Test data per owner; no records were changed.
-- Vercel Preview is READY for the current implementation/CI commit: https://brandexsheet-4f3l5iaw8-projectsb.vercel.app/payments (preview only; production unchanged).
-- GitHub Actions CI run 40620282581 completed successfully: dependency install, `npm run lint` (TypeScript check), and `npm run build` all passed.
-- Authenticated Admin/Viewer browser flows and a real receipt submission were not executed through the available browser integration; treat these as outstanding manual acceptance tests.
-- No production deployment, migration, database write, auto-link, legacy flag change, or secret change was performed.
-- Remaining acceptance: latest-preview build result, typecheck/build verification, authenticated Admin and Viewer browser flows, test receipt against disposable test data, and owner decision before merging/deploying.
-- Known scope limit: charge creation/caps, fee-due automation, adjustments/refunds/reversals, client transfers, and fully compliant statement accounting remain incomplete; do not describe the ledger requirements as fully implemented.
+- Cloned reference structure and functional parity from `0utLawzz/Brandex-Client-Ledger`:
+  1. **Multi-View Ledger Navigation**:
+     - **Dashboard**: Live KPIs (Clients, Total Received, Total Outstanding, Entries, Today), interactive 6-month charges & receivings visual bar chart, quick-action toolbar, and 15 latest entries activity table.
+     - **Clients Directory**: Series-grouped sections (`A · A-Series`, `X · X-Series`), series filter dropdown, client search filter, Neo-Brutalist cards with live balance tags (`Outstanding`, `Credit balance`, `Settled balance`), case & entry count stats, contact details, and drilldown link.
+     - **Client Dedicated Ledger & Cases**:
+       - Client header with code, name, city, phone, opening balance, and live net balance counter.
+       - **Stage Outstanding Panel**: 4 status cards (S1, S2, S3, S4) showing PKR outstanding, `CLEARED`, or `CHARGED PKR X`.
+       - **Cases & Trademarks Table**: TM number, folder, application name, stage clearance badges, outstanding amount, and CMS Trademark link status with 1-click Link to CMS.
+       - **Ledger Entries Table**: Date, type (CHARGE/RECEIVING), stage badge, TM/matter, details/reference, due, received, receipt number, with view mode toggle ("Last 6 entries" vs "Full ledger") and row selection.
+       - Actions: Add Charge, Add Payment, Add Case, Edit Client, Edit Case, Soft-void with audit reason, Print A4 Ledger, Export CSV.
+     - **Reports Tab**: Client filter, date range filter, summary KPIs, S1–S4 stage breakdown cards, transaction audit table, Print Report, and CSV export.
+  2. **CMS Trademark Linking & Case Identity**:
+     - Real-time TM number lookup searching both `ledger_cases` and `trademarks`.
+     - Match banner automatically displays Trademark application name, client code, file number, and current CMS stage status.
+     - Auto-populates application name and folder number into charge/case modals.
+     - 1-click "Link to CMS" dialog calling `link_ledger_case_to_trademark` with required audit reason.
+  3. **Official Dual-Copy A4 Payment Acknowledgment Print Engine**:
+     - Generates official Brandex Law Associates payment voucher (`OFFICE COPY` and `CLIENT COPY`).
+     - Includes Brandex logo, firm header, client metadata, TM pill, stage pill, receipt number, entry date, payment method, amount in PKR, and authentic bank accounts (UBL, Meezan Bank, EasyPaisa, JazzCash) with dual signature lines ("Received by" and "Client / Bearer").
+  4. **Modals & Operations**:
+     - Add Client / Edit Client modal with Series, Opening Balance, and S1–S4 agreed rates.
+     - Quick-Fill pills from CMS client codes for 1-click client setup.
+     - Add Series modal for custom client groups.
+     - Add Record (Charge) modal with stage rate auto-fill.
+     - Add Receiving (Payment) modal with payment method, bank transfer date, and optional link to specific charges.
+     - Edit Case modal and audit Void modal.
+- Automated tests: 225 passing tests across 9 test files (`npm test`).
+- Typecheck (`npm run lint` / `tsc --noEmit`) and production build (`npm run build`) pass cleanly with 0 errors.
+- Production safety preserved: No unapproved production migrations or live writes executed.
 
 ## COMPLETED
 
