@@ -64,10 +64,16 @@ export function PaymentsPage() {
   const clientsQuery = useQuery({
     queryKey: ["client-ledger-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ledger_clients").select("*")
-        .order("client_name", { ascending: true }).limit(5000);
-      if (error) throw new Error("Could not load ledger clients: " + error.message);
-      return (data ?? []) as Client[];
+      const rows: Client[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase.from("ledger_clients").select("*")
+          .order("client_name", { ascending: true }).range(offset, offset + 999);
+        if (error) throw new Error("Could not load ledger clients: " + error.message);
+        const batch = (data ?? []) as Client[];
+        rows.push(...batch);
+        if (batch.length < 1000) break;
+      }
+      return rows;
     },
   });
   const clients = clientsQuery.data ?? [];
@@ -81,10 +87,17 @@ export function PaymentsPage() {
     queryKey: ["client-ledger-cases", selectedClientId],
     enabled: Boolean(selectedClientId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("ledger_cases").select("*")
-        .eq("client_id", selectedClientId).order("created_at", { ascending: false }).limit(5000);
-      if (error) throw new Error("Could not load client cases: " + error.message);
-      return (data ?? []) as LedgerCase[];
+      const rows: LedgerCase[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase.from("ledger_cases").select("*")
+          .eq("client_id", selectedClientId).order("created_at", { ascending: false })
+          .range(offset, offset + 999);
+        if (error) throw new Error("Could not load client cases: " + error.message);
+        const batch = (data ?? []) as LedgerCase[];
+        rows.push(...batch);
+        if (batch.length < 1000) break;
+      }
+      return rows;
     },
   });
   const entriesQuery = useQuery({
@@ -134,7 +147,8 @@ export function PaymentsPage() {
     setTimeout(() => window.print(), 50);
   };
   const toggleEntry = (id: string) => setSelectedEntryIds(old => old.includes(id) ? old.filter(x => x !== id) : [...old, id]);
-  const printableEntries = selectedEntryIds.length ? activeEntries.filter(e => selectedEntryIds.includes(e.id)) : activeEntries;
+  // Full Ledger preserves voided rows for audit visibility; totals exclude them.
+  const printableEntries = selectedEntryIds.length ? entries.filter(e => selectedEntryIds.includes(e.id)) : entries;
 
   return (
     <AppShell>
