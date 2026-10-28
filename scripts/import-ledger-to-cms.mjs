@@ -81,6 +81,8 @@ const [series, clients, rates, cases, entries, cmsCases] = await Promise.all([
   fetchAll(target, "trademarks"),
 ]);
 
+const clientCodeById = new Map(clients.map((client) => [client.id, client.client_code]));
+
 const cmsByTm = new Map();
 for (const cmsCase of cmsCases) {
   const tm = cmsCase.tm_cpr_number_norm ?? digits(cmsCase.tm_cpr_number);
@@ -108,7 +110,7 @@ const mappedCases = cases.map((row) => {
     status = "ownership_conflict";
   } else if (candidates.length === 1) {
     const cmsCase = candidates[0];
-    const sameClient = String(cmsCase.client_code ?? "") === String(row.client_code ?? "");
+    const sameClient = String(cmsCase.client_code ?? "") === String(clientCodeById.get(row.client_id) ?? "");
     const sameApplication = normalizeName(cmsCase.application_name) === normalizeName(row.application_name);
     status = sameClient && sameApplication ? "pending_review" : "ownership_conflict";
   }
@@ -143,8 +145,8 @@ const mappedEntries = entries.map((row) => ({
   amount_received: row.amount_received,
   running_balance: row.running_balance,
   payment_method: row.payment_method,
-  bank_name: null,
-  cheque_no: null,
+  bank_name: row.bank_name ?? null,
+  cheque_no: row.cheque_no ?? null,
   receipt_no: row.receipt_no,
   notes: row.notes,
   voided_at: row.voided_at,
