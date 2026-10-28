@@ -189,6 +189,8 @@ await upsertAll(target, "ledger_clients", mappedClients);
 await upsertAll(target, "ledger_client_stage_rates", rates);
 await upsertAll(target, "ledger_cases", mappedCases);
 await upsertAll(target, "ledger_entries", mappedEntries);
+const { error: sequenceError } = await target.rpc("sync_ledger_receipt_sequence");
+if (sequenceError) throw new Error(`Receipt sequence sync failed: ${sequenceError.message}`);
 
 const [verifiedSeries, verifiedClients, verifiedRates, verifiedCases, verifiedEntries] = await Promise.all([
   verifyImportedRows(target, "ledger_series", series),
