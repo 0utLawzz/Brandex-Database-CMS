@@ -93,11 +93,19 @@ CREATE TABLE public.ledger_entries (
 );
 
 CREATE OR REPLACE FUNCTION public.sync_ledger_receipt_sequence()
-RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $
+RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_max_suffix bigint;
 BEGIN
-  SELECT max((regexp_match(receipt_no, '([0-9]+)
+  SELECT max((regexp_match(receipt_no, '([0-9]+)$'))[1]::bigint)
+    INTO v_max_suffix
+    FROM public.ledger_entries
+   WHERE receipt_no IS NOT NULL;
+  v_max_suffix := greatest(coalesce(v_max_suffix, 1000), 1000);
+  PERFORM setval('public.ledger_receipt_seq', v_max_suffix, true);
+  RETURN v_max_suffix;
+END;
+$$;
 CREATE INDEX ledger_clients_series_idx ON public.ledger_clients(series_id) WHERE series_id IS NOT NULL;
 CREATE INDEX ledger_cases_client_idx ON public.ledger_cases(client_id);
 CREATE INDEX ledger_entries_case_stage_idx ON public.ledger_entries(case_id, stage);
