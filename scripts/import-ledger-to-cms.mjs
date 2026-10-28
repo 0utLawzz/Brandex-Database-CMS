@@ -156,7 +156,7 @@ const mappedEntries = entries.map((row) => ({
   created_by: null,
   source_created_by: row.created_by ?? null,
   created_at: row.created_at,
-  updated_at: row.created_at,
+  updated_at: row.updated_at ?? row.created_at,
 }));
 
 const counts = {
@@ -211,10 +211,17 @@ for (let i = 0; i < mappedEntries.length; i++) {
   const sourceRow = mappedEntries[i];
   const targetRow = verifiedEntries[i];
   if (targetRow.client_id !== sourceRow.client_id || targetRow.case_id !== sourceRow.case_id
-      || targetRow.entry_type !== sourceRow.entry_type || targetRow.receipt_no !== sourceRow.receipt_no
+      || targetRow.entry_date !== sourceRow.entry_date || targetRow.entry_type !== sourceRow.entry_type
+      || targetRow.stage !== sourceRow.stage || targetRow.details !== sourceRow.details
+      || targetRow.notes !== sourceRow.notes || targetRow.payment_method !== sourceRow.payment_method
+      || targetRow.bank_name !== sourceRow.bank_name || targetRow.cheque_no !== sourceRow.cheque_no
+      || targetRow.receipt_no !== sourceRow.receipt_no || targetRow.voided_at !== sourceRow.voided_at
+      || targetRow.void_reason !== sourceRow.void_reason || targetRow.linked_entry_id !== sourceRow.linked_entry_id
+      || targetRow.source_created_by !== sourceRow.source_created_by
+      || targetRow.created_at !== sourceRow.created_at || targetRow.updated_at !== sourceRow.updated_at
+      || cents(targetRow.running_balance) !== cents(sourceRow.running_balance)
       || cents(targetRow.amount_due) !== cents(sourceRow.amount_due)
-      || cents(targetRow.amount_received) !== cents(sourceRow.amount_received)
-      || targetRow.voided_at !== sourceRow.voided_at) {
+      || cents(targetRow.amount_received) !== cents(sourceRow.amount_received)) {
     throw new Error("Entry reconciliation verification failed.");
   }
 }
