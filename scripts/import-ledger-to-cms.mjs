@@ -137,6 +137,7 @@ const mappedEntries = entries.map((row) => ({
   voided_at: row.voided_at,
   void_reason: row.void_reason,
   linked_entry_id: row.linked_entry_id,
+  request_id: null,
   created_by: null,
   source_created_by: row.created_by ?? null,
   created_at: row.created_at,
