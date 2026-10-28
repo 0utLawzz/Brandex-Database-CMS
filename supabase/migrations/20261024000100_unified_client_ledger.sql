@@ -85,6 +85,7 @@ CREATE TABLE public.ledger_entries (
   voided_at timestamptz,
   void_reason text,
   linked_entry_id uuid REFERENCES public.ledger_entries(id) ON DELETE RESTRICT,
+  request_id uuid UNIQUE,
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   source_created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -256,11 +257,52 @@ SELECT e.id, c.cms_trademark_id AS trademark_id, e.entry_date, e.entry_type, e.s
   JOIN public.ledger_cases c ON c.id=e.case_id
  WHERE c.cms_trademark_id IS NOT NULL;
 
+CREATE OR REPLACE FUNCTION public.record_ledger_receiving(
+  p_client_id uuid, p_case_id uuid, p_entry_date date, p_stage text,
+  p_amount numeric, p_payment_method text, p_details text,
+  p_notes text, p_linked_entry_id uuid, p_request_id uuid
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_receipt_no text;
+  v_entry_id uuid;
+  v_row public.ledger_entries%ROWTYPE;
+BEGIN
+  IF public.current_brandex_role()::text <> 'admin' THEN RAISE EXCEPTION 'Only administrators can record client receipts.'; END IF;
+  IF p_amount IS NULL OR p_amount <= 0 THEN RAISE EXCEPTION 'Receipt amount must be greater than zero.'; END IF;
+  IF p_stage IS NOT NULL AND p_stage NOT IN ('S1','S2','S3','S4') THEN RAISE EXCEPTION 'Invalid stage.'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.ledger_clients WHERE id=p_client_id AND is_active) THEN RAISE EXCEPTION 'Active client not found.'; END IF;
+  IF p_case_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.ledger_cases WHERE id=p_case_id AND client_id=p_client_id) THEN RAISE EXCEPTION 'Case does not belong to this client.'; END IF;
+  IF p_linked_entry_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.ledger_entries
+     WHERE id=p_linked_entry_id AND client_id=p_client_id AND entry_type='charge' AND voided_at IS NULL
+  ) THEN RAISE EXCEPTION 'Linked charge is not active or does not belong to this client.'; END IF;
+  IF p_request_id IS NOT NULL THEN
+    SELECT * INTO v_row FROM public.ledger_entries WHERE request_id=p_request_id;
+    IF FOUND THEN
+      RETURN jsonb_build_object('id',v_row.id,'receipt_no',v_row.receipt_no,'amount',v_row.amount_received,'stage',v_row.stage,'entry_date',v_row.entry_date);
+    END IF;
+  END IF;
+  v_receipt_no := 'REC-' || to_char(coalesce(p_entry_date,current_date),'YYYY') || '-' || lpad(nextval('public.ledger_receipt_seq')::text,4,'0');
+  INSERT INTO public.ledger_entries(client_id,case_id,entry_date,entry_type,stage,amount_due,amount_received,payment_method,details,notes,linked_entry_id,receipt_no,request_id,created_by)
+  VALUES(p_client_id,p_case_id,coalesce(p_entry_date,current_date),'receiving',p_stage,0,p_amount,p_payment_method,p_details,p_notes,p_linked_entry_id,v_receipt_no,p_request_id,v_user_id)
+  ON CONFLICT (request_id) DO NOTHING
+  RETURNING id INTO v_entry_id;
+  IF v_entry_id IS NULL THEN
+    SELECT * INTO v_row FROM public.ledger_entries WHERE request_id=p_request_id;
+    RETURN jsonb_build_object('id',v_row.id,'receipt_no',v_row.receipt_no,'amount',v_row.amount_received,'stage',v_row.stage,'entry_date',v_row.entry_date);
+  END IF;
+  RETURN jsonb_build_object('id',v_entry_id,'receipt_no',v_receipt_no,'amount',p_amount,'stage',p_stage,'entry_date',coalesce(p_entry_date,current_date));
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.record_client_receipt(
   p_trademark_id text, p_stage text, p_amount numeric,
   p_entry_date date DEFAULT CURRENT_DATE, p_payment_method text DEFAULT 'cash',
   p_bank_name text DEFAULT NULL, p_cheque_no text DEFAULT NULL,
-  p_receipt_no text DEFAULT NULL, p_details text DEFAULT NULL, p_notes text DEFAULT NULL
+  p_receipt_no text DEFAULT NULL, p_details text DEFAULT NULL, p_notes text DEFAULT NULL,
+  p_request_id uuid DEFAULT NULL
 )
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
@@ -268,17 +310,29 @@ DECLARE
   v_case public.ledger_cases%ROWTYPE;
   v_entry_id uuid;
   v_receipt_no text;
+  v_existing public.ledger_entries%ROWTYPE;
   v_entry_date date := coalesce(p_entry_date,current_date);
 BEGIN
   IF public.current_brandex_role()::text <> 'admin' THEN RAISE EXCEPTION 'Only administrators can record client receipts.'; END IF;
   IF p_amount IS NULL OR p_amount <= 0 THEN RAISE EXCEPTION 'Receipt amount must be greater than zero.'; END IF;
   IF p_stage NOT IN ('S1','S2','S3','S4') THEN RAISE EXCEPTION 'Invalid stage.'; END IF;
+  IF p_request_id IS NOT NULL THEN
+    SELECT * INTO v_existing FROM public.ledger_entries WHERE request_id=p_request_id;
+    IF FOUND THEN
+      RETURN jsonb_build_object('id',v_existing.id,'receipt_no',v_existing.receipt_no,'amount',v_existing.amount_received,'stage',v_existing.stage,'entry_date',v_existing.entry_date);
+    END IF;
+  END IF;
   SELECT * INTO v_case FROM public.ledger_cases WHERE cms_trademark_id=p_trademark_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'No approved ledger case is linked to this CMS trademark.'; END IF;
   v_receipt_no := 'REC-' || to_char(v_entry_date,'YYYY') || '-' || lpad(nextval('public.ledger_receipt_seq')::text,4,'0');
-  INSERT INTO public.ledger_entries(client_id,case_id,entry_date,entry_type,stage,amount_due,amount_received,payment_method,bank_name,cheque_no,receipt_no,details,notes,created_by)
-  VALUES(v_case.client_id,v_case.id,v_entry_date,'receiving',p_stage,0,p_amount,p_payment_method,p_bank_name,p_cheque_no,v_receipt_no,p_details,p_notes,v_user_id)
+  INSERT INTO public.ledger_entries(client_id,case_id,entry_date,entry_type,stage,amount_due,amount_received,payment_method,bank_name,cheque_no,receipt_no,details,notes,request_id,created_by)
+  VALUES(v_case.client_id,v_case.id,v_entry_date,'receiving',p_stage,0,p_amount,p_payment_method,p_bank_name,p_cheque_no,v_receipt_no,p_details,p_notes,p_request_id,v_user_id)
+  ON CONFLICT (request_id) DO NOTHING
   RETURNING id INTO v_entry_id;
+  IF v_entry_id IS NULL THEN
+    SELECT * INTO v_existing FROM public.ledger_entries WHERE request_id=p_request_id;
+    RETURN jsonb_build_object('id',v_existing.id,'receipt_no',v_existing.receipt_no,'amount',v_existing.amount_received,'stage',v_existing.stage,'entry_date',v_existing.entry_date);
+  END IF;
   RETURN jsonb_build_object('id',v_entry_id,'receipt_no',v_receipt_no,'amount',p_amount,'stage',p_stage,'entry_date',v_entry_date);
 END;
 $$;
@@ -331,10 +385,12 @@ GRANT SELECT, INSERT, UPDATE ON public.ledger_series, public.ledger_clients,
   public.ledger_client_stage_rates, public.ledger_cases, public.ledger_entries TO authenticated;
 GRANT SELECT ON public.ledger_case_link_audit, public.client_ledger_entries TO authenticated;
 REVOKE ALL ON FUNCTION public.link_ledger_case_to_trademark(uuid,text,text) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text,uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.record_ledger_receiving(uuid,uuid,date,text,numeric,text,text,text,uuid,uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.void_client_receipt(uuid,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.link_ledger_case_to_trademark(uuid,text,text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text,uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.record_ledger_receiving(uuid,uuid,date,text,numeric,text,text,text,uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.void_client_receipt(uuid,text) TO authenticated;
 
 COMMIT;
