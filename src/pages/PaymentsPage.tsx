@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { supabase } from "@/lib/supabase";
-import { Search, RefreshCw, Printer, ReceiptText, Users, Wallet, FileText, AlertCircle } from "lucide-react";
+import { Search, RefreshCw, Printer, ReceiptText, Users, Wallet, AlertCircle } from "lucide-react";
 
 type Client = {
   id: string; client_code: string; client_name: string | null; city: string | null;
