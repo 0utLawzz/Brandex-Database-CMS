@@ -42,6 +42,19 @@ async function upsertAll(client, table, rows) {
   }
 }
 
+
+function cents(value) {
+  return Math.round(Number(value ?? 0) * 100);
+}
+
+async function verifyImportedRows(client, table, expectedRows) {
+  const actualRows = await fetchAll(client, table);
+  const actualById = new Map(actualRows.map((row) => [row.id, row]));
+  const missing = expectedRows.filter((row) => !actualById.has(row.id)).map((row) => row.id);
+  if (missing.length) throw new Error(`Verification failed for ${table}: ${missing.length} imported IDs are missing.`);
+  return expectedRows.map((row) => actualById.get(row.id));
+}
+
 const sourceUrl = required("LEDGER_SOURCE_SUPABASE_URL");
 const sourceKey = required("LEDGER_SOURCE_SERVICE_ROLE_KEY");
 const targetUrl = required("CMS_TARGET_SUPABASE_URL");
@@ -175,4 +188,44 @@ await upsertAll(target, "ledger_client_stage_rates", rates);
 await upsertAll(target, "ledger_cases", mappedCases);
 await upsertAll(target, "ledger_entries", mappedEntries);
 
-console.log(JSON.stringify({ mode: "applied", sourceRef: SOURCE_REF, targetRef: TARGET_REF, counts }, null, 2));
+const [verifiedSeries, verifiedClients, verifiedRates, verifiedCases, verifiedEntries] = await Promise.all([
+  verifyImportedRows(target, "ledger_series", series),
+  verifyImportedRows(target, "ledger_clients", mappedClients),
+  verifyImportedRows(target, "ledger_client_stage_rates", rates),
+  verifyImportedRows(target, "ledger_cases", mappedCases),
+  verifyImportedRows(target, "ledger_entries", mappedEntries),
+]);
+for (let i = 0; i < mappedClients.length; i++) {
+  if (verifiedClients[i].client_code !== mappedClients[i].client_code) throw new Error("Client verification failed.");
+}
+for (let i = 0; i < mappedCases.length; i++) {
+  if (verifiedCases[i].client_id !== mappedCases[i].client_id || verifiedCases[i].tm_no_normalized !== mappedCases[i].tm_no_normalized) {
+    throw new Error("Case ownership/TM verification failed.");
+  }
+}
+for (let i = 0; i < mappedEntries.length; i++) {
+  const sourceRow = mappedEntries[i];
+  const targetRow = verifiedEntries[i];
+  if (targetRow.client_id !== sourceRow.client_id || targetRow.case_id !== sourceRow.case_id
+      || targetRow.entry_type !== sourceRow.entry_type || targetRow.receipt_no !== sourceRow.receipt_no
+      || cents(targetRow.amount_due) !== cents(sourceRow.amount_due)
+      || cents(targetRow.amount_received) !== cents(sourceRow.amount_received)
+      || targetRow.voided_at !== sourceRow.voided_at) {
+    throw new Error("Entry reconciliation verification failed.");
+  }
+}
+const verification = {
+  series: verifiedSeries.length,
+  clients: verifiedClients.length,
+  stageRates: verifiedRates.length,
+  cases: verifiedCases.length,
+  entries: verifiedEntries.length,
+  activeChargeCents: verifiedEntries.filter((r) => r.entry_type === "charge" && !r.voided_at).reduce((n, r) => n + cents(r.amount_due), 0),
+  activeReceiptCents: verifiedEntries.filter((r) => r.entry_type === "receiving" && !r.voided_at).reduce((n, r) => n + cents(r.amount_received), 0),
+};
+
+if (verification.activeChargeCents !== Math.round(counts.activeChargeAmount * 100)
+    || verification.activeReceiptCents !== Math.round(counts.activeReceiptAmount * 100)) {
+  throw new Error("Active financial totals do not match the source.");
+}
+console.log(JSON.stringify({ mode: "applied", sourceRef: SOURCE_REF, targetRef: TARGET_REF, counts, verification }, null, 2));
