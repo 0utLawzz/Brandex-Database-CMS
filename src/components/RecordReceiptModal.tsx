@@ -94,7 +94,7 @@ export function RecordReceiptModal({
     },
     onError: (err: Error) => {
       const message = err.message || "Failed to record client receipt.";
-      if (message.includes("No approved ledger case is linked to this CMS trademark.")) {
+      if (message.toLowerCase().includes("approved ledger case is linked to this cms trademark") || message.toLowerCase().includes("no single approved ledger case is linked to this cms trademark")) {
         setErrorMsg(
           "No receipt was saved. This trademark has no approved Ledger link, so a trademark-specific receipt cannot be recorded here. Open Payments > Client Accounts and record the receipt against the correct Ledger client and case. Do not link records by TM number alone."
         );
