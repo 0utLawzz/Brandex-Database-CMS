@@ -15,12 +15,13 @@ export type LedgerStagePayment = {
 
 export type ClientLedgerEntry = {
   id: string;
-  trademark_id: string;
+  client_id: string;
+  case_id: string | null;
   entry_date: string;
   entry_type: "charge" | "receiving";
-  stage: "S1" | "S2" | "S3" | "S4";
-  amount_due: number;
-  amount_received: number;
+  stage: "S1" | "S2" | "S3" | "S4" | null;
+  amount_due: number | null;
+  amount_received: number | null;
   payment_method: string | null;
   bank_name: string | null;
   cheque_no: string | null;
@@ -33,17 +34,30 @@ export type ClientLedgerEntry = {
   created_by?: string | null;
 };
 
+type ApprovedLedgerCase = {
+  id: string;
+  client_id: string;
+  cms_trademark_id: string;
+};
+
 export type LedgerPaymentsByTm = Record<string, Partial<Record<"S1" | "S2" | "S3" | "S4", LedgerStagePayment>>>;
+
+const STAGE_KEYS = ["S1", "S2", "S3", "S4"] as const;
+type StageKey = typeof STAGE_KEYS[number];
 
 export function normalizeTmDigits(value: string | null | undefined): string | null {
   const digits = value?.replace(/\D/g, "") ?? "";
   return digits.length === 6 ? digits : null;
 }
 
-function summarizeStage(entries: ClientLedgerEntry[], stage: "S1" | "S2" | "S3" | "S4"): LedgerStagePayment {
+function summarizeStage(entries: ClientLedgerEntry[], stage: StageKey): LedgerStagePayment {
   const rows = entries.filter((entry) => entry.stage === stage && !entry.voided_at);
-  const due = rows.reduce((sum, entry) => sum + Number(entry.amount_due || 0), 0);
-  const received = rows.reduce((sum, entry) => sum + Number(entry.amount_received || 0), 0);
+  const due = rows
+    .filter((entry) => entry.entry_type === "charge")
+    .reduce((sum, entry) => sum + Number(entry.amount_due || 0), 0);
+  const received = rows
+    .filter((entry) => entry.entry_type === "receiving")
+    .reduce((sum, entry) => sum + Number(entry.amount_received || 0), 0);
   const lastReceipt = rows
     .filter((entry) => entry.entry_type === "receiving" && Number(entry.amount_received || 0) > 0)
     .sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime())[0];
@@ -62,45 +76,79 @@ function summarizeStage(entries: ClientLedgerEntry[], stage: "S1" | "S2" | "S3" 
   };
 }
 
-/** Read payment truth from this CMS Supabase project's ledger view only. */
+/**
+ * Resolve a CMS trademark to exactly one audited, approved Ledger case.
+ * TM-number similarity alone is never sufficient to authorize a payment link.
+ */
+async function getApprovedLedgerCase(trademarkId: string): Promise<ApprovedLedgerCase | null> {
+  const { data, error } = await supabase
+    .from("ledger_cases")
+    .select("id, client_id, cms_trademark_id")
+    .eq("cms_trademark_id", trademarkId)
+    .eq("reconciliation_status", "approved_link");
+
+  if (error) throw new Error(`Could not verify Ledger case link: ${error.message}`);
+  if (!data || data.length !== 1 || !data[0].cms_trademark_id) return null;
+  return data[0] as ApprovedLedgerCase;
+}
+
+/** Read payment truth from the consolidated CMS Supabase Ledger tables. */
 export async function getLedgerStagePayments(tmNumbers: Array<string | null | undefined>): Promise<LedgerPaymentsByTm> {
   const normalized = [...new Set(tmNumbers.map(normalizeTmDigits).filter((value): value is string => value !== null))];
   if (normalized.length === 0) return {};
 
-  const { data: cases, error: caseError } = await supabase
+  const { data: trademarks, error: trademarkError } = await supabase
     .from("trademarks")
     .select("id, tm_cpr_number_norm")
     .in("tm_cpr_number_norm", normalized);
-  if (caseError) throw new Error(`Could not read CMS cases: ${caseError.message}`);
+  if (trademarkError) throw new Error(`Could not read CMS cases: ${trademarkError.message}`);
 
   const result: LedgerPaymentsByTm = {};
-  if (!cases?.length) return result;
+  if (!trademarks?.length) return result;
 
-  // A CMS trademark is not a Ledger case merely because it has a TM number.
-  // Only an explicit, audited approved link authorizes payment status/receipt actions.
-  const { data: linkedCases, error: linkError } = await supabase
+  // Ambiguous duplicate TM numbers must fail closed rather than combine unrelated cases.
+  const trademarkIdsByTm = new Map<string, string[]>();
+  for (const trademark of trademarks) {
+    const tm = trademark.tm_cpr_number_norm;
+    if (!tm) continue;
+    const ids = trademarkIdsByTm.get(tm) ?? [];
+    ids.push(trademark.id);
+    trademarkIdsByTm.set(tm, ids);
+  }
+
+  const cmsIds = [...new Set(trademarks.map((row) => row.id))];
+  const { data: links, error: linkError } = await supabase
     .from("ledger_cases")
-    .select("cms_trademark_id")
-    .in("cms_trademark_id", cases.map((row) => row.id))
+    .select("id, client_id, cms_trademark_id")
+    .in("cms_trademark_id", cmsIds)
     .eq("reconciliation_status", "approved_link");
   if (linkError) throw new Error(`Could not verify Ledger case links: ${linkError.message}`);
 
-  const linkedTrademarkIds = [...new Set((linkedCases ?? [])
-    .map((row) => row.cms_trademark_id)
-    .filter((id): id is string => Boolean(id)))];
-  if (linkedTrademarkIds.length === 0) return result;
+  const linksByCmsId = new Map<string, ApprovedLedgerCase[]>();
+  for (const link of (links ?? []) as ApprovedLedgerCase[]) {
+    const id = link.cms_trademark_id;
+    const rows = linksByCmsId.get(id) ?? [];
+    rows.push(link);
+    linksByCmsId.set(id, rows);
+  }
+
+  const approvedLinks = (links ?? []) as ApprovedLedgerCase[];
+  if (!approvedLinks.length) return result;
 
   const { data: entries, error: entryError } = await supabase
-    .from("client_ledger_entries")
+    .from("ledger_entries")
     .select("*")
-    .in("trademark_id", linkedTrademarkIds)
+    .in("case_id", approvedLinks.map((link) => link.id))
     .is("voided_at", null);
-  if (entryError) throw new Error(`Could not read ledger entries: ${entryError.message}`);
+  if (entryError) throw new Error(`Could not read consolidated Ledger entries: ${entryError.message}`);
 
-  for (const row of cases) {
-    const tm = row.tm_cpr_number_norm;
-    if (!tm || !linkedTrademarkIds.includes(row.id)) continue;
-    const caseEntries = (entries ?? []).filter((entry) => entry.trademark_id === row.id) as ClientLedgerEntry[];
+  for (const [tm, trademarkIds] of trademarkIdsByTm) {
+    if (trademarkIds.length !== 1) continue;
+    const cmsId = trademarkIds[0];
+    const linkedCases = linksByCmsId.get(cmsId) ?? [];
+    if (linkedCases.length !== 1) continue;
+    const linkedCase = linkedCases[0];
+    const caseEntries = ((entries ?? []) as ClientLedgerEntry[]).filter((entry) => entry.case_id === linkedCase.id);
     result[tm] = {
       S1: summarizeStage(caseEntries, "S1"),
       S2: summarizeStage(caseEntries, "S2"),
@@ -114,28 +162,22 @@ export async function getLedgerStagePayments(tmNumbers: Array<string | null | un
 export async function refreshLedgerPaymentsForCase(
   caseId: string,
   tmNumber?: string | null
-): Promise<Partial<Record<"S1" | "S2" | "S3" | "S4", LedgerStagePayment>>> {
+): Promise<Partial<Record<StageKey, LedgerStagePayment>>> {
   const tm = normalizeTmDigits(tmNumber);
   if (tm) {
     const payments = await getLedgerStagePayments([tm]);
     return payments[tm] ?? {};
   }
 
-  const { data: linkedCase, error: linkError } = await supabase
-    .from("ledger_cases")
-    .select("id")
-    .eq("cms_trademark_id", caseId)
-    .eq("reconciliation_status", "approved_link")
-    .maybeSingle();
-  if (linkError) throw new Error(`Could not verify Ledger case link: ${linkError.message}`);
+  const linkedCase = await getApprovedLedgerCase(caseId);
   if (!linkedCase) return {};
 
   const { data: entries, error } = await supabase
-    .from("client_ledger_entries")
+    .from("ledger_entries")
     .select("*")
-    .eq("trademark_id", caseId)
+    .eq("case_id", linkedCase.id)
     .is("voided_at", null);
-  if (error) throw new Error(`Could not read ledger entries: ${error.message}`);
+  if (error) throw new Error(`Could not read consolidated Ledger entries: ${error.message}`);
   const rows = (entries ?? []) as ClientLedgerEntry[];
   return {
     S1: summarizeStage(rows, "S1"),
@@ -145,21 +187,24 @@ export async function refreshLedgerPaymentsForCase(
   };
 }
 
-/** Fetch all entries linked to one CMS trademark from the consolidated database. */
+/** Fetch entries for a CMS trademark only when one approved Ledger link exists. */
 export async function getClientLedgerEntries(trademarkId: string): Promise<ClientLedgerEntry[]> {
+  const linkedCase = await getApprovedLedgerCase(trademarkId);
+  if (!linkedCase) return [];
+
   const { data, error } = await supabase
-    .from("client_ledger_entries")
+    .from("ledger_entries")
     .select("*")
-    .eq("trademark_id", trademarkId)
+    .eq("case_id", linkedCase.id)
     .order("entry_date", { ascending: false })
     .order("created_at", { ascending: false });
-  if (error) throw new Error(`Could not read ledger entries: ${error.message}`);
+  if (error) throw new Error(`Could not read consolidated Ledger entries: ${error.message}`);
   return (data as ClientLedgerEntry[]) ?? [];
 }
 
 export type RecordReceiptParams = {
   trademarkId: string;
-  stage: "S1" | "S2" | "S3" | "S4";
+  stage: StageKey;
   amount: number;
   entryDate?: string;
   paymentMethod?: "cash" | "bank_transfer" | "cheque" | "online" | "other";
@@ -171,7 +216,7 @@ export type RecordReceiptParams = {
   notes?: string;
 };
 
-/** The database generates receipt numbers and enforces authorization/idempotency. */
+/** The database generates receipt numbers and enforces approved-link authorization/idempotency. */
 export async function recordClientReceipt(params: RecordReceiptParams) {
   const { data, error } = await supabase.rpc("record_client_receipt", {
     p_trademark_id: params.trademarkId,
