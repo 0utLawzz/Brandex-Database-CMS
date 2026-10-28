@@ -227,8 +227,8 @@ export function PaymentsPage() {
                           {STAGES.map((stageNum) => {
                             const stageKey = `S${stageNum}` as "S1" | "S2" | "S3" | "S4";
                             const stageStatus: LedgerStagePayment | undefined = status?.[stageKey];
-                            const hasLedgerLink = Boolean(status?.S1 && status?.S2 && status?.S3 && status?.S4);
-                            const isPaid = stageStatus?.paid === true;
+                            const hasLedgerLink = !isLedgerError && Boolean(status?.S1 && status?.S2 && status?.S3 && status?.S4);
+                            const isPaid = !isLedgerError && stageStatus?.paid === true;
                             const paidDate = stageStatus?.paid_date ?? null;
                             const amountRec = Number(stageStatus?.amount_received || 0);
                             const statusLabel = !tm
@@ -280,7 +280,7 @@ export function PaymentsPage() {
                                     </button>
                                   ) : (
                                     <span className="mt-1 inline-block border border-stone-400 bg-stone-100 px-2 py-0.5 text-[10px] font-bold uppercase text-stone-600">
-                                      {statusLabel === "UNVERIFIED" ? "RETRY SYNC" : statusLabel === "TM REQUIRED" ? "ADD TM" : statusLabel}
+                                      {statusLabel === "TM REQUIRED" ? "ADD TM" : statusLabel}
                                     </span>
                                   )}
                                 </div>
