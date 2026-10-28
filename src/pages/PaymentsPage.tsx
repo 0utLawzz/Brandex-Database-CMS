@@ -59,6 +59,7 @@ export function PaymentsPage() {
     data: ledgerPayments,
     isLoading: isLedgerLoading,
     isFetching: isLedgerFetching,
+    isError: isLedgerError,
     refetch: refreshLedger,
   } = useQuery({
     queryKey: ["payments-ledger-status", tmNumbers],
@@ -226,9 +227,21 @@ export function PaymentsPage() {
                           {STAGES.map((stageNum) => {
                             const stageKey = `S${stageNum}` as "S1" | "S2" | "S3" | "S4";
                             const stageStatus: LedgerStagePayment | undefined = status?.[stageKey];
+                            const hasLedgerLink = Boolean(status?.S1 && status?.S2 && status?.S3 && status?.S4);
                             const isPaid = stageStatus?.paid === true;
                             const paidDate = stageStatus?.paid_date ?? null;
                             const amountRec = Number(stageStatus?.amount_received || 0);
+                            const statusLabel = !tm
+                              ? "TM REQUIRED"
+                              : isLedgerError
+                                ? "UNVERIFIED"
+                                : !hasLedgerLink && (isLedgerLoading || isLedgerFetching)
+                                  ? "CHECKING"
+                                  : !hasLedgerLink
+                                    ? "LINK REQUIRED"
+                                    : isPaid
+                                      ? "PAID"
+                                      : "UNPAID";
 
                             return (
                               <td key={stageNum} className="px-2 py-3 text-center">
@@ -240,7 +253,7 @@ export function PaymentsPage() {
                                   }`}
                                 >
                                   <span className="font-bold uppercase tracking-wider">
-                                    {isPaid ? "PAID" : "UNPAID"}
+                                    {statusLabel}
                                   </span>
 
                                   {isPaid ? (
@@ -257,7 +270,7 @@ export function PaymentsPage() {
                                         </span>
                                       )}
                                     </>
-                                  ) : (
+                                  ) : hasLedgerLink ? (
                                     <button
                                       type="button"
                                       onClick={() => handleOpenRecordReceipt(record, stageNum)}
@@ -265,6 +278,10 @@ export function PaymentsPage() {
                                     >
                                       + RECEIVE
                                     </button>
+                                  ) : (
+                                    <span className="mt-1 inline-block border border-stone-400 bg-stone-100 px-2 py-0.5 text-[10px] font-bold uppercase text-stone-600">
+                                      {statusLabel === "UNVERIFIED" ? "RETRY SYNC" : statusLabel === "TM REQUIRED" ? "ADD TM" : statusLabel}
+                                    </span>
                                   )}
                                 </div>
                               </td>
