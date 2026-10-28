@@ -93,7 +93,14 @@ export function RecordReceiptModal({
       onClose();
     },
     onError: (err: Error) => {
-      setErrorMsg(err.message || "Failed to record client receipt.");
+      const message = err.message || "Failed to record client receipt.";
+      if (message.includes("No approved ledger case is linked to this CMS trademark.")) {
+        setErrorMsg(
+          "No receipt was saved. This trademark has no approved Ledger link, so a trademark-specific receipt cannot be recorded here. Open Payments > Client Accounts and record the receipt against the correct Ledger client and case. Do not link records by TM number alone."
+        );
+        return;
+      }
+      setErrorMsg(message);
     },
   });
 
@@ -156,6 +163,11 @@ export function RecordReceiptModal({
           {errorMsg && (
             <div className="p-3 border-2 border-[#CC0000] bg-[#FFF0F0] text-[#CC0000] font-mono text-xs font-bold">
               {errorMsg}
+              {errorMsg.includes("no approved Ledger link") && (
+                <a href="/payments" className="mt-3 inline-block border-2 border-[#0C0C0C] bg-white px-3 py-2 text-[#0C0C0C] underline">
+                  Open Client Ledger Payments
+                </a>
+              )}
             </div>
           )}
 
