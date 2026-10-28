@@ -281,6 +281,12 @@ BEGIN
   IF p_request_id IS NOT NULL THEN
     SELECT * INTO v_row FROM public.ledger_entries WHERE request_id=p_request_id;
     IF FOUND THEN
+      IF v_row.entry_type <> 'receiving' OR v_row.client_id IS DISTINCT FROM p_client_id
+         OR v_row.case_id IS DISTINCT FROM p_case_id OR v_row.stage IS DISTINCT FROM p_stage
+         OR v_row.amount_received IS DISTINCT FROM p_amount
+         OR v_row.entry_date IS DISTINCT FROM coalesce(p_entry_date,current_date) THEN
+        RAISE EXCEPTION 'Idempotency key was already used for a different receipt.';
+      END IF;
       RETURN jsonb_build_object('id',v_row.id,'receipt_no',v_row.receipt_no,'amount',v_row.amount_received,'stage',v_row.stage,'entry_date',v_row.entry_date);
     END IF;
   END IF;
@@ -291,6 +297,12 @@ BEGIN
   RETURNING id INTO v_entry_id;
   IF v_entry_id IS NULL THEN
     SELECT * INTO v_row FROM public.ledger_entries WHERE request_id=p_request_id;
+    IF v_row.entry_type <> 'receiving' OR v_row.client_id IS DISTINCT FROM p_client_id
+       OR v_row.case_id IS DISTINCT FROM p_case_id OR v_row.stage IS DISTINCT FROM p_stage
+       OR v_row.amount_received IS DISTINCT FROM p_amount
+       OR v_row.entry_date IS DISTINCT FROM coalesce(p_entry_date,current_date) THEN
+      RAISE EXCEPTION 'Idempotency key was already used for a different receipt.';
+    END IF;
     RETURN jsonb_build_object('id',v_row.id,'receipt_no',v_row.receipt_no,'amount',v_row.amount_received,'stage',v_row.stage,'entry_date',v_row.entry_date);
   END IF;
   RETURN jsonb_build_object('id',v_entry_id,'receipt_no',v_receipt_no,'amount',p_amount,'stage',p_stage,'entry_date',coalesce(p_entry_date,current_date));
@@ -319,6 +331,11 @@ BEGIN
   IF p_request_id IS NOT NULL THEN
     SELECT * INTO v_existing FROM public.ledger_entries WHERE request_id=p_request_id;
     IF FOUND THEN
+      IF v_existing.entry_type <> 'receiving' OR v_existing.stage IS DISTINCT FROM p_stage
+         OR v_existing.amount_received IS DISTINCT FROM p_amount OR v_existing.entry_date IS DISTINCT FROM v_entry_date
+         OR NOT EXISTS (SELECT 1 FROM public.ledger_cases c WHERE c.id=v_existing.case_id AND c.cms_trademark_id=p_trademark_id) THEN
+        RAISE EXCEPTION 'Idempotency key was already used for a different receipt.';
+      END IF;
       RETURN jsonb_build_object('id',v_existing.id,'receipt_no',v_existing.receipt_no,'amount',v_existing.amount_received,'stage',v_existing.stage,'entry_date',v_existing.entry_date);
     END IF;
   END IF;
@@ -331,6 +348,11 @@ BEGIN
   RETURNING id INTO v_entry_id;
   IF v_entry_id IS NULL THEN
     SELECT * INTO v_existing FROM public.ledger_entries WHERE request_id=p_request_id;
+    IF v_existing.entry_type <> 'receiving' OR v_existing.stage IS DISTINCT FROM p_stage
+       OR v_existing.amount_received IS DISTINCT FROM p_amount OR v_existing.entry_date IS DISTINCT FROM v_entry_date
+       OR NOT EXISTS (SELECT 1 FROM public.ledger_cases c WHERE c.id=v_existing.case_id AND c.cms_trademark_id=p_trademark_id) THEN
+      RAISE EXCEPTION 'Idempotency key was already used for a different receipt.';
+    END IF;
     RETURN jsonb_build_object('id',v_existing.id,'receipt_no',v_existing.receipt_no,'amount',v_existing.amount_received,'stage',v_existing.stage,'entry_date',v_existing.entry_date);
   END IF;
   RETURN jsonb_build_object('id',v_entry_id,'receipt_no',v_receipt_no,'amount',p_amount,'stage',p_stage,'entry_date',v_entry_date);
