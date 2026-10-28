@@ -1,338 +1,340 @@
--- =====================================================================
--- Brandex Database CMS — Unified Client Ledger Architecture
--- Integrates Client Ledger directly into the primary database.
--- 1 Database, 1 Place, 1 System.
--- =====================================================================
-
+-- Consolidate the Ledger data model into the CMS Supabase project.
+-- Replaces the prior unapplied draft migration, which assumed UUID CMS trademark IDs.
 BEGIN;
 
--- 1. Receipt serial sequence for official Brandex payment receipts
-CREATE SEQUENCE IF NOT EXISTS public.client_receipt_seq START 1001;
+CREATE SEQUENCE IF NOT EXISTS public.ledger_receipt_seq START WITH 1001;
 
--- 2. Client ledger entries table
-CREATE TABLE IF NOT EXISTS public.client_ledger_entries (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  trademark_id     uuid NOT NULL REFERENCES public.trademarks(id) ON DELETE CASCADE,
-  entry_date       date NOT NULL DEFAULT CURRENT_DATE,
-  entry_type       text NOT NULL CHECK (entry_type IN ('charge', 'receiving')),
-  stage            text NOT NULL CHECK (stage IN ('S1', 'S2', 'S3', 'S4')),
-  amount_due       numeric(14,2) DEFAULT 0 CHECK (amount_due >= 0),
-  amount_received  numeric(14,2) DEFAULT 0 CHECK (amount_received >= 0),
-  payment_method   text CHECK (payment_method IS NULL OR payment_method IN ('cash', 'bank_transfer', 'cheque', 'online', 'other')),
-  bank_name        text,
-  cheque_no        text,
-  receipt_no       text,
-  details          text,
-  notes            text,
-  voided_at        timestamptz,
-  void_reason      text,
-  created_by       uuid REFERENCES auth.users(id),
-  created_at       timestamptz NOT NULL DEFAULT now(),
-  updated_at       timestamptz NOT NULL DEFAULT now()
+CREATE TABLE public.ledger_series (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  name text NOT NULL,
+  prefix text NOT NULL DEFAULT '',
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Indexes for lightning-fast queries and ledger reports
-CREATE INDEX IF NOT EXISTS idx_client_ledger_tm ON public.client_ledger_entries(trademark_id, stage);
-CREATE INDEX IF NOT EXISTS idx_client_ledger_date ON public.client_ledger_entries(entry_date DESC);
-CREATE INDEX IF NOT EXISTS idx_client_ledger_receipt ON public.client_ledger_entries(receipt_no);
-CREATE INDEX IF NOT EXISTS idx_client_ledger_voided ON public.client_ledger_entries(voided_at) WHERE voided_at IS NOT NULL;
+CREATE TABLE public.ledger_clients (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  series_id uuid REFERENCES public.ledger_series(id) ON DELETE RESTRICT,
+  client_code text NOT NULL UNIQUE,
+  client_name text,
+  city text,
+  header_balance numeric(14,2) NOT NULL DEFAULT 0,
+  bank_name text,
+  bank_account text,
+  bank_iban text,
+  notes text,
+  is_active boolean NOT NULL DEFAULT true,
+  email text,
+  phone text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
--- 3. Update the stage payment guard to permit internal ledger sync
-CREATE OR REPLACE FUNCTION public.prevent_unverified_stage_payment_changes()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = public, pg_temp
-AS $$
+CREATE TABLE public.ledger_client_stage_rates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid NOT NULL REFERENCES public.ledger_clients(id) ON DELETE RESTRICT,
+  stage text NOT NULL CHECK (stage IN ('S1','S2','S3','S4')),
+  amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  currency text NOT NULL DEFAULT 'PKR',
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (client_id, stage)
+);
+
+CREATE TABLE public.ledger_cases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid NOT NULL REFERENCES public.ledger_clients(id) ON DELETE RESTRICT,
+  tm_no text,
+  tm_no_normalized text,
+  folder_no text,
+  case_ref text,
+  application_name text,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed','stopped')),
+  notes text,
+  cms_trademark_id text REFERENCES public.trademarks(id) ON DELETE SET NULL,
+  reconciliation_status text NOT NULL DEFAULT 'unmatched'
+    CHECK (reconciliation_status IN ('unmatched','pending_review','ownership_conflict','approved_link')),
+  source_created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (tm_no_normalized IS NULL OR tm_no_normalized = NULLIF(regexp_replace(coalesce(tm_no,''), '[^0-9]', '', 'g'), ''))
+);
+
+CREATE UNIQUE INDEX ledger_cases_tm_normalized_unique
+  ON public.ledger_cases(tm_no_normalized) WHERE tm_no_normalized IS NOT NULL;
+CREATE UNIQUE INDEX ledger_cases_cms_trademark_unique
+  ON public.ledger_cases(cms_trademark_id) WHERE cms_trademark_id IS NOT NULL;
+
+CREATE TABLE public.ledger_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid NOT NULL REFERENCES public.ledger_clients(id) ON DELETE RESTRICT,
+  case_id uuid REFERENCES public.ledger_cases(id) ON DELETE RESTRICT,
+  entry_date date NOT NULL DEFAULT CURRENT_DATE,
+  entry_type text NOT NULL CHECK (entry_type IN ('charge','receiving')),
+  stage text CHECK (stage IS NULL OR stage IN ('S1','S2','S3','S4')),
+  details text,
+  amount_due numeric(14,2) CHECK (amount_due IS NULL OR amount_due >= 0),
+  amount_received numeric(14,2) CHECK (amount_received IS NULL OR amount_received >= 0),
+  running_balance numeric(14,2),
+  payment_method text,
+  bank_name text,
+  cheque_no text,
+  receipt_no text,
+  notes text,
+  voided_at timestamptz,
+  void_reason text,
+  linked_entry_id uuid REFERENCES public.ledger_entries(id) ON DELETE RESTRICT,
+  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  source_created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ledger_entries_client_date_idx ON public.ledger_entries(client_id, entry_date DESC, created_at DESC);
+CREATE INDEX ledger_entries_case_stage_idx ON public.ledger_entries(case_id, stage);
+CREATE INDEX ledger_entries_active_idx ON public.ledger_entries(case_id, stage) WHERE voided_at IS NULL;
+CREATE UNIQUE INDEX ledger_entries_receipt_no_unique
+  ON public.ledger_entries(receipt_no) WHERE receipt_no IS NOT NULL;
+
+CREATE TABLE public.ledger_case_link_audit (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  ledger_case_id uuid NOT NULL REFERENCES public.ledger_cases(id) ON DELETE RESTRICT,
+  cms_trademark_id text NOT NULL REFERENCES public.trademarks(id) ON DELETE RESTRICT,
+  action text NOT NULL CHECK (action IN ('linked')),
+  reason text NOT NULL CHECK (length(trim(reason)) >= 3),
+  changed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  changed_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION public.guard_ledger_case_link_change()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 BEGIN
-  -- Allow internal database sync from client_ledger_entries trigger
-  IF current_setting('brandex.internal_ledger_sync', true) = 'true' THEN
-    RETURN NEW;
-  END IF;
-
-  IF coalesce(auth.jwt() ->> 'role', '') = 'authenticated' THEN
-    IF TG_OP = 'INSERT' THEN
-      IF NEW.stage1_paid OR NEW.stage1_paid_date IS NOT NULL
-         OR NEW.stage2_paid OR NEW.stage2_paid_date IS NOT NULL
-         OR NEW.stage3_paid OR NEW.stage3_paid_date IS NOT NULL
-         OR NEW.stage4_paid OR NEW.stage4_paid_date IS NOT NULL THEN
-        RAISE EXCEPTION 'Stage payment status must be updated through Brandex Client Ledger entries.';
-      END IF;
-    ELSIF ROW(
-      NEW.stage1_paid, NEW.stage1_paid_date,
-      NEW.stage2_paid, NEW.stage2_paid_date,
-      NEW.stage3_paid, NEW.stage3_paid_date,
-      NEW.stage4_paid, NEW.stage4_paid_date
-    ) IS DISTINCT FROM ROW(
-      OLD.stage1_paid, OLD.stage1_paid_date,
-      OLD.stage2_paid, OLD.stage2_paid_date,
-      OLD.stage3_paid, OLD.stage3_paid_date,
-      OLD.stage4_paid, OLD.stage4_paid_date
-    ) THEN
-      RAISE EXCEPTION 'Stage payment status must be updated through Brandex Client Ledger entries.';
+  IF current_setting('brandex.internal_case_link', true) IS DISTINCT FROM 'true' THEN
+    IF TG_OP = 'INSERT' AND NEW.cms_trademark_id IS NOT NULL THEN
+      RAISE EXCEPTION 'Use the audited ledger case link operation.';
+    ELSIF TG_OP = 'UPDATE' AND NEW.cms_trademark_id IS DISTINCT FROM OLD.cms_trademark_id THEN
+      RAISE EXCEPTION 'Use the audited ledger case link operation.';
     END IF;
   END IF;
   RETURN NEW;
 END;
 $$;
+CREATE TRIGGER ledger_cases_guard_link
+  BEFORE UPDATE OF cms_trademark_id ON public.ledger_cases
+  FOR EACH ROW EXECUTE FUNCTION public.guard_ledger_case_link_change();
 
--- 4. Function to recalculate and sync stage payments for a trademark
-CREATE OR REPLACE FUNCTION public.sync_trademark_from_ledger(p_trademark_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-DECLARE
-  v_s1_due numeric := 0; v_s1_rec numeric := 0; v_s1_paid boolean := false; v_s1_date date := null;
-  v_s2_due numeric := 0; v_s2_rec numeric := 0; v_s2_paid boolean := false; v_s2_date date := null;
-  v_s3_due numeric := 0; v_s3_rec numeric := 0; v_s3_paid boolean := false; v_s3_date date := null;
-  v_s4_due numeric := 0; v_s4_rec numeric := 0; v_s4_paid boolean := false; v_s4_date date := null;
-  v_last_receipt text := null;
+CREATE OR REPLACE FUNCTION public.prevent_unverified_stage_payment_changes()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 BEGIN
-  -- Stage 1
-  SELECT COALESCE(SUM(amount_due), 0), COALESCE(SUM(amount_received), 0)
-    INTO v_s1_due, v_s1_rec
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S1' AND voided_at IS NULL;
-  SELECT entry_date INTO v_s1_date
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S1' AND entry_type = 'receiving' AND amount_received > 0 AND voided_at IS NULL
-   ORDER BY entry_date DESC, created_at DESC LIMIT 1;
-  v_s1_paid := (v_s1_rec > 0 AND (v_s1_due = 0 OR v_s1_rec >= v_s1_due));
-
-  -- Stage 2
-  SELECT COALESCE(SUM(amount_due), 0), COALESCE(SUM(amount_received), 0)
-    INTO v_s2_due, v_s2_rec
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S2' AND voided_at IS NULL;
-  SELECT entry_date INTO v_s2_date
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S2' AND entry_type = 'receiving' AND amount_received > 0 AND voided_at IS NULL
-   ORDER BY entry_date DESC, created_at DESC LIMIT 1;
-  v_s2_paid := (v_s2_rec > 0 AND (v_s2_due = 0 OR v_s2_rec >= v_s2_due));
-
-  -- Stage 3
-  SELECT COALESCE(SUM(amount_due), 0), COALESCE(SUM(amount_received), 0)
-    INTO v_s3_due, v_s3_rec
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S3' AND voided_at IS NULL;
-  SELECT entry_date INTO v_s3_date
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S3' AND entry_type = 'receiving' AND amount_received > 0 AND voided_at IS NULL
-   ORDER BY entry_date DESC, created_at DESC LIMIT 1;
-  v_s3_paid := (v_s3_rec > 0 AND (v_s3_due = 0 OR v_s3_rec >= v_s3_due));
-
-  -- Stage 4
-  SELECT COALESCE(SUM(amount_due), 0), COALESCE(SUM(amount_received), 0)
-    INTO v_s4_due, v_s4_rec
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S4' AND voided_at IS NULL;
-  SELECT entry_date INTO v_s4_date
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND stage = 'S4' AND entry_type = 'receiving' AND amount_received > 0 AND voided_at IS NULL
-   ORDER BY entry_date DESC, created_at DESC LIMIT 1;
-  v_s4_paid := (v_s4_rec > 0 AND (v_s4_due = 0 OR v_s4_rec >= v_s4_due));
-
-  -- Latest receipt number
-  SELECT receipt_no INTO v_last_receipt
-    FROM public.client_ledger_entries
-   WHERE trademark_id = p_trademark_id AND receipt_no IS NOT NULL AND voided_at IS NULL
-   ORDER BY entry_date DESC, created_at DESC LIMIT 1;
-
-  -- Set session setting to allow trigger to update trademarks table
-  PERFORM set_config('brandex.internal_ledger_sync', 'true', true);
-
-  UPDATE public.trademarks
-     SET stage1_paid = v_s1_paid,
-         stage1_paid_date = v_s1_date,
-         stage2_paid = v_s2_paid,
-         stage2_paid_date = v_s2_date,
-         stage3_paid = v_s3_paid,
-         stage3_paid_date = v_s3_date,
-         stage4_paid = v_s4_paid,
-         stage4_paid_date = v_s4_date,
-         payment_reference = COALESCE(v_last_receipt, payment_reference)
-   WHERE id = p_trademark_id;
-
-  PERFORM set_config('brandex.internal_ledger_sync', 'false', true);
-END;
-$$;
-
--- 5. Trigger on client_ledger_entries to automatically sync trademark status
-CREATE OR REPLACE FUNCTION public.trigger_sync_trademark_from_ledger()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    PERFORM public.sync_trademark_from_ledger(OLD.trademark_id);
-    RETURN OLD;
-  ELSE
-    PERFORM public.sync_trademark_from_ledger(NEW.trademark_id);
+  IF current_setting('brandex.internal_ledger_sync', true) = 'true'
+     OR auth.role() IS DISTINCT FROM 'authenticated' THEN
     RETURN NEW;
   END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.stage1_paid OR NEW.stage1_paid_date IS NOT NULL
+       OR NEW.stage2_paid OR NEW.stage2_paid_date IS NOT NULL
+       OR NEW.stage3_paid OR NEW.stage3_paid_date IS NOT NULL
+       OR NEW.stage4_paid OR NEW.stage4_paid_date IS NOT NULL THEN
+      RAISE EXCEPTION 'Stage payment status must come from ledger entries.';
+    END IF;
+  ELSIF ROW(NEW.stage1_paid, NEW.stage1_paid_date, NEW.stage2_paid, NEW.stage2_paid_date,
+            NEW.stage3_paid, NEW.stage3_paid_date, NEW.stage4_paid, NEW.stage4_paid_date)
+        IS DISTINCT FROM
+        ROW(OLD.stage1_paid, OLD.stage1_paid_date, OLD.stage2_paid, OLD.stage2_paid_date,
+            OLD.stage3_paid, OLD.stage3_paid_date, OLD.stage4_paid, OLD.stage4_paid_date) THEN
+    RAISE EXCEPTION 'Stage payment status must come from ledger entries.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS prevent_unverified_stage_payment_changes ON public.trademarks;
+CREATE TRIGGER prevent_unverified_stage_payment_changes
+  BEFORE INSERT OR UPDATE ON public.trademarks
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_unverified_stage_payment_changes();
+
+CREATE OR REPLACE FUNCTION public.sync_trademark_from_ledger(p_trademark_id text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  v_due numeric;
+  v_received numeric;
+  v_paid boolean;
+  v_paid_date date;
+  v_stage text;
+  v_stage_num integer;
+  v_prior_setting text := current_setting('brandex.internal_ledger_sync', true);
+BEGIN
+  PERFORM 1 FROM public.trademarks WHERE id=p_trademark_id FOR UPDATE;
+  IF NOT FOUND THEN RETURN; END IF;
+  FOR v_stage IN SELECT unnest(ARRAY['S1','S2','S3','S4']) LOOP
+    SELECT coalesce(sum(amount_due) FILTER (WHERE entry_type='charge'),0),
+           coalesce(sum(amount_received) FILTER (WHERE entry_type='receiving'),0),
+           max(entry_date) FILTER (WHERE entry_type='receiving' AND coalesce(amount_received,0)>0)
+      INTO v_due, v_received, v_paid_date
+      FROM public.ledger_entries e
+      JOIN public.ledger_cases c ON c.id=e.case_id
+     WHERE c.cms_trademark_id=p_trademark_id
+       AND e.stage=v_stage
+       AND e.voided_at IS NULL;
+    v_paid := v_due > 0 AND v_received >= v_due;
+    v_stage_num := substring(v_stage from 2)::integer;
+    PERFORM set_config('brandex.internal_ledger_sync','true',true);
+    EXECUTE format('UPDATE public.trademarks SET stage%s_paid=$1, stage%s_paid_date=$2 WHERE id=$3',
+                   v_stage_num, v_stage_num)
+      USING v_paid, CASE WHEN v_paid THEN v_paid_date ELSE NULL END, p_trademark_id;
+    PERFORM set_config('brandex.internal_ledger_sync',coalesce(v_prior_setting,'false'),true);
+  END LOOP;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_sync_trademark_from_ledger ON public.client_ledger_entries;
-CREATE TRIGGER trg_sync_trademark_from_ledger
-  AFTER INSERT OR UPDATE OR DELETE ON public.client_ledger_entries
-  FOR EACH ROW
-  EXECUTE FUNCTION public.trigger_sync_trademark_from_ledger();
+CREATE OR REPLACE FUNCTION public.sync_trademark_for_ledger_entry()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_tm_id text;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    SELECT cms_trademark_id INTO v_tm_id FROM public.ledger_cases WHERE id=OLD.case_id;
+    IF v_tm_id IS NOT NULL THEN PERFORM public.sync_trademark_from_ledger(v_tm_id); END IF;
+  END IF;
+  IF TG_OP <> 'DELETE' THEN
+    SELECT cms_trademark_id INTO v_tm_id FROM public.ledger_cases WHERE id=NEW.case_id;
+    IF v_tm_id IS NOT NULL THEN PERFORM public.sync_trademark_from_ledger(v_tm_id); END IF;
+  END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+END;
+$$;
+CREATE TRIGGER ledger_entries_sync_trademark
+  AFTER INSERT OR UPDATE OR DELETE ON public.ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION public.sync_trademark_for_ledger_entry();
 
--- 6. Helper RPC to record a client receipt with automatic sequence generation
+CREATE OR REPLACE FUNCTION public.sync_trademark_for_ledger_case_link()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF OLD.cms_trademark_id IS NOT NULL THEN PERFORM public.sync_trademark_from_ledger(OLD.cms_trademark_id); END IF;
+  IF NEW.cms_trademark_id IS NOT NULL THEN PERFORM public.sync_trademark_from_ledger(NEW.cms_trademark_id); END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER ledger_cases_sync_trademark
+  AFTER UPDATE OF cms_trademark_id ON public.ledger_cases
+  FOR EACH ROW EXECUTE FUNCTION public.sync_trademark_for_ledger_case_link();
+
+CREATE OR REPLACE FUNCTION public.link_ledger_case_to_trademark(
+  p_ledger_case_id uuid, p_trademark_id text, p_reason text
+)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_role text := public.current_brandex_role()::text;
+  v_tm_normalized text;
+  v_old_setting text := current_setting('brandex.internal_case_link', true);
+BEGIN
+  IF v_role <> 'admin' THEN RAISE EXCEPTION 'Only administrators can link ledger cases.'; END IF;
+  IF p_reason IS NULL OR length(trim(p_reason)) < 3 THEN RAISE EXCEPTION 'An audit reason is required.'; END IF;
+  SELECT tm_cpr_number_norm INTO v_tm_normalized FROM public.trademarks WHERE id=p_trademark_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'CMS trademark not found.'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.ledger_cases WHERE id=p_ledger_case_id) THEN RAISE EXCEPTION 'Ledger case not found.'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.ledger_cases WHERE id=p_ledger_case_id AND tm_no_normalized=v_tm_normalized) THEN
+    RAISE EXCEPTION 'The normalized TM number does not match.';
+  END IF;
+  PERFORM set_config('brandex.internal_case_link','true',true);
+  UPDATE public.ledger_cases SET cms_trademark_id=p_trademark_id, reconciliation_status='approved_link', updated_at=now()
+   WHERE id=p_ledger_case_id AND cms_trademark_id IS NULL;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Ledger case is already linked; use an audited transfer process.'; END IF;
+  PERFORM set_config('brandex.internal_case_link',coalesce(v_old_setting,'false'),true);
+  INSERT INTO public.ledger_case_link_audit(ledger_case_id,cms_trademark_id,action,reason,changed_by)
+  VALUES (p_ledger_case_id,p_trademark_id,'linked',trim(p_reason),v_user_id);
+END;
+$$;
+
+CREATE OR REPLACE VIEW public.client_ledger_entries WITH (security_invoker = true) AS
+SELECT e.id, c.cms_trademark_id AS trademark_id, e.entry_date, e.entry_type, e.stage,
+       e.amount_due, e.amount_received, e.payment_method,
+       e.bank_name, e.cheque_no,
+       e.receipt_no, e.details, e.notes, e.voided_at, e.void_reason,
+       e.created_by, e.created_at, e.updated_at
+  FROM public.ledger_entries e
+  JOIN public.ledger_cases c ON c.id=e.case_id
+ WHERE c.cms_trademark_id IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION public.record_client_receipt(
-  p_trademark_id   uuid,
-  p_stage          text,
-  p_amount         numeric,
-  p_entry_date     date DEFAULT CURRENT_DATE,
-  p_payment_method text DEFAULT 'cash',
-  p_bank_name      text DEFAULT NULL,
-  p_cheque_no      text DEFAULT NULL,
-  p_receipt_no     text DEFAULT NULL,
-  p_details        text DEFAULT NULL,
-  p_notes          text DEFAULT NULL
+  p_trademark_id text, p_stage text, p_amount numeric,
+  p_entry_date date DEFAULT CURRENT_DATE, p_payment_method text DEFAULT 'cash',
+  p_bank_name text DEFAULT NULL, p_cheque_no text DEFAULT NULL,
+  p_receipt_no text DEFAULT NULL, p_details text DEFAULT NULL, p_notes text DEFAULT NULL
 )
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
-  v_rec_no text := p_receipt_no;
+  v_user_id uuid := auth.uid();
+  v_case public.ledger_cases%ROWTYPE;
   v_entry_id uuid;
-  v_user_id uuid := auth.uid();
-  v_user_role text;
+  v_receipt_no text;
+  v_entry_date date := coalesce(p_entry_date,current_date);
 BEGIN
-  -- Verify caller role (Admin only)
-  SELECT role INTO v_user_role FROM public.profiles WHERE user_id = v_user_id;
-  IF v_user_role IS NULL OR v_user_role <> 'admin' THEN
-    RAISE EXCEPTION 'Only administrators can record client receipts.';
-  END IF;
-
-  IF p_amount <= 0 THEN
-    RAISE EXCEPTION 'Receipt amount must be greater than zero.';
-  END IF;
-
-  IF p_stage NOT IN ('S1', 'S2', 'S3', 'S4') THEN
-    RAISE EXCEPTION 'Invalid stage code: %. Must be S1, S2, S3, or S4.', p_stage;
-  END IF;
-
-  -- Generate receipt number if not provided
-  IF v_rec_no IS NULL OR length(trim(v_rec_no)) = 0 THEN
-    v_rec_no := 'REC-' || to_char(COALESCE(p_entry_date, CURRENT_DATE), 'YYYY') || '-' || lpad(nextval('public.client_receipt_seq')::text, 4, '0');
-  END IF;
-
-  INSERT INTO public.client_ledger_entries (
-    trademark_id, entry_date, entry_type, stage,
-    amount_due, amount_received,
-    payment_method, bank_name, cheque_no, receipt_no,
-    details, notes, created_by
-  ) VALUES (
-    p_trademark_id, COALESCE(p_entry_date, CURRENT_DATE), 'receiving', p_stage,
-    0, p_amount,
-    COALESCE(p_payment_method, 'cash'), p_bank_name, p_cheque_no, v_rec_no,
-    p_details, p_notes, v_user_id
-  ) RETURNING id INTO v_entry_id;
-
-  RETURN jsonb_build_object(
-    'id', v_entry_id,
-    'receipt_no', v_rec_no,
-    'amount', p_amount,
-    'stage', p_stage,
-    'entry_date', COALESCE(p_entry_date, CURRENT_DATE)
-  );
+  IF public.current_brandex_role()::text <> 'admin' THEN RAISE EXCEPTION 'Only administrators can record client receipts.'; END IF;
+  IF p_amount IS NULL OR p_amount <= 0 THEN RAISE EXCEPTION 'Receipt amount must be greater than zero.'; END IF;
+  IF p_stage NOT IN ('S1','S2','S3','S4') THEN RAISE EXCEPTION 'Invalid stage.'; END IF;
+  SELECT * INTO v_case FROM public.ledger_cases WHERE cms_trademark_id=p_trademark_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'No approved ledger case is linked to this CMS trademark.'; END IF;
+  v_receipt_no := 'REC-' || to_char(v_entry_date,'YYYY') || '-' || lpad(nextval('public.ledger_receipt_seq')::text,4,'0');
+  INSERT INTO public.ledger_entries(client_id,case_id,entry_date,entry_type,stage,amount_due,amount_received,payment_method,bank_name,cheque_no,receipt_no,details,notes,created_by)
+  VALUES(v_case.client_id,v_case.id,v_entry_date,'receiving',p_stage,0,p_amount,p_payment_method,p_bank_name,p_cheque_no,v_receipt_no,p_details,p_notes,v_user_id)
+  RETURNING id INTO v_entry_id;
+  RETURN jsonb_build_object('id',v_entry_id,'receipt_no',v_receipt_no,'amount',p_amount,'stage',p_stage,'entry_date',v_entry_date);
 END;
 $$;
 
--- 7. Helper RPC to soft-void a client receipt with reason
-CREATE OR REPLACE FUNCTION public.void_client_receipt(
-  p_entry_id   uuid,
-  p_reason     text
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-DECLARE
-  v_user_id uuid := auth.uid();
-  v_user_role text;
-  v_trademark_id uuid;
+CREATE OR REPLACE FUNCTION public.void_client_receipt(p_entry_id uuid,p_reason text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_user_id uuid := auth.uid(); v_receipt public.ledger_entries%ROWTYPE;
 BEGIN
-  SELECT role INTO v_user_role FROM public.profiles WHERE user_id = v_user_id;
-  IF v_user_role IS NULL OR v_user_role <> 'admin' THEN
-    RAISE EXCEPTION 'Only administrators can void client receipts.';
-  END IF;
-
-  IF p_reason IS NULL OR length(trim(p_reason)) < 3 THEN
-    RAISE EXCEPTION 'A specific void reason is required (at least 3 characters).';
-  END IF;
-
-  SELECT trademark_id INTO v_trademark_id FROM public.client_ledger_entries WHERE id = p_entry_id;
-  IF v_trademark_id IS NULL THEN
-    RAISE EXCEPTION 'Ledger entry not found.';
-  END IF;
-
-  UPDATE public.client_ledger_entries
-     SET voided_at = now(),
-         void_reason = trim(p_reason),
-         updated_at = now()
-   WHERE id = p_entry_id;
-
-  RETURN jsonb_build_object(
-    'id', p_entry_id,
-    'status', 'voided',
-    'voided_at', now()
-  );
+  IF public.current_brandex_role()::text <> 'admin' THEN RAISE EXCEPTION 'Only administrators can void client receipts.'; END IF;
+  IF p_reason IS NULL OR length(trim(p_reason)) < 3 THEN RAISE EXCEPTION 'A specific void reason is required.'; END IF;
+  SELECT * INTO v_receipt FROM public.ledger_entries WHERE id=p_entry_id AND entry_type='receiving' FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Receipt entry not found.'; END IF;
+  IF v_receipt.voided_at IS NOT NULL THEN RAISE EXCEPTION 'Receipt is already voided.'; END IF;
+  UPDATE public.ledger_entries SET voided_at=now(),void_reason=trim(p_reason),updated_at=now() WHERE id=p_entry_id;
+  RETURN jsonb_build_object('id',p_entry_id,'status','voided','voided_at',now());
 END;
 $$;
 
--- 8. Enable Row Level Security (RLS)
-ALTER TABLE public.client_ledger_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledger_series ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledger_clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledger_client_stage_rates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledger_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledger_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledger_case_link_audit ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY client_ledger_select ON public.client_ledger_entries
-  FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-       WHERE profiles.user_id = auth.uid()
-         AND profiles.role IN ('admin', 'viewer')
-    )
-  );
+CREATE POLICY ledger_series_read ON public.ledger_series FOR SELECT TO authenticated
+  USING (public.current_brandex_role()::text IN ('admin','viewer'));
+CREATE POLICY ledger_series_admin ON public.ledger_series FOR ALL TO authenticated
+  USING (public.current_brandex_role()::text='admin') WITH CHECK (public.current_brandex_role()::text='admin');
+CREATE POLICY ledger_clients_read ON public.ledger_clients FOR SELECT TO authenticated
+  USING (public.current_brandex_role()::text IN ('admin','viewer'));
+CREATE POLICY ledger_clients_admin ON public.ledger_clients FOR ALL TO authenticated
+  USING (public.current_brandex_role()::text='admin') WITH CHECK (public.current_brandex_role()::text='admin');
+CREATE POLICY ledger_rates_read ON public.ledger_client_stage_rates FOR SELECT TO authenticated
+  USING (public.current_brandex_role()::text IN ('admin','viewer'));
+CREATE POLICY ledger_rates_admin ON public.ledger_client_stage_rates FOR ALL TO authenticated
+  USING (public.current_brandex_role()::text='admin') WITH CHECK (public.current_brandex_role()::text='admin');
+CREATE POLICY ledger_cases_read ON public.ledger_cases FOR SELECT TO authenticated
+  USING (public.current_brandex_role()::text IN ('admin','viewer'));
+CREATE POLICY ledger_cases_admin ON public.ledger_cases FOR ALL TO authenticated
+  USING (public.current_brandex_role()::text='admin') WITH CHECK (public.current_brandex_role()::text='admin');
+CREATE POLICY ledger_entries_read ON public.ledger_entries FOR SELECT TO authenticated
+  USING (public.current_brandex_role()::text IN ('admin','viewer'));
+CREATE POLICY ledger_entries_admin ON public.ledger_entries FOR ALL TO authenticated
+  USING (public.current_brandex_role()::text='admin') WITH CHECK (public.current_brandex_role()::text='admin');
+CREATE POLICY ledger_link_audit_read ON public.ledger_case_link_audit FOR SELECT TO authenticated
+  USING (public.current_brandex_role()::text IN ('admin','viewer'));
 
-CREATE POLICY client_ledger_insert ON public.client_ledger_entries
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-       WHERE profiles.user_id = auth.uid()
-         AND profiles.role = 'admin'
-    )
-  );
-
-CREATE POLICY client_ledger_update ON public.client_ledger_entries
-  FOR UPDATE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-       WHERE profiles.user_id = auth.uid()
-         AND profiles.role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-       WHERE profiles.user_id = auth.uid()
-         AND profiles.role = 'admin'
-    )
-  );
-
-GRANT SELECT, INSERT, UPDATE ON public.client_ledger_entries TO authenticated;
-GRANT USAGE, SELECT ON SEQUENCE public.client_receipt_seq TO authenticated;
-GRANT EXECUTE ON FUNCTION public.record_client_receipt TO authenticated;
-GRANT EXECUTE ON FUNCTION public.void_client_receipt TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.ledger_series, public.ledger_clients,
+  public.ledger_client_stage_rates, public.ledger_cases, public.ledger_entries TO authenticated;
+GRANT SELECT ON public.ledger_case_link_audit, public.client_ledger_entries TO authenticated;
+REVOKE ALL ON FUNCTION public.link_ledger_case_to_trademark(uuid,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.void_client_receipt(uuid,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.link_ledger_case_to_trademark(uuid,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.record_client_receipt(text,text,numeric,date,text,text,text,text,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.void_client_receipt(uuid,text) TO authenticated;
 
 COMMIT;
