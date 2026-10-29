@@ -18,7 +18,7 @@ import {
   type TrademarkRecord,
   type TrademarkWorkflowEvent,
 } from "@/lib/api";
-import { getLedgerStagePayments, normalizeTmDigits, refreshLedgerPaymentsForCase } from "@/lib/ledgerPayments";
+import { normalizeTmDigits, refreshLedgerPaymentsForCase } from "@/lib/ledgerPayments";
 import { formatDateShort } from "@/lib/utils";
 import { RecordReceiptModal } from "@/components/RecordReceiptModal";
 import { ReceiptPrintModal } from "@/components/ReceiptPrintModal";
@@ -60,9 +60,12 @@ export function CaseWorkflowSection({ record, canEdit }: CaseWorkflowSectionProp
   const [agentError, setAgentError] = useState<string | null>(null);
 
   // Always derive workflow payment gates from the authoritative Ledger, not cached trademark flags.
-  const { data: liveStagePayments, isLoading: isLedgerPaymentLoading, isError: isLedgerPaymentError } = useQuery({
+  const { data: liveStagePayments = {}, isLoading: isLedgerPaymentLoading, isError: isLedgerPaymentError } = useQuery({
     queryKey: ["workflow-ledger-payment-status", normalizeTmDigits(record.tmCprNo) || record.id],
-    queryFn: () => refreshLedgerPaymentsForCase(record.id, record.tmCprNo),
+    queryFn: async () => {
+      const res = await refreshLedgerPaymentsForCase(record.id, record.tmCprNo);
+      return res ?? {};
+    },
     staleTime: 0,
     refetchOnWindowFocus: true,
     refetchInterval: 30_000,
@@ -608,14 +611,11 @@ export function StagePaymentsSection({ record }: StagePaymentsSectionProps) {
   const [targetStage, setTargetStage] = useState<"S1" | "S2" | "S3" | "S4">("S1");
   const [printedReceipt, setPrintedReceipt] = useState<any | null>(null);
 
-  const { data: payments, isLoading, isFetching, refetch } = useQuery({
+  const { data: payments = {}, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["ledger-payment-status", tmDigits || record.id],
     queryFn: async () => {
-      const status = tmDigits
-        ? (await getLedgerStagePayments([tmDigits]))[tmDigits]
-        : await refreshLedgerPaymentsForCase(record.id);
-      await queryClient.invalidateQueries({ queryKey: ["trademark", record.id] });
-      return status;
+      const status = await refreshLedgerPaymentsForCase(record.id, record.tmCprNo);
+      return status ?? {};
     },
     staleTime: 10_000,
     refetchInterval: 30_000,

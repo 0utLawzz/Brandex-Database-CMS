@@ -16,6 +16,7 @@ import {
   recordClientReceipt,
   createLedgerClient,
   recordLedgerCharge,
+  refreshLedgerPaymentsForCase,
 } from "./ledgerPayments";
 
 describe("Unified Brandex Client Ledger", () => {
@@ -174,6 +175,33 @@ describe("Unified Brandex Client Ledger", () => {
       p_trademark_id: "cms-tm-id-1",
       p_reason: "Admin verified against physical file",
     });
+  });
+
+  it("refreshLedgerPaymentsForCase returns a defined empty object when unlinked (never undefined)", async () => {
+    supabaseMock.from.mockImplementation((table: string) => {
+      if (table === "trademarks") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        }),
+      };
+    });
+
+    const resWithTm = await refreshLedgerPaymentsForCase("case-1", "963963");
+    expect(resWithTm).toBeDefined();
+    expect(resWithTm).toEqual({});
+
+    const resWithoutTm = await refreshLedgerPaymentsForCase("case-1", null);
+    expect(resWithoutTm).toBeDefined();
+    expect(resWithoutTm).toEqual({});
   });
 });
 
